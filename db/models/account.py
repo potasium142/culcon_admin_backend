@@ -12,6 +12,11 @@ class AccountType(Enum):
     STAFF = 2
 
 
+class AccountStatus(Enum):
+    ACTIVE = 1
+    DISABLE = 2
+
+
 class EmployeeInfo(Base):
     __tablename__ = "employee_info"
     account_id: orm.Mapped[str] = orm.mapped_column(
@@ -32,5 +37,6 @@ class Account(Base):
     username: orm.Mapped[str] = orm.mapped_column(unique=True)
     password: orm.Mapped[str]
     type: orm.Mapped[AccountType]
+    status: orm.Mapped[AccountStatus]
     token: orm.Mapped[str]
     employee_info: orm.Mapped[EmployeeInfo] = orm.relationship()

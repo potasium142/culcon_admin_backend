@@ -1,8 +1,5 @@
 from fastapi import APIRouter
-from db.models.account import Account
-from services import account_service
 from dtos.request.account import AccountCreateDto
-import db
 
 from services import account_service as acc_sv
 

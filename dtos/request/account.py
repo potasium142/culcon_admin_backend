@@ -1,32 +1,41 @@
 from dataclasses import dataclass
 from datetime import date
 from pydantic import BaseModel
-from db.models.account import AccountType, Account, EmployeeInfo
+from db.models.account import AccountType, Account, EmployeeInfo, AccountStatus
 
 
 @dataclass
-class AccountCreateDto(BaseModel):
-    username: str
-    password: str
+class AccountInfoForm(BaseModel):
     ssn: str
     phonenumber: str
     realname: str
     email: str
     dob: date
-    type: AccountType
 
-    def get_account(self) -> Account:
-        employee_info = EmployeeInfo(
+    def get_employee_info(self) -> EmployeeInfo:
+        return EmployeeInfo(
             ssn=self.ssn,
             phonenumber=self.phonenumber,
             realname=self.realname,
             email=self.email,
             dob=self.dob
         )
+
+
+@dataclass
+class AccountCreateDto(BaseModel):
+    username: str
+    password: str
+    type: AccountType
+    employee_info: AccountInfoForm
+    account_status: AccountStatus
+
+    def get_account(self) -> Account:
         account = Account(
             username=self.username,
             password=self.password,
             type=self.type,
-            employee_info=employee_info
+            status=self.account_status,
+            employee_info=self.employee_info.get_employee_info()
         )
         return account
