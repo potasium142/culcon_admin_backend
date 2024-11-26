@@ -17,7 +17,6 @@ def encode(account: Account,
 
     to_encode = {
         "username": account.username,
-        "password": account.password,
         "type": account.type.name,
         "exp": expire
     }

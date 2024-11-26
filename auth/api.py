@@ -22,7 +22,10 @@ async def test(token: Annotated[str, Depends(auth.oauth2_scheme)]):
 
 
 @router.post("/login")
-async def login(login_form: Annotated[OAuth2PasswordRequestForm, Depends()]):
+async def login(login_form: Annotated[
+    OAuth2PasswordRequestForm,
+    Depends()
+]) -> Token:
 
     user = account_repo.find_by_username(
         login_form.username,

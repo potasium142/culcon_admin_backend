@@ -3,6 +3,7 @@ from dtos.request.account import AccountCreateDto
 
 from services import account_service as acc_sv
 
+
 router = APIRouter(
     prefix="/api/account",
     tags=["Account"]
