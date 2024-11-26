@@ -15,8 +15,8 @@ CREDENTIAL_EXCEPTION = HTTPException(
 
 
 def permission(
-    type: AccountType,
     token: str,
+    is_manager: bool = False
 ) -> bool:
     try:
         payload = jwt_token.decode(token)
@@ -29,7 +29,12 @@ def permission(
         if account is None:
             raise CREDENTIAL_EXCEPTION
 
-        if account.type != type:
+        is_staff = account.type == AccountType.STAFF
+
+        if not is_manager and is_staff:
+            return True
+
+        if account.type != AccountType.MANAGER:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Insufficient permission",
@@ -45,10 +50,10 @@ def permission(
 def manager_permission(
     token: str = Depends(oauth2_scheme)
 ) -> bool:
-    return permission(AccountType.MANAGER, token)
+    return permission(token, True)
 
 
 def staff_permission(
     token: str = Depends(oauth2_scheme)
 ) -> bool:
-    return permission(AccountType.STAFF, token)
+    return permission(token)
