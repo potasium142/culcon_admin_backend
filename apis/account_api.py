@@ -16,5 +16,5 @@ async def test():
 
 @router.post("/create", response_model=None)
 async def create(account: AccountCreateDto) -> str:
-    acc_sv.create_account(account)
-    return "ok"
+    token = acc_sv.create_account(account)
+    return {"access_token": token}

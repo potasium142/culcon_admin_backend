@@ -7,6 +7,9 @@ from fastapi import APIRouter
 
 import auth
 
+from auth import encryption,  jwt_token
+from auth.token import Token
+
 router = APIRouter(
     prefix="/api/auth",
     tags=["Auth"]
@@ -20,15 +23,27 @@ async def test(token: Annotated[str, Depends(auth.oauth2_scheme)]):
 
 @router.post("/login")
 async def login(login_form: Annotated[OAuth2PasswordRequestForm, Depends()]):
-    user = account_repo.authen_user(
+
+    user = account_repo.find_by_username(
         login_form.username,
-        login_form.password
     )
 
     if not user:
         raise HTTPException(
             status_code=400,
-            detail="No such account with username and password"
+            detail="No such account with username"
         )
 
-    return "some fake ass token"
+    is_password_match = encryption.verify(login_form.password, user.password)
+
+    if not is_password_match:
+        raise HTTPException(
+            status_code=400,
+            detail="Password incorrect"
+        )
+
+    token = jwt_token.encode(user)
+
+    account_repo.update_token(user.id, token)
+
+    return Token(access_token=token, token_type="bearer")
