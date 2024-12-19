@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from datetime import date
 from pydantic import BaseModel
-from db.models.account import AccountType, Account, EmployeeInfo, AccountStatus
+from db.models.staff_account import AccountType, Account, EmployeeInfo, AccountStatus
 
 
 @dataclass

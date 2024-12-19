@@ -1,7 +1,7 @@
 import sqlalchemy_utils as sqlau
 import sqlalchemy as sqla
 import db.models
-from db.models import account
+from db.models import staff_account
 
 URL_DATABASE = "postgresql://culcon:culcon@localhost:5432/culcon_admin"
 

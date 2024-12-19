@@ -1,0 +1,5 @@
+fastapi[standard]
+sqlalchemy_utils
+psycopg2-binary
+pyjwt
+passlib

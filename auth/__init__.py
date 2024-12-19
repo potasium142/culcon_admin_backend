@@ -3,7 +3,7 @@ from fastapi.security import OAuth2PasswordBearer
 from jwt import InvalidTokenError
 from auth import jwt_token
 from db.repos import account_repo
-from db.models.account import AccountType
+from db.models.staff_account import AccountType
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
