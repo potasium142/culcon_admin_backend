@@ -18,9 +18,9 @@ class AccountStatus(Enum):
 
 
 class EmployeeInfo(Base):
-    __tablename__ = "employee_info"
+    __tablename__: str = "employee_info"
     account_id: orm.Mapped[str] = orm.mapped_column(
-        sqla.ForeignKey("account.id"), primary_key=True
+        sqla.ForeignKey("staff_account.id"), primary_key=True
     )
     ssn: orm.Mapped[str] = orm.mapped_column(unique=True)
     phonenumber: orm.Mapped[str] = orm.mapped_column(unique=True)
@@ -29,8 +29,8 @@ class EmployeeInfo(Base):
     dob: orm.Mapped[date]
 
 
-class Account(Base):
-    __tablename__ = "account"
+class StaffAccount(Base):
+    __tablename__: str = "staff_account"
     id: orm.Mapped[UUID] = orm.mapped_column(primary_key=True, default=uuid4)
     username: orm.Mapped[str] = orm.mapped_column(unique=True)
     password: orm.Mapped[str]

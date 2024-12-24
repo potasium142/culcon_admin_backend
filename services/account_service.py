@@ -1,5 +1,5 @@
 from typing_extensions import List
-from db.models.staff_account import Account, AccountType
+from db.models.staff_account import StaffAccount, AccountType
 from dtos.request.account import AccountCreateDto
 from datetime import datetime, timedelta, timezone
 

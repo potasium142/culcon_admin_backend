@@ -1,7 +1,12 @@
 from dataclasses import dataclass
 from datetime import date
 from pydantic import BaseModel
-from db.models.staff_account import AccountType, Account, EmployeeInfo, AccountStatus
+from db.models.staff_account import (
+    AccountType,
+    StaffAccount,
+    EmployeeInfo,
+    AccountStatus,
+)
 
 
 @dataclass
@@ -18,7 +23,7 @@ class AccountInfoForm(BaseModel):
             phonenumber=self.phonenumber,
             realname=self.realname,
             email=self.email,
-            dob=self.dob
+            dob=self.dob,
         )
 
 
@@ -30,12 +35,12 @@ class AccountCreateDto(BaseModel):
     employee_info: AccountInfoForm
     account_status: AccountStatus
 
-    def get_account(self) -> Account:
-        account = Account(
+    def get_account(self) -> StaffAccount:
+        account = StaffAccount(
             username=self.username,
             password=self.password,
             type=self.type,
             status=self.account_status,
-            employee_info=self.employee_info.get_employee_info()
+            employee_info=self.employee_info.get_employee_info(),
         )
         return account

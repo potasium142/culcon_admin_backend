@@ -1,8 +1,4 @@
-import db
-import uvicorn
-
 from fastapi import FastAPI, Request
-from pydantic import BaseModel
 from fastapi.responses import JSONResponse
 
 from auth import api as auth_api

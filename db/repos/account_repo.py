@@ -1,7 +1,9 @@
-from db.models.staff_account import Account, EmployeeInfo
-from typing_extensions import List
-from db import DBSession
+from typing import Type
+
 import sqlalchemy.orm
+
+from db import DBSession
+from db.models.staff_account import StaffAccount
 
 _session: sqlalchemy.orm.Session = DBSession()
 
@@ -14,20 +16,20 @@ def commit() -> None:
         raise e
 
 
-def add_account(account: Account) -> None:
+def add_account(account: StaffAccount) -> None:
     _session.add(account)
     commit()
 
 
 def update_token(id: str, token: str) -> None:
-    acc: Account = _session.query(Account).get(id)
+    acc: StaffAccount = _session.query(StaffAccount).get(id)
     acc.token = token
     _session.commit()
 
 
-def find_by_username(username: str) -> Account | None:
+def find_by_username(username: str) -> StaffAccount | None:
     return (
-        _session.query(Account)
+        _session.query(StaffAccount)
         .filter_by(
             username=username,
         )
@@ -35,9 +37,9 @@ def find_by_username(username: str) -> Account | None:
     )
 
 
-def find_by_token(token: str) -> Account | None:
-    return _session.query(Account).filter_by(token=token).first()
+def find_by_token(token: str) -> StaffAccount | None:
+    return _session.query(StaffAccount).filter_by(token=token).first()
 
 
-def get_all() -> List[Account]:
-    return _session.query(Account).all()
+def get_all() -> list[Type[StaffAccount]]:
+    return _session.query(StaffAccount).all()

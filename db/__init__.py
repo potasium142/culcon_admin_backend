@@ -1,7 +1,8 @@
-import sqlalchemy_utils as sqlau
 import sqlalchemy as sqla
+import sqlalchemy_utils as sqlau
+
 import db.models
-from db.models import staff_account
+from db.models import *
 
 URL_DATABASE = "postgresql://culcon:culcon@localhost:5432/culcon_admin"
 
