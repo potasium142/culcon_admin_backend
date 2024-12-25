@@ -30,14 +30,12 @@ class Product(Base):
     image_url: orm.Mapped[str]
     price: orm.Mapped[float] = orm.mapped_column(sqltypes.REAL)
     sale_percent: orm.Mapped[float] = orm.mapped_column(sqltypes.REAL)
+    product_price: orm.Mapped[list["ProductPriceHistory"]] = orm.relationship()
 
 
-class PriceHistory(Base):
+class ProductPriceHistory(Base):
     __tablename__: str = "product_price_history"
     price: orm.Mapped[float] = orm.mapped_column(sqltypes.REAL)
     sale_percent: orm.Mapped[float] = orm.mapped_column(sqltypes.REAL)
-    date: orm.Mapped[datetime] = orm.mapped_column(sqltypes.TIMESTAMP, primary_key=True)
-    product_id: orm.Mapped[str] = orm.mapped_column(
-        sqla.ForeignKey("product.id"), primary_key=True
-    )
-    product: orm.Mapped[Product] = orm.relationship()
+    date: orm.Mapped[datetime] = orm.mapped_column(sqltypes.TIMESTAMP)
+    product_id: orm.Mapped[str] = orm.mapped_column(sqla.ForeignKey("product.id"))
