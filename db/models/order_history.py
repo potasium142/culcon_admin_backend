@@ -1,8 +1,9 @@
 from ast import For
 from datetime import datetime, date
 from enum import Enum
+from typing import Optional
 
-from sqlalchemy import Column, ForeignKey, Table, orm
+from sqlalchemy import Column, ForeignKey, Table, orm, ForeignKeyConstraint
 from sqlalchemy.sql import sqltypes
 
 from db.models import Base
@@ -17,6 +18,20 @@ class OrderStatus(Enum):
     CANCELLED = 5
 
 
+class PaymentMethod(Enum):
+    BANKING = 1
+    COD = 2
+
+
+class PaymentStatus(Enum):
+    PENDING = 1
+    RECEIVED = 2
+    REFUNDED = 3
+    REFUNDING = 4
+    CREATED = 5
+    CHANGED = 6
+
+
 class Coupon(Base):
     __tablename__: str = "coupon"
     id: orm.Mapped[str] = orm.mapped_column(primary_key=True)
@@ -26,43 +41,38 @@ class Coupon(Base):
     usage_left: orm.Mapped[int] = orm.mapped_column(sqltypes.INTEGER)
 
 
-# class OrderHistoryItems(Base):
-#     __tablename__: str = "order_history_items"
-#     order_history_id: orm.Mapped[int] = orm.mapped_column(
-#         ForeignKey("order_history.id"), primary_key=True
-#     )
-#     product_id: orm.Mapped[str] = orm.mapped_column(
-#         ForeignKey("product_price_history.product_id"), primary_key=True
-#     )
-#     date: orm.Mapped[datetime] = orm.mapped_column(
-#         ForeignKey("product_price_history.date"), primary_key=True
-#     )
-#     quantity: orm.Mapped[int] = orm.mapped_column(sqltypes.INTEGER)
-
-
 OrderHistoryItems = Table(
     "order_history_items",
     Base.metadata,
-    Column("order_history_id", ForeignKey("order_history.id"), primary_key=True),
-    Column(
-        "product_id", ForeignKey("product_price_history.product_id"), primary_key=True
-    ),
-    Column("date", ForeignKey("product_price_history.date")),
+    Column("order_history_id", ForeignKey("order_history.id")),
+    Column("product_id_product_id"),
+    Column("product_id_date"),
     Column("quantity", sqltypes.INTEGER),
+    ForeignKeyConstraint(
+        ["product_id_date", "product_id_product_id"],
+        ["product_price_history.date", "product_price_history.product_id"],
+    ),
 )
 
 
 class OrderHistory(Base):
     __tablename__: str = "order_history"
     id: orm.Mapped[int] = orm.mapped_column(sqltypes.BIGINT, primary_key=True)
+    user_id: orm.Mapped[str] = orm.mapped_column(
+        sqltypes.UUID, ForeignKey("user_account.id")
+    )
     order_date: orm.Mapped[datetime] = orm.mapped_column(sqltypes.TIMESTAMP)
     delivery_address: orm.Mapped[str] = orm.mapped_column(sqltypes.VARCHAR(255))
     note: orm.Mapped[str] = orm.mapped_column(sqltypes.VARCHAR(255))
     total_price: orm.Mapped[float] = orm.mapped_column(sqltypes.REAL)
     receiver: orm.Mapped[str] = orm.mapped_column(sqltypes.VARCHAR(255))
     phonenumber: orm.Mapped[str] = orm.mapped_column(sqltypes.VARCHAR(12))
+    coupon: orm.Mapped[Coupon | None] = orm.mapped_column(ForeignKey("coupon.id"))
     updated_coupon: orm.Mapped[bool]
     updated_payment: orm.Mapped[bool]
+    payment_method: orm.Mapped[PaymentMethod]
+    payment_status: orm.Mapped[PaymentStatus]
+    order_status: orm.Mapped[OrderStatus]
     order_history_items: orm.Mapped[list[Product]] = orm.relationship(
         secondary=OrderHistoryItems
     )

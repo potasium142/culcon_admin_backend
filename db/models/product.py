@@ -26,7 +26,8 @@ class Product(Base):
     id: orm.Mapped[str] = orm.mapped_column(sqltypes.VARCHAR(255), primary_key=True)
     product_name: orm.Mapped[str]
     available_quantity: orm.Mapped[int]
-    product_type: orm.Mapped[ProductType]
+    product_types: orm.Mapped[ProductType]
+    product_status: orm.Mapped[ProductStatus]
     image_url: orm.Mapped[str]
     price: orm.Mapped[float] = orm.mapped_column(sqltypes.REAL)
     sale_percent: orm.Mapped[float] = orm.mapped_column(sqltypes.REAL)
@@ -37,5 +38,10 @@ class ProductPriceHistory(Base):
     __tablename__: str = "product_price_history"
     price: orm.Mapped[float] = orm.mapped_column(sqltypes.REAL)
     sale_percent: orm.Mapped[float] = orm.mapped_column(sqltypes.REAL)
-    date: orm.Mapped[datetime] = orm.mapped_column(sqltypes.TIMESTAMP)
-    product_id: orm.Mapped[str] = orm.mapped_column(sqla.ForeignKey("product.id"))
+    date: orm.Mapped[datetime] = orm.mapped_column(sqltypes.TIMESTAMP, primary_key=True)
+    product_id: orm.Mapped[str] = orm.mapped_column(
+        sqla.ForeignKey("product.id"), primary_key=True
+    )
+    __table_args__ = (
+        sqla.UniqueConstraint("date", "product_id", name="product_price_history_pk"),
+    )
