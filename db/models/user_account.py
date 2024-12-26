@@ -21,7 +21,7 @@ class UserAccountStatus(Enum):
 class UserAccount(Base):
     __tablename__: str = "user_account"
     id: orm.Mapped[UUID] = orm.mapped_column(
-        primary_key=True, default=uuid4, unique=True
+        sqltypes.VARCHAR(255), primary_key=True, unique=True
     )
     email: orm.Mapped[str] = orm.mapped_column(unique=True)
     username: orm.Mapped[str] = orm.mapped_column(unique=True)
@@ -54,7 +54,7 @@ class PostComment(Base):
         sqltypes.VARCHAR(255), primary_key=True
     )
     account_id: orm.Mapped[UserAccount] = orm.mapped_column(
-        sqltypes.UUID, sqla.ForeignKey("user_account.id"), primary_key=True
+        sqltypes.VARCHAR(255), sqla.ForeignKey("user_account.id"), primary_key=True
     )
     comment: orm.Mapped[str] = orm.mapped_column(sqltypes.VARCHAR(255))
 
