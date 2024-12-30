@@ -1,13 +1,13 @@
 import sqlalchemy as sqla
 from uuid import UUID, uuid4
 from sqlalchemy import orm
-from enum import Enum
+from enum import Enum, Flag
 from datetime import date
 
-from db.models import Base
+from db.postgresql.models import Base
 
 
-class AccountType(Enum):
+class AccountType(Flag):
     MANAGER = 1
     STAFF = 2
 

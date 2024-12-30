@@ -1,14 +1,13 @@
 from datetime import datetime
 from enum import Enum
-from uuid import UUID, uuid4
+from uuid import UUID
 
 import sqlalchemy as sqla
-from sqlalchemy import Column, orm
+from sqlalchemy import orm
 from sqlalchemy.dialects.postgresql import ARRAY, VARCHAR
 from sqlalchemy.sql import sqltypes
 
-from db.models import Base
-from db.models.product import Product
+from db.postgresql.models import Base
 
 
 class UserAccountStatus(Enum):

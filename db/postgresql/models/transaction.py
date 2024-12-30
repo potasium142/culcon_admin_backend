@@ -1,13 +1,11 @@
 from datetime import datetime
-from enum import Enum
 
 import sqlalchemy as sqla
 from sqlalchemy import orm
 from sqlalchemy.sql import sqltypes
 
-from db.models import Base
-from db.models.order_history import PaymentStatus
-from db.models.order_history import OrderHistory
+from db.postgresql.models import Base
+from db.postgresql.models.order_history import PaymentStatus, OrderHistory
 
 
 class PaymentTransaction(Base):

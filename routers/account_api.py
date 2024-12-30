@@ -8,10 +8,7 @@ import auth
 
 Permission = Annotated[bool, Depends(auth.manager_permission)]
 
-router = APIRouter(
-    prefix="/api/account",
-    tags=["Account"]
-)
+router = APIRouter(prefix="/api/account", tags=["Account"])
 
 
 @router.get("/test")
@@ -20,7 +17,6 @@ async def test():
 
 
 @router.post("/create", response_model=None)
-async def create(account: AccountCreateDto,
-                 permission: Permission) -> str:
+async def create(account: AccountCreateDto) -> dict[str, str]:
     token = acc_sv.create_account(account)
     return {"access_token": token}

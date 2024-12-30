@@ -8,7 +8,4 @@ def hash(input: str) -> str:
 
 
 def verify(secret: str, hash: str):
-    return pwd_context.verify(
-        secret=secret,
-        hash=hash
-    )
+    return pwd_context.verify(secret=secret, hash=hash)

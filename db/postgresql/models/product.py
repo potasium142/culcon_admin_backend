@@ -5,7 +5,7 @@ import sqlalchemy as sqla
 from sqlalchemy import orm
 from sqlalchemy.sql import sqltypes
 
-from db.models import Base
+from db.postgresql.models import Base
 
 
 class ProductType(Enum):

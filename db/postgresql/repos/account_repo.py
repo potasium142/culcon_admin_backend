@@ -1,9 +1,10 @@
 from typing import Type
+from uuid import UUID, uuid4
 
 import sqlalchemy.orm
 
-from db import DBSession
-from db.models.staff_account import StaffAccount
+from db.postgresql import DBSession
+from db.postgresql.models.staff_account import StaffAccount
 
 _session: sqlalchemy.orm.Session = DBSession()
 
@@ -24,7 +25,7 @@ def add_account(account: StaffAccount) -> None:
 def update_token(id: str, token: str) -> None:
     acc: StaffAccount = _session.query(StaffAccount).get(id)
     acc.token = token
-    _session.commit()
+    commit()
 
 
 def find_by_username(username: str) -> StaffAccount | None:

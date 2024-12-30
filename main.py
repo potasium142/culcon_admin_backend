@@ -1,15 +1,15 @@
+import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from auth import api as auth_api
-
-from apis import account_api, manager_api, staff_api
+from routers import account_api, staff, manager
 
 app = FastAPI()
 
+app.include_router(staff.router)
+app.include_router(manager.router)
 app.include_router(account_api.router)
-app.include_router(manager_api.router)
-app.include_router(staff_api.router)
 app.include_router(auth_api.router)
 
 
@@ -32,5 +32,5 @@ async def read_root():
     return {"Hello": "World"}
 
 
-# if __name__ == "__main__":
-#     uvicorn.run(app, host="0.0.0.0", port=8686)
+if __name__ == "__main__":
+    uvicorn.run(app)

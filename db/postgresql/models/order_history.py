@@ -1,13 +1,11 @@
-from ast import For
 from datetime import datetime, date
 from enum import Enum
-from typing import Optional
 
 from sqlalchemy import Column, ForeignKey, Table, orm, ForeignKeyConstraint
 from sqlalchemy.sql import sqltypes
 
-from db.models import Base
-from db.models.product import Product, ProductPriceHistory
+from db.postgresql.models import Base
+from db.postgresql.models.product import Product
 
 
 class OrderStatus(Enum):
