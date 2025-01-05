@@ -40,8 +40,8 @@ def permission(token: str, type: AccountType) -> bool:
 
 
 def manager_permission(token: str = Depends(oauth2_scheme)) -> bool:
-    return permission(token, True)
+    return permission(token, AccountType.MANAGER)
 
 
 def staff_permission(token: str = Depends(oauth2_scheme)) -> bool:
-    return permission(token)
+    return permission(token, AccountType.MANAGER | AccountType.STAFF)

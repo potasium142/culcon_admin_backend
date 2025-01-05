@@ -1,5 +1,4 @@
 from typing import Type
-from uuid import UUID, uuid4
 
 import sqlalchemy.orm
 

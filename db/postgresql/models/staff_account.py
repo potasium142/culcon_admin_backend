@@ -1,6 +1,8 @@
 import sqlalchemy as sqla
+
 from uuid import UUID, uuid4
 from sqlalchemy import orm
+from sqlalchemy.sql import sqltypes
 from enum import Enum, Flag
 from datetime import date
 
@@ -31,7 +33,9 @@ class EmployeeInfo(Base):
 
 class StaffAccount(Base):
     __tablename__: str = "staff_account"
-    id: orm.Mapped[UUID] = orm.mapped_column(primary_key=True, default=uuid4)
+    id: orm.Mapped[str] = orm.mapped_column(
+        sqltypes.UUID, primary_key=True, default=uuid4
+    )
     username: orm.Mapped[str] = orm.mapped_column(unique=True)
     password: orm.Mapped[str]
     type: orm.Mapped[AccountType]

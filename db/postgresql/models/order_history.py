@@ -5,7 +5,7 @@ from sqlalchemy import Column, ForeignKey, Table, orm, ForeignKeyConstraint
 from sqlalchemy.sql import sqltypes
 
 from db.postgresql.models import Base
-from db.postgresql.models.product import Product
+from db.postgresql.models.product import Product, ProductPriceHistory
 
 
 class OrderStatus(Enum):
@@ -69,6 +69,6 @@ class OrderHistory(Base):
     payment_method: orm.Mapped[PaymentMethod]
     payment_status: orm.Mapped[PaymentStatus]
     order_status: orm.Mapped[OrderStatus]
-    order_history_items: orm.Mapped[list[Product]] = orm.relationship(
+    order_history_items: orm.Mapped[list[ProductPriceHistory]] = orm.relationship(
         secondary=OrderHistoryItems
     )

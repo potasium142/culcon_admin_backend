@@ -1,15 +1,14 @@
 import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
-
 from auth import api as auth_api
-from routers import account_api, staff, manager
+from routers import prototype, staff, manager
 
 app = FastAPI()
 
 app.include_router(staff.router)
 app.include_router(manager.router)
-app.include_router(account_api.router)
+app.include_router(prototype.router)
 app.include_router(auth_api.router)
 
 
