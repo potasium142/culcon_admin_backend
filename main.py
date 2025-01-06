@@ -3,8 +3,19 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from auth import api as auth_api
 from routers import prototype, staff, manager
+from contextlib import asynccontextmanager
+import ai
 
-app = FastAPI()
+preload = dict()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    preload["AI"] = ai.load_all_model()
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 
 app.include_router(staff.router)
 app.include_router(manager.router)

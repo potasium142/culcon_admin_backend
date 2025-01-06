@@ -14,5 +14,7 @@ class ProductEmbedding(Base):
         sqla.ForeignKey(Product.id), primary_key=True
     )
     images_embed: orm.Mapped[list[Vector]] = orm.mapped_column(
-        postgresql.ARRAY(Vector(512))
+        postgresql.ARRAY(Vector(768))
     )
+    description_embed: orm.Mapped[Vector] = orm.mapped_column(Vector(768))
+    clip_embed: orm.Mapped[Vector] = orm.mapped_column(Vector(768))
