@@ -5,6 +5,9 @@ from sqlalchemy import event, text
 from config import env
 from db.postgresql.models import Base
 
+## DO NOT DELETE THIS LINE
+from db.postgresql.models import *  # noqa: F403
+
 URL_DATABASE = env.DB_URL
 
 engine = sqla.create_engine(URL_DATABASE)

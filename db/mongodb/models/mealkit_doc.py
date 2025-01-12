@@ -19,5 +19,7 @@ class MealkitDoc(BaseModel):
     instructions: list[str]
     ingredients: list[str]
     model_config = ConfigDict(
-        populate_by_name=True, arbitrary_types_allowed=True, use_enum_values=True
+        populate_by_name=True,
+        arbitrary_types_allowed=True,
+        use_enum_values=True,
     )

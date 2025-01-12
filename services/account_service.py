@@ -5,6 +5,8 @@ from db.postgresql.repos import account_repo as repos
 
 from auth import encryption, jwt_token
 
+from db.postgresql.db_session import db_session
+
 
 def create_account(account_dto: AccountCreateDto) -> str:
     account = account_dto.get()
@@ -15,6 +17,7 @@ def create_account(account_dto: AccountCreateDto) -> str:
     token = jwt_token.encode(account, timedelta(hours=1))
     account.token = token
 
-    repos.add_account(account=account)
+    db_session.session.add(account)
+    db_session.commit()
 
     return account.token

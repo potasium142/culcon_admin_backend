@@ -9,13 +9,11 @@ class ProductDoc(BaseModel):
     name: str
     description: str
     infos: dict[str, str]
-    tags: list[str]
     images_url: list[str]
-    price: float
-    sale_percent: float
-    day_before_expiry: int
     article_md: str
     type: ProductType
     model_config = ConfigDict(
-        populate_by_name=True, arbitrary_types_allowed=True, use_enum_values=True
+        populate_by_name=True,
+        arbitrary_types_allowed=True,
+        use_enum_values=True,
     )

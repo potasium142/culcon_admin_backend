@@ -1,9 +1,10 @@
-from . import yolo
+from . import yolo, clip
+
+weights_dir = "./ai/weights"
 
 
 def load_all_model() -> dict:
-    models = dict()
-
-    models["yolo"] = yolo.load_yolo("./ai/weights/yolo11m-cls.pt")
-
-    return models
+    return {
+        "yolo": yolo.YOLOEmbed(f"{weights_dir}/yolo11m-cls.pt"),
+        "clip": clip.OpenCLIP("ViT-L-14-336", "./ai/weights/ViT-L-14-336px.pt"),
+    }

@@ -16,6 +16,7 @@ class PaymentTransaction(Base):
     create_time: orm.Mapped[datetime] = orm.mapped_column(sqltypes.TIMESTAMP)
     payment_id: orm.Mapped[str | None] = orm.mapped_column(sqltypes.VARCHAR(255))
     refund_id: orm.Mapped[str | None] = orm.mapped_column(sqltypes.VARCHAR(255))
+    url: orm.Mapped[str | None] = orm.mapped_column(sqltypes.VARCHAR(255))
     transaction_id: orm.Mapped[str | None] = orm.mapped_column(sqltypes.VARCHAR(255))
     status: orm.Mapped[PaymentStatus]
     amount: orm.Mapped[float] = orm.mapped_column(sqltypes.REAL)
