@@ -1,0 +1,21 @@
+fastapi[standard]==0.115.6
+fastapi-cli==0.0.7
+psycopg[binary]==3.2.3
+pyjwt==2.10.1
+passlib==1.7.4
+sqlalchemy==2.0.36
+sqlalchemy-utils==0.41.2
+pydantic==2.10.4
+bcrypt==4.2.1
+pymongo[srv]==4.10.1
+pgvector==0.3.6
+pydantic-settings==2.7.1
+ultralytics==8.3.57
+python-multipart
+cloudinary==1.42.1
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.5.1+cpu
+torchaudio==2.5.1+cpu
+torchvision==0.20.1+cpu
+
+open_clip_torch==2.30.0
