@@ -33,6 +33,11 @@ async def get():
     return db["Blog"].find()[0]
 
 
+@router.get("/mongo/get/id")
+async def get_id(id: str):
+    return db["Blog"].find_one({"_id": id})
+
+
 @router.post("/mongo/save", response_model=ProductDoc)
 async def save(blog: ProductDoc):
     db["Blog"].insert_one(blog.model_dump(by_alias=True))

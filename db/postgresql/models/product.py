@@ -1,5 +1,5 @@
 from datetime import datetime
-from enum import Enum, auto
+from enum import Enum
 
 import sqlalchemy as sqla
 from sqlalchemy import orm
@@ -58,6 +58,13 @@ class ProductPriceHistory(Base):
             name="product_price_history_pk",
         ),
     )
+
+    def to_list_instance(self) -> dict:
+        return {
+            "date": self.date,
+            "price": self.price,
+            "sale_percent": self.sale_percent,
+        }
 
 
 class ProductEmbedding(Base):

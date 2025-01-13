@@ -99,6 +99,25 @@ async def create_mealkit(
     }
 
 
+@router.put("/product/price/update")
+async def update_price(
+    product_id: str,
+    price: float,
+    sale_percent: float,
+):
+    ps.update_price(
+        product_id,
+        price,
+        sale_percent,
+    )
+    return {"message": "Price updated"}
+
+
+@router.get("/product/get")
+async def get_product(prod_id: str) -> dict:
+    return ps.get_product(prod_id)
+
+
 @router.get("/progress/get")
 async def get_progress(prog_id: int):
     return StreamingResponse(

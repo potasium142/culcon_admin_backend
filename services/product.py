@@ -242,3 +242,57 @@ def mealkit_creation(
     except Exception as e:
         pp.halt(prog_id)
         raise e
+
+
+def update_price(
+    prod_id: str,
+    price: float,
+    sale_percent: float,
+):
+    product_price = prod.ProductPriceHistory(
+        price=price,
+        sale_percent=sale_percent,
+        date=datetime.now(),
+        product_id=prod_id,
+    )
+
+    db_session.session.add(product_price)
+
+    product: prod.Product = db_session.session.query(prod.Product).get(prod_id)
+
+    product.price = price
+    product.sale_percent = sale_percent
+
+    db_session.commit()
+
+
+def get_product(prod_id: str):
+    product: prod.Product = db_session.session.query(prod.Product).get(prod_id)
+    product_price: list[prod.ProductPriceHistory] = (
+        db_session.session.query(prod.ProductPriceHistory)
+        .filter_by(product_id=prod_id)
+        .all()
+    )
+
+    if product.product_types == prod.ProductType.MEALKIT:
+        product_doc: dict = mongo_session["MealKitInfo"].find_one({"_id": prod_id})
+    else:
+        product_doc: dict = mongo_session["ProductInfo"].find_one({"_id": prod_id})
+
+    base_info = {
+        "id": product.id,
+        "product_name": product.product_name,
+        "available_quantity": product.available_quantity,
+        "product_type": product.product_types,
+        "product_status": product.product_status,
+        "price_list": [price.to_list_instance() for price in product_price],
+        "info": product_doc["infos"],
+        "images_url": product_doc["images_url"],
+        "article": product_doc["article_md"],
+    }
+
+    if product.product_types == prod.ProductType.MEALKIT:
+        base_info["instructions"] = product_doc["instructions"]
+        base_info["ingredients"] = product_doc["ingredients"]
+
+    return base_info
