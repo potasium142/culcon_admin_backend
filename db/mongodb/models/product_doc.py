@@ -1,9 +1,7 @@
-from dataclasses import dataclass
 from pydantic import BaseModel, ConfigDict, Field
 from db.postgresql.models.product import ProductType
 
 
-@dataclass
 class ProductDoc(BaseModel):
     id: str = Field(alias="_id")
     name: str

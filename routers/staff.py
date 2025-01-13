@@ -27,7 +27,8 @@ async def create_product(
     req: Request,
     product_detail: prod.ProductCreation,
     main_image: Annotated[UploadFile, File(media_type="image")],
-    additional_images: list[UploadFile] | None = None,
+    additional_images: list[Annotated[UploadFile, File(media_type="image")]]
+    | None = None,
 ):
     bg_id = pp.new()
     yolo_model = req.state.ai_models["yolo"]
@@ -45,6 +46,45 @@ async def create_product(
 
     bg_task.add_task(
         ps.create_product,
+        product_detail,
+        additional_images_preload,
+        main_image_preload,
+        yolo_model,
+        clip_model,
+        pp,
+        bg_id,
+    )
+
+    return {
+        "progress_id": bg_id,
+    }
+
+
+@router.post("/mealkit/create")
+async def create_mealkit(
+    bg_task: BackgroundTasks,
+    req: Request,
+    product_detail: prod.MealKitCreation,
+    main_image: Annotated[UploadFile, File(media_type="image")],
+    additional_images: list[Annotated[UploadFile, File(media_type="image")]]
+    | None = None,
+):
+    bg_id = pp.new()
+    yolo_model = req.state.ai_models["yolo"]
+    clip_model = req.state.ai_models["clip"]
+
+    main_image_preload = await main_image.read()
+
+    pp.update(bg_id, "Preloaded main image")
+
+    if additional_images is None:
+        additional_images_preload = []
+    else:
+        additional_images_preload = [await f.read() for f in additional_images]
+    pp.update(bg_id, "Preloaded additional images")
+
+    bg_task.add_task(
+        ps.mealkit_creation,
         product_detail,
         additional_images_preload,
         main_image_preload,
