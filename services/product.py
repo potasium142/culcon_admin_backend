@@ -10,12 +10,12 @@ from db.mongodb import db as mongo_session
 from io import BytesIO
 from dtos.request.product import ProductCreation, MealKitCreation
 from ai import clip, yolo
-from PIL import Image
+from PIL import Image, ImageFile
 from etc.progress_tracker import ProgressTracker
 from etc import cloudinary
 
 
-def read_image(file: bytes) -> Image:
+def read_image(file: bytes) -> ImageFile.ImageFile:
     return Image.open(BytesIO(file))
 
 
@@ -49,7 +49,10 @@ def __upload_images(
     img_dir: str,
     main_image: bytes,
     additional_images: list[bytes],
+    pp: ProgressTracker,
+    prog_id: int,
 ) -> tuple[str, list[str]]:
+    upload_img_task = pp.new_subtask(prog_id, "Upload image")
     main_image_url = cloudinary.upload(
         main_image,
         img_dir,
@@ -65,6 +68,13 @@ def __upload_images(
             f"{i + 1}",
         )
         images_url.append(img_url)
+        pp.update_subtask(
+            prog_id,
+            upload_img_task,
+            progress=i,
+        )
+
+    pp.close_subtask(prog_id, upload_img_task)
     return main_image_url, images_url
 
 
@@ -79,7 +89,7 @@ def __create_general_product(
     pp: ProgressTracker,
     prog_id: int,
 ) -> None:
-    pp.update(prog_id, "Embedding data")
+    embed_task_id = pp.new_subtask(prog_id, "Embedding")
     description_embed, images_embed_clip, images_embed_yolo = __embed_data(
         yolo_model,
         clip_model,
@@ -87,8 +97,12 @@ def __create_general_product(
         additional_images,
         main_image,
     )
-    pp.update(prog_id, "Embedded data")
+    pp.close_subtask(
+        prog_id,
+        embed_task_id,
+    )
 
+    save_db_task = pp.new_subtask(prog_id, "Save to db")
     product = prod.Product(
         id=prod_id,
         product_name=prod_info.product_name,
@@ -119,14 +133,14 @@ def __create_general_product(
 
     db_session.session.add(product_embedded)
 
-    pp.update(prog_id, "Saved to local database")
-
     db_session.commit()
+
+    pp.close_subtask(prog_id, save_db_task)
 
 
 def create_product(
     prod_info: ProductCreation,
-    additional_images: list[bytes] | None,
+    additional_images: list[bytes],
     main_image: bytes,
     yolo_model: yolo.YOLOEmbed,
     clip_model: clip.OpenCLIP,
@@ -138,11 +152,12 @@ def create_product(
         prod_id = f"{prod_info.product_type}_{name}"
         image_dir = f"{IMG_DIR}/{prod_id}"
 
-        pp.update(prog_id, "Uploading images")
         main_image_url, images_url = __upload_images(
             image_dir,
             main_image,
             additional_images,
+            pp,
+            prog_id,
         )
 
         __create_general_product(
@@ -172,17 +187,16 @@ def create_product(
                 by_alias=True,
             )
         )
-        pp.update(prog_id, "Saved to mongodb")
 
         pp.complete(prog_id)
     except Exception as e:
-        pp.halt(prog_id)
+        pp.halt(prog_id, str(e))
         raise e
 
 
 def mealkit_creation(
     prod_info: MealKitCreation,
-    additional_images: list[bytes] | None,
+    additional_images: list[bytes],
     main_image: bytes,
     yolo_model: yolo.YOLOEmbed,
     clip_model: clip.OpenCLIP,
@@ -200,11 +214,12 @@ def mealkit_creation(
         ):
             raise Exception("Product exist")
 
-        pp.update(prog_id, "Uploading images")
         main_image_url, images_url = __upload_images(
             image_dir,
             main_image,
             additional_images,
+            pp,
+            prog_id,
         )
 
         __create_general_product(
@@ -236,11 +251,10 @@ def mealkit_creation(
                 by_alias=True,
             )
         )
-        pp.update(prog_id, "Saved to mongodb")
 
         pp.complete(prog_id)
     except Exception as e:
-        pp.halt(prog_id)
+        pp.halt(prog_id, str(e))
         raise e
 
 

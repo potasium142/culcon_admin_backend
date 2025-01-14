@@ -1,9 +1,10 @@
+import enum
 from typing import Annotated
 from dtos.request import product as prod
 from fastapi import APIRouter, Depends, File, Request, UploadFile, BackgroundTasks
 from services import product as ps
 from fastapi.responses import StreamingResponse
-from etc.progress_tracker import ProgressTracker
+from etc.progress_tracker import ProgressTracker, Status
 
 import auth
 
@@ -34,16 +35,22 @@ async def create_product(
     yolo_model = req.state.ai_models["yolo"]
     clip_model = req.state.ai_models["clip"]
 
+    mip = pp.new_subtask(bg_id, "Preloaded main")
+
     main_image_preload = await main_image.read()
 
-    pp.update(bg_id, "Preloaded main image")
+    additional_images_preload: list[bytes] = []
 
-    if additional_images is None:
-        additional_images_preload = []
-    else:
-        additional_images_preload = [await f.read() for f in additional_images]
-    pp.update(bg_id, "Preloaded additional images")
+    if additional_images:
+        for i, f in enumerate(additional_images):
+            img = await f.read()
+            additional_images_preload.append(img)
+            pp.update_subtask(bg_id, mip, progress=i + 1)
 
+    pp.close_subtask(
+        bg_id,
+        mip,
+    )
     bg_task.add_task(
         ps.create_product,
         product_detail,
@@ -73,15 +80,22 @@ async def create_mealkit(
     yolo_model = req.state.ai_models["yolo"]
     clip_model = req.state.ai_models["clip"]
 
+    mip = pp.new_subtask(bg_id, "Preloaded main")
+
     main_image_preload = await main_image.read()
 
-    pp.update(bg_id, "Preloaded main image")
+    additional_images_preload: list[bytes] = []
 
-    if additional_images is None:
-        additional_images_preload = []
-    else:
-        additional_images_preload = [await f.read() for f in additional_images]
-    pp.update(bg_id, "Preloaded additional images")
+    if additional_images:
+        for i, f in enumerate(additional_images):
+            img = await f.read()
+            additional_images_preload.append(img)
+            pp.update_subtask(bg_id, mip, progress=i + 1)
+
+    pp.close_subtask(
+        bg_id,
+        mip,
+    )
 
     bg_task.add_task(
         ps.mealkit_creation,

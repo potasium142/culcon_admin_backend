@@ -1,5 +1,6 @@
 from datetime import datetime
 from enum import Enum
+from typing import Any
 
 import sqlalchemy as sqla
 from sqlalchemy import orm
@@ -59,7 +60,7 @@ class ProductPriceHistory(Base):
         ),
     )
 
-    def to_list_instance(self) -> dict:
+    def to_list_instance(self) -> dict[str, Any]:
         return {
             "date": self.date,
             "price": self.price,
