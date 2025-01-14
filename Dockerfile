@@ -8,10 +8,8 @@ EXPOSE 8000
 
 RUN apt update
 
-RUN apt install wget curl libpq-dev libgl1 libglib2.0-0 -y > /dev/null
+RUN apt install wget curl libpq-dev libgl1 libglib2.0-0 -y 
 
-RUN pip install -q -r requirements.txt
-
-RUN ./debian_setup.bash
+RUN pip install -r requirements.txt
 
 ENTRYPOINT ["fastapi","run","main.py"]
