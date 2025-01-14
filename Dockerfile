@@ -12,6 +12,4 @@ RUN apt install wget curl libpq-dev libgl1 libglib2.0-0 -y > /dev/null
 
 RUN pip install -q -r requirements.txt
 
-RUN ./debian_setup.bash
-
 ENTRYPOINT ["fastapi","run","main.py"]
