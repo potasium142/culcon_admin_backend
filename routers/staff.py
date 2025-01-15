@@ -1,10 +1,9 @@
-import enum
-from typing import Annotated
+from typing import Annotated, Any
 from dtos.request import product as prod
 from fastapi import APIRouter, Depends, File, Request, UploadFile, BackgroundTasks
 from services import product as ps
 from fastapi.responses import StreamingResponse
-from etc.progress_tracker import ProgressTracker, Status
+from etc.progress_tracker import pp
 
 import auth
 
@@ -14,8 +13,6 @@ router = APIRouter(prefix="/api/staff", tags=["Staff"])
 
 oauth2_scheme = auth.oauth2_scheme
 
-pp = ProgressTracker()
-
 
 @router.get("/permission_test")
 async def test(permission: Permission):
@@ -24,6 +21,7 @@ async def test(permission: Permission):
 
 @router.post("/product/create")
 async def create_product(
+    _permission: Permission,
     bg_task: BackgroundTasks,
     req: Request,
     product_detail: prod.ProductCreation,
@@ -69,6 +67,7 @@ async def create_product(
 
 @router.post("/mealkit/create")
 async def create_mealkit(
+    _permission: Permission,
     bg_task: BackgroundTasks,
     req: Request,
     product_detail: prod.MealKitCreation,
@@ -115,6 +114,7 @@ async def create_mealkit(
 
 @router.put("/product/price/update")
 async def update_price(
+    _permission: Permission,
     product_id: str,
     price: float,
     sale_percent: float,
@@ -125,16 +125,3 @@ async def update_price(
         sale_percent,
     )
     return {"message": "Price updated"}
-
-
-@router.get("/product/get")
-async def get_product(prod_id: str) -> dict:
-    return ps.get_product(prod_id)
-
-
-@router.get("/progress/get")
-async def get_progress(prog_id: int):
-    return StreamingResponse(
-        pp.get(prog_id),
-        media_type="text/event-stream",
-    )

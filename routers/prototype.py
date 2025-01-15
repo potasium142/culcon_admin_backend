@@ -1,5 +1,4 @@
-from typing import Annotated
-from fastapi import APIRouter, Depends, UploadFile, BackgroundTasks
+from fastapi import APIRouter, UploadFile, BackgroundTasks
 from fastapi.responses import StreamingResponse
 from dtos.request.account import AccountCreateDto
 
@@ -9,11 +8,6 @@ from db.mongodb.models.product_doc import ProductDoc
 from time import sleep
 from etc import cloudinary, progress_tracker
 
-
-import auth
-
-
-Permission = Annotated[bool, Depends(auth.manager_permission)]
 
 router = APIRouter(prefix="/test", tags=["Prototype"])
 

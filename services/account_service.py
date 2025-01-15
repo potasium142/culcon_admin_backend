@@ -1,8 +1,6 @@
 from dtos.request.account import AccountCreateDto
 from datetime import timedelta
 
-from db.postgresql.repos import account_repo as repos
-
 from auth import encryption, jwt_token
 
 from db.postgresql.db_session import db_session

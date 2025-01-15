@@ -135,3 +135,6 @@ class ProgressTracker:
 
         if prog.tracker_amount == 0:
             del self.process[prog_id]
+
+
+pp = ProgressTracker()
