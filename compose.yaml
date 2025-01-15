@@ -1,0 +1,27 @@
+services:
+    culcon_db:
+        container_name: culcon_db
+        image: docker.io/pgvector/pgvector:0.8.0-pg17
+        ports:
+            - "5432:5432"
+        environment:
+            POSTGRES_USER: culcon
+            POSTGRES_PASSWORD: culcon
+            POSTGRES_DB: culcon
+
+    app:
+        image: culcon:admin_backend
+        container_name: culcon_admin_backend
+        entrypoint: bash -c 'sleep 5 && fastapi run'
+
+        volumes:
+            - ./weights:/workdir/ai/weights
+        ports:
+            - "8000:8000"
+        depends_on:
+            - culcon_db
+        environment:
+            DB_URL: "postgresql+psycopg://culcon:culcon@culcon_db:5432/culcon"
+
+volumes:
+    weights:
