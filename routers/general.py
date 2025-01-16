@@ -16,6 +16,11 @@ async def get_product(prod_id: str):
     return ps.get_product(prod_id)
 
 
+@router.get("/product/get_all")
+async def get_all_product():
+    return ps.get_list_product()
+
+
 @router.get("/progress/get")
 async def get_progress(prog_id: int):
     return StreamingResponse(

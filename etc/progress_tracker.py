@@ -70,13 +70,15 @@ class ProgressTracker:
         self,
         prog_id: int,
         description: str,
+        status: Status = Status.UPDATED,
+        progress: int = 0,
     ) -> int:
         id: int = len(self.process[prog_id].subtask)
 
         self.process[prog_id].subtask[id] = SubTask(
-            status=Status.UPDATED,
+            status=status,
             description=description,
-            progress=0,
+            progress=progress,
         )
 
         return id

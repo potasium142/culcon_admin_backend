@@ -11,7 +11,7 @@ from io import BytesIO
 from dtos.request.product import ProductCreation, MealKitCreation
 from ai import clip, yolo
 from PIL import Image, ImageFile
-from etc.progress_tracker import ProgressTracker
+from etc.progress_tracker import ProgressTracker, Status
 from etc import cloudinary
 
 
@@ -188,6 +188,12 @@ def create_product(
             )
         )
 
+        _ = pp.new_subtask(
+            prog_id,
+            f'{{"product_id" : "{prod_id}"}}',
+            Status.DONE,
+        )
+
         pp.complete(prog_id)
     except Exception as e:
         pp.halt(prog_id, str(e))
@@ -252,6 +258,11 @@ def mealkit_creation(
             )
         )
 
+        _ = pp.new_subtask(
+            prog_id,
+            f'{{"product_id" : "{prod_id}"}}',
+            Status.DONE,
+        )
         pp.complete(prog_id)
     except Exception as e:
         pp.halt(prog_id, str(e))
@@ -278,6 +289,29 @@ def update_price(
     product.sale_percent = sale_percent
 
     db_session.commit()
+
+
+def get_list_product():
+    products: list[prod.Product] = db_session.session.query(prod.Product).all()
+
+    rtn_products: list[
+        dict[str, str | float | int | prod.ProductStatus | prod.ProductType]
+    ] = list(
+        map(
+            lambda prod: {
+                "id": prod.id,
+                "name": prod.product_name,
+                "price": prod.price,
+                "type": prod.product_types,
+                "status": prod.product_status,
+                "image_url": prod.image_url,
+                "available_quantity": prod.available_quantity,
+            },
+            products,
+        )
+    )
+
+    return rtn_products
 
 
 def get_product(prod_id: str):

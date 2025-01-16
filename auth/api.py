@@ -24,7 +24,10 @@ async def login(login_form: Annotated[OAuth2PasswordRequestForm, Depends()]) -> 
     )
 
     if not user:
-        raise HTTPException(status_code=400, detail="No such account with username")
+        raise HTTPException(
+            status_code=400,
+            detail="No such account with username",
+        )
 
     is_password_match = encryption.verify(login_form.password, user.password)
 
@@ -36,3 +39,20 @@ async def login(login_form: Annotated[OAuth2PasswordRequestForm, Depends()]) -> 
     account_repo.update_token(user.id, token)
 
     return Token(access_token=token)
+
+
+@router.post("/logout")
+async def logout(token: str) -> dict[str, str]:
+    user = account_repo.find_by_token(token)
+
+    if not user:
+        raise HTTPException(
+            status_code=400,
+            detail="No such account with token",
+        )
+
+    account_repo.update_token(user.id, "")
+
+    return {
+        "message": "Logout successfully",
+    }
