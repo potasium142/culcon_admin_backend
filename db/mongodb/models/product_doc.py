@@ -1,5 +1,4 @@
 from pydantic import BaseModel, ConfigDict, Field
-from db.postgresql.models.product import ProductType
 
 
 class ProductDoc(BaseModel):

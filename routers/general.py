@@ -11,12 +11,12 @@ router = APIRouter(prefix="/api/general", tags=["General"])
 oauth2_scheme = auth.oauth2_scheme
 
 
-@router.get("/product/get")
+@router.get("/product/fetch")
 async def get_product(prod_id: str):
     return ps.get_product(prod_id)
 
 
-@router.get("/product/get_all")
+@router.get("/product/fetch_all")
 async def get_all_product():
     return ps.get_list_product()
 

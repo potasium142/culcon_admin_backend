@@ -2,7 +2,9 @@ from typing import Annotated
 
 from dtos.request import product as prod
 from fastapi import APIRouter, Depends, File, Request, UploadFile, BackgroundTasks
+from dtos.request.blog import BlogCreation
 from services import product as ps
+from services import blog
 from etc.progress_tracker import pp
 from db.postgresql.models import product
 
@@ -168,3 +170,42 @@ async def update_price(
         sale_percent,
     )
     return {"message": "Price updated"}
+
+
+@router.post("/blog/create")
+async def create_blog(
+    _: Permission,
+    blog_info: BlogCreation,
+    main_image: Annotated[UploadFile, File(media_type="image")],
+):
+    main_image_preload = await main_image.read()
+
+    return blog.create(
+        blog_info,
+        main_image_preload,
+    )
+
+
+@router.post("/blog/edit")
+async def edit_blog(
+    _: Permission,
+    id: str,
+    blog_info: BlogCreation,
+):
+    blog.edit(id, blog_info)
+
+
+@router.get("/blog/comment")
+async def get_blog_comment(
+    _: Permission,
+    id: str,
+):
+    return blog.get_comment(id)
+
+
+@router.get("/blog/fetch")
+async def get_blog(
+    _: Permission,
+    id: str,
+):
+    return blog.get(id)

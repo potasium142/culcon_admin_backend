@@ -233,12 +233,12 @@ def update_info(
     match prod_info:
         case ProductUpdate():
             mongo_session["ProductInfo"].update_one(
-                {"id": prod_id},
+                {"_id": prod_id},
                 {"$set": prod_info.model_dump(by_alias=True)},
             )
         case ProductCreation():
             mongo_session["MealKitInfo"].update_one(
-                {"id": prod_id},
+                {"_id": prod_id},
                 {"$set": prod_info.model_dump(by_alias=True)},
             )
 

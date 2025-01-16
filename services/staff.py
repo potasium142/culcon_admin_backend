@@ -1,12 +1,16 @@
+from webbrowser import get
 from db.postgresql.db_session import db_session
+from db.postgresql.models.staff_account import AccountStatus, AccountType, StaffAccount
 
 
 def get_all_staff():
-    pass
+    return (
+        db_session.session.query(StaffAccount).filter_by(type=AccountType.STAFF).all()
+    )
 
 
-def get_staff_profile():
-    pass
+def get_staff_profile(id: str):
+    return db_session.session.query(StaffAccount).get(id)
 
 
 def edit_staff_profile():
@@ -17,9 +21,11 @@ def edit_employee_info():
     pass
 
 
-def create_staff():
-    pass
+def set_staff_status(
+    id: str,
+    status: AccountStatus,
+):
+    staff: StaffAccount = db_session.session.query(StaffAccount).get(id)
+    staff.status = AccountStatus.DISABLE
 
-
-def disable_staff(staf_id: str):
-    pass
+    db_session.commit()
