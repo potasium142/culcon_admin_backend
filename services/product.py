@@ -1,6 +1,7 @@
 import re
 
 from numpy import ndarray
+from db import mongodb
 from db.mongodb.models.product_doc import ProductDoc
 from db.mongodb.models.mealkit_doc import MealkitDoc
 from datetime import datetime
@@ -8,10 +9,15 @@ from db.postgresql.models import product as prod
 from db.postgresql.db_session import db_session
 from db.mongodb import db as mongo_session
 from io import BytesIO
-from dtos.request.product import ProductCreation, MealKitCreation
+from dtos.request.product import (
+    ProductCreation,
+    MealKitCreation,
+    ProductUpdate,
+    MealKitUpdate,
+)
 from ai import clip, yolo
 from PIL import Image, ImageFile
-from etc.progress_tracker import ProgressTracker, Status
+from etc.progress_tracker import ProgressTracker
 from etc import cloudinary
 
 
@@ -138,70 +144,8 @@ def __create_general_product(
     pp.close_subtask(prog_id, save_db_task)
 
 
-def create_product(
-    prod_info: ProductCreation,
-    additional_images: list[bytes],
-    main_image: bytes,
-    yolo_model: yolo.YOLOEmbed,
-    clip_model: clip.OpenCLIP,
-    pp: ProgressTracker,
-    prog_id: int,
-) -> None:
-    try:
-        name = re.sub(r"\s+", "", prod_info.product_name)
-        prod_id = f"{prod_info.product_type}_{name}"
-        image_dir = f"{IMG_DIR}/{prod_id}"
-
-        main_image_url, images_url = __upload_images(
-            image_dir,
-            main_image,
-            additional_images,
-            pp,
-            prog_id,
-        )
-
-        __create_general_product(
-            prod_id=prod_id,
-            prod_info=prod_info,
-            additional_images=additional_images,
-            main_image=main_image,
-            main_image_url=main_image_url,
-            yolo_model=yolo_model,
-            clip_model=clip_model,
-            pp=pp,
-            prog_id=prog_id,
-        )
-
-        product_doc = ProductDoc(
-            id=prod_id,
-            name=prod_info.product_name,
-            description=prod_info.description,
-            infos=prod_info.infos,
-            images_url=images_url,
-            article_md=prod_info.article_md,
-            type=prod_info.product_type,
-        )
-
-        mongo_session["ProductInfo"].insert_one(
-            product_doc.model_dump(
-                by_alias=True,
-            )
-        )
-
-        _ = pp.new_subtask(
-            prog_id,
-            f'{{"product_id" : "{prod_id}"}}',
-            Status.DONE,
-        )
-
-        pp.complete(prog_id)
-    except Exception as e:
-        pp.halt(prog_id, str(e))
-        raise e
-
-
-def mealkit_creation(
-    prod_info: MealKitCreation,
+def product_creation(
+    prod_info: MealKitCreation | ProductCreation,
     additional_images: list[bytes],
     main_image: bytes,
     yolo_model: yolo.YOLOEmbed,
@@ -240,33 +184,63 @@ def mealkit_creation(
             prog_id=prog_id,
         )
 
-        product_doc = MealkitDoc(
-            id=prod_id,
-            name=prod_info.product_name,
-            description=prod_info.description,
-            infos=prod_info.infos,
-            images_url=images_url,
-            article_md=prod_info.article_md,
-            type=prod_info.product_type,
-            ingredients=prod_info.ingredients,
-            instructions=prod_info.instructions,
-        )
+        match prod_info:
+            case MealKitCreation():
+                product_doc = MealkitDoc(
+                    _id=prod_id,
+                    name=prod_info.product_name,
+                    description=prod_info.description,
+                    infos=prod_info.infos,
+                    images_url=images_url,
+                    article_md=prod_info.article_md,
+                    ingredients=prod_info.ingredients,
+                    instructions=prod_info.instructions,
+                    day_before_expiry=prod_info.day_before_expiry,
+                )
+                mongo_session["MealKitInfo"].insert_one(
+                    product_doc.model_dump(
+                        by_alias=True,
+                    )
+                )
+            case ProductCreation():
+                product_doc = ProductDoc(
+                    _id=prod_id,
+                    name=prod_info.product_name,
+                    description=prod_info.description,
+                    infos=prod_info.infos,
+                    images_url=images_url,
+                    article_md=prod_info.article_md,
+                    day_before_expiry=prod_info.day_before_expiry,
+                )
+                mongo_session["ProductInfo"].insert_one(
+                    product_doc.model_dump(
+                        by_alias=True,
+                    )
+                )
 
-        mongo_session["MealKitInfo"].insert_one(
-            product_doc.model_dump(
-                by_alias=True,
-            )
-        )
-
-        _ = pp.new_subtask(
+        pp.complete(
             prog_id,
-            f'{{"product_id" : "{prod_id}"}}',
-            Status.DONE,
+            {"product_id": prod_id},
         )
-        pp.complete(prog_id)
     except Exception as e:
         pp.halt(prog_id, str(e))
-        raise e
+
+
+def update_info(
+    prod_id: str,
+    prod_info: ProductUpdate | MealKitUpdate,
+) -> None:
+    match prod_info:
+        case ProductUpdate():
+            mongo_session["ProductInfo"].update_one(
+                {"id": prod_id},
+                {"$set": prod_info.model_dump(by_alias=True)},
+            )
+        case ProductCreation():
+            mongo_session["MealKitInfo"].update_one(
+                {"id": prod_id},
+                {"$set": prod_info.model_dump(by_alias=True)},
+            )
 
 
 def update_price(
@@ -287,6 +261,29 @@ def update_price(
 
     product.price = price
     product.sale_percent = sale_percent
+
+    db_session.commit()
+
+
+def update_quantity(
+    prod_id: str,
+    amount: int,
+):
+    product: prod.Product = db_session.session.query(prod.Product).get(prod_id)
+
+    product.available_quantity = amount
+    product.product_status = prod.ProductStatus.IN_STOCK
+
+    db_session.commit()
+
+
+def update_status(
+    prod_id: str,
+    status: prod.ProductStatus,
+):
+    product: prod.Product = db_session.session.query(prod.Product).get(prod_id)
+
+    product.product_status = status
 
     db_session.commit()
 

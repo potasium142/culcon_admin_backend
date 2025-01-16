@@ -10,7 +10,7 @@ services:
             POSTGRES_DB: culcon
 
     app:
-        image: culcon:admin_backend
+        image: docker.io/giangltce/culcon_admin_backend:main
         container_name: culcon_admin_backend
         entrypoint: bash -c 'sleep 5 && fastapi run'
 

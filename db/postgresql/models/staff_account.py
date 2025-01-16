@@ -14,9 +14,9 @@ class AccountType(Flag):
     STAFF = 2
 
 
-class AccountStatus(Enum):
-    ACTIVE = 1
-    DISABLE = 2
+class AccountStatus(str, Enum):
+    ACTIVE = "ACTIVE"
+    DISABLE = "DISABLE"
 
 
 class EmployeeInfo(Base):

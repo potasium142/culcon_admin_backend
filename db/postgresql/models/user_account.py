@@ -11,10 +11,10 @@ from db.postgresql.models import Base
 
 
 class UserAccountStatus(Enum):
-    NON_ACTIVE = 1
-    NORMAL = 2
-    BANNED = 3
-    DEACTIVATE = 4
+    NON_ACTIVE = "NON_ACTIVE"
+    NORMAL = "NORMAL"
+    BANNED = "BANNED"
+    DEACTIVATE = "DEACTIVATE"
 
 
 class UserAccount(Base):

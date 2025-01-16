@@ -1,9 +1,10 @@
-from typing import Annotated, Any
+from typing import Annotated
+
 from dtos.request import product as prod
 from fastapi import APIRouter, Depends, File, Request, UploadFile, BackgroundTasks
 from services import product as ps
-from fastapi.responses import StreamingResponse
 from etc.progress_tracker import pp
+from db.postgresql.models import product
 
 import auth
 
@@ -15,7 +16,7 @@ oauth2_scheme = auth.oauth2_scheme
 
 
 @router.get("/permission_test")
-async def test(permission: Permission):
+async def test(_permission: Permission):
     return "ok"
 
 
@@ -50,7 +51,7 @@ async def create_product(
         mip,
     )
     bg_task.add_task(
-        ps.create_product,
+        ps.product_creation,
         product_detail,
         additional_images_preload,
         main_image_preload,
@@ -97,7 +98,7 @@ async def create_mealkit(
     )
 
     bg_task.add_task(
-        ps.mealkit_creation,
+        ps.product_creation,
         product_detail,
         additional_images_preload,
         main_image_preload,
@@ -112,7 +113,49 @@ async def create_mealkit(
     }
 
 
-@router.put("/product/price/update")
+@router.post("/product/update/info/prod")
+async def update_info_prod(
+    _: Permission,
+    prod_id: str,
+    info: prod.ProductUpdate,
+):
+    ps.update_info(
+        prod_id,
+        info,
+    )
+
+
+@router.post("/product/update/info/mealkit")
+async def update_info_mk(
+    _: Permission,
+    prod_id: str,
+    info: prod.MealKitUpdate,
+):
+    ps.update_info(
+        prod_id,
+        info,
+    )
+
+
+@router.patch("/product/update/status")
+async def update_status(
+    _: Permission,
+    prod_id: str,
+    status: product.ProductStatus,
+):
+    ps.update_status(prod_id, status)
+
+
+@router.patch("/product/update/quantity")
+async def update_quantity(
+    _: Permission,
+    prod_id: str,
+    quantity: int,
+):
+    ps.update_quantity(prod_id, quantity)
+
+
+@router.put("/product/update/price")
 async def update_price(
     _permission: Permission,
     product_id: str,

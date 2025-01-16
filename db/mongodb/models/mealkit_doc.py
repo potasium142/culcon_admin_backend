@@ -9,9 +9,9 @@ class MealkitDoc(BaseModel):
     infos: dict[str, str]
     images_url: list[str]
     article_md: str
-    type: ProductType
     instructions: list[str]
     ingredients: list[str]
+    day_before_expiry: int
     model_config = ConfigDict(
         populate_by_name=True,
         arbitrary_types_allowed=True,

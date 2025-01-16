@@ -22,7 +22,7 @@ class ProcessProgress(BaseModel):
         default=0,
         exclude=True,
     )
-    subtask: dict[int, SubTask] = dict()
+    subtask: dict[int | str, SubTask | dict[str, str]] = dict()
     status: Status = Status.UPDATED
 
 
@@ -90,7 +90,7 @@ class ProgressTracker:
         progress: int | None = None,
         status: None | Status = None,
     ):
-        subtask = self.process[prog_id].subtask[subtask_id]
+        subtask: SubTask = self.process[prog_id].subtask[subtask_id]
 
         if progress:
             subtask.progress = progress
@@ -101,7 +101,7 @@ class ProgressTracker:
         self.process[prog_id].status = Status.UPDATED
 
     def close_subtask(self, prog_id: int, subtask_id: int):
-        subtask = self.process[prog_id].subtask[subtask_id]
+        subtask: SubTask = self.process[prog_id].subtask[subtask_id]
 
         subtask.status = Status.DONE
 
@@ -111,7 +111,10 @@ class ProgressTracker:
     def complete(
         self,
         prog_id: int,
+        output: dict[str, str] | None = None,
     ):
+        if output:
+            self.process[prog_id].subtask["DONE"] = output
         self.process[prog_id].status = Status.DONE
 
     def halt(
@@ -119,13 +122,9 @@ class ProgressTracker:
         prog_id: int,
         msg: str,
     ):
-        id: int = len(self.process[prog_id].subtask)
-
-        self.process[prog_id].subtask[id] = SubTask(
-            status=Status.HALT,
-            description=msg,
-            progress=-1,
-        )
+        self.process[prog_id].subtask["HALT"] = {
+            "reason": msg,
+        }
 
         self.process[prog_id].status = Status.HALT
 

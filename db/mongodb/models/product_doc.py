@@ -9,7 +9,7 @@ class ProductDoc(BaseModel):
     infos: dict[str, str]
     images_url: list[str]
     article_md: str
-    type: ProductType
+    day_before_expiry: int
     model_config = ConfigDict(
         populate_by_name=True,
         arbitrary_types_allowed=True,

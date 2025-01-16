@@ -19,10 +19,10 @@ class ProductType(str, Enum):
     MEALKIT = "MK"
 
 
-class ProductStatus(Enum):
-    IN_STOCK = 1
-    OUT_OF_STOCK = 2
-    NO_LONGER_IN_SALE = 3
+class ProductStatus(str, Enum):
+    IN_STOCK = "IN_STOCK"
+    OUT_OF_STOCK = "OUT_OF_STOCK"
+    NO_LONGER_IN_SALE = "NO_LONGER_IN_SALE"
 
 
 class Product(Base):
