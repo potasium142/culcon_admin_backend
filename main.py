@@ -10,24 +10,6 @@ from fastapi.middleware.cors import CORSMiddleware
 
 preload = dict()
 
-app = FastAPI()
-
-origins = [
-    "http://localhost",
-    "http://localhost:8080",
-    "http://localhost:3000",
-    "*",
-    "**",
-]
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -35,6 +17,18 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+
+origins = [
+    "http://localhost:3000",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_headers=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+)
 
 app.include_router(dev.router)
 app.include_router(general.router)

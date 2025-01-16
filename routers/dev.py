@@ -14,3 +14,8 @@ router = APIRouter(prefix="/dev", tags=["Dev"])
 async def create(account: AccountCreateDto) -> dict[str, str]:
     token = acc_sv.create_account(account)
     return {"access_token": token}
+
+
+@router.get("/cors_test")
+async def cors() -> str:
+    return "CORS"
