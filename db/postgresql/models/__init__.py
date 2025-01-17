@@ -6,5 +6,6 @@ __all__ = [
     "user_account",
     "order_history",
     "transaction",
+    "blog",
 ]
 Base = declarative_base()

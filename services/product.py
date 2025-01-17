@@ -1,13 +1,10 @@
 import re
 
 from numpy import ndarray
-from db import mongodb
-from db.mongodb.models.product_doc import ProductDoc
-from db.mongodb.models.mealkit_doc import MealkitDoc
+from db.postgresql.models.blog import ProductDoc
 from datetime import datetime
 from db.postgresql.models import product as prod
 from db.postgresql.db_session import db_session
-from db.mongodb import db as mongo_session
 from io import BytesIO
 from dtos.request.product import (
     ProductCreation,
@@ -184,44 +181,27 @@ def product_creation(
             prog_id=prog_id,
         )
 
+        product_doc = ProductDoc(
+            id=prod_id,
+            description=prod_info.description,
+            infos=prod_info.infos,
+            images_url=images_url,
+            article_md=prod_info.article_md,
+            day_before_expiry=prod_info.day_before_expiry,
+        )
+
         match prod_info:
             case MealKitCreation():
-                product_doc = MealkitDoc(
-                    _id=prod_id,
-                    name=prod_info.product_name,
-                    description=prod_info.description,
-                    infos=prod_info.infos,
-                    images_url=images_url,
-                    article_md=prod_info.article_md,
-                    ingredients=prod_info.ingredients,
-                    instructions=prod_info.instructions,
-                    day_before_expiry=prod_info.day_before_expiry,
-                )
-                mongo_session["MealKitInfo"].insert_one(
-                    product_doc.model_dump(
-                        by_alias=True,
-                    )
-                )
-            case ProductCreation():
-                product_doc = ProductDoc(
-                    _id=prod_id,
-                    name=prod_info.product_name,
-                    description=prod_info.description,
-                    infos=prod_info.infos,
-                    images_url=images_url,
-                    article_md=prod_info.article_md,
-                    day_before_expiry=prod_info.day_before_expiry,
-                )
-                mongo_session["ProductInfo"].insert_one(
-                    product_doc.model_dump(
-                        by_alias=True,
-                    )
-                )
+                product_doc.ingredients = prod_info.ingredients
+                product_doc.instructions = prod_info.instructions
+
+        db_session.session.add(product_doc)
 
         pp.complete(
             prog_id,
             {"product_id": prod_id},
         )
+        db_session.commit()
     except Exception as e:
         pp.halt(prog_id, str(e))
 
@@ -230,17 +210,21 @@ def update_info(
     prod_id: str,
     prod_info: ProductUpdate | MealKitUpdate,
 ) -> None:
-    match prod_info:
-        case ProductUpdate():
-            mongo_session["ProductInfo"].update_one(
-                {"_id": prod_id},
-                {"$set": prod_info.model_dump(by_alias=True)},
-            )
-        case ProductCreation():
-            mongo_session["MealKitInfo"].update_one(
-                {"_id": prod_id},
-                {"$set": prod_info.model_dump(by_alias=True)},
-            )
+    prod_doc = db_session.session.get(ProductDoc, prod_id)
+
+    if not prod_doc:
+        raise Exception("Product doc not found")
+
+    prod_doc.day_before_expiry = prod_info.day_before_expiry
+    prod_doc.description = prod_info.description
+    prod_doc.article_md = prod_info.article_md
+    prod_doc.infos = prod_info.infos
+
+    if type(prod_info) is MealKitUpdate:
+        prod_doc.ingredients = prod_info.ingredients
+        prod_doc.instructions = prod_info.instructions
+
+    db_session.commit()
 
 
 def update_price(
@@ -257,7 +241,10 @@ def update_price(
 
     db_session.session.add(product_price)
 
-    product: prod.Product = db_session.session.query(prod.Product).get(prod_id)
+    product: prod.Product = db_session.session.get(prod.Product, prod_id)
+
+    if not product:
+        raise Exception("Product not found")
 
     product.price = price
     product.sale_percent = sale_percent
@@ -269,7 +256,10 @@ def update_quantity(
     prod_id: str,
     amount: int,
 ):
-    product: prod.Product = db_session.session.query(prod.Product).get(prod_id)
+    product: prod.Product = db_session.session.get(prod.Product, prod_id)
+
+    if not product:
+        raise Exception("Product not found")
 
     product.available_quantity = amount
     product.product_status = prod.ProductStatus.IN_STOCK
@@ -281,7 +271,10 @@ def update_status(
     prod_id: str,
     status: prod.ProductStatus,
 ):
-    product: prod.Product = db_session.session.query(prod.Product).get(prod_id)
+    product: prod.Product = db_session.session.get(prod.Product, prod_id)
+
+    if not product:
+        raise Exception("Product not found")
 
     product.product_status = status
 
@@ -312,17 +305,19 @@ def get_list_product():
 
 
 def get_product(prod_id: str):
-    product: prod.Product = db_session.session.query(prod.Product).get(prod_id)
+    product: prod.Product = db_session.session.get(prod.Product, prod_id)
     product_price: list[prod.ProductPriceHistory] = (
         db_session.session.query(prod.ProductPriceHistory)
         .filter_by(product_id=prod_id)
         .all()
     )
 
-    if product.product_types == prod.ProductType.MEALKIT:
-        product_doc: dict = mongo_session["MealKitInfo"].find_one({"_id": prod_id})
-    else:
-        product_doc: dict = mongo_session["ProductInfo"].find_one({"_id": prod_id})
+    product_doc = db_session.session.get(ProductDoc, prod_id)
+
+    if not product:
+        raise Exception("Product not found")
+    if not product_doc:
+        raise Exception("Product doc not found")
 
     base_info = {
         "id": product.id,
@@ -331,13 +326,13 @@ def get_product(prod_id: str):
         "product_type": product.product_types,
         "product_status": product.product_status,
         "price_list": [price.to_list_instance() for price in product_price],
-        "info": product_doc["infos"],
-        "images_url": product_doc["images_url"],
-        "article": product_doc["article_md"],
+        "info": product_doc.infos,
+        "images_url": product_doc.images_url,
+        "article": product_doc.article_md,
     }
 
-    if product.product_types == prod.ProductType.MEALKIT:
-        base_info["instructions"] = product_doc["instructions"]
-        base_info["ingredients"] = product_doc["ingredients"]
+    if product_doc.ingredients and product_doc.instructions:
+        base_info["instructions"] = product_doc.instructions
+        base_info["ingredients"] = product_doc.ingredients
 
     return base_info

@@ -7,9 +7,9 @@ from sqlalchemy import orm
 from sqlalchemy.sql import sqltypes
 
 from db.postgresql.models import Base
-from pgvector.sqlalchemy import Vector
-
 from sqlalchemy.dialects import postgresql
+
+from pgvector.sqlalchemy import Vector
 
 
 class ProductType(str, Enum):
@@ -38,7 +38,6 @@ class Product(Base):
     image_url: orm.Mapped[str]
     price: orm.Mapped[float] = orm.mapped_column(sqltypes.REAL)
     sale_percent: orm.Mapped[float] = orm.mapped_column(sqltypes.REAL)
-    product_price: orm.Mapped[list["ProductPriceHistory"]] = orm.relationship()
 
 
 class ProductPriceHistory(Base):
@@ -50,7 +49,8 @@ class ProductPriceHistory(Base):
         primary_key=True,
     )
     product_id: orm.Mapped[str] = orm.mapped_column(
-        sqla.ForeignKey("product.id"), primary_key=True
+        sqla.ForeignKey("product.id"),
+        primary_key=True,
     )
     __table_args__ = (
         sqla.UniqueConstraint(

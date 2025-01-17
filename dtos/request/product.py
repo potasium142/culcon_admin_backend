@@ -1,4 +1,4 @@
-from pydantic import BaseModel, model_validator, Field
+from pydantic import BaseModel, model_validator
 from pydantic_core import from_json
 from db.postgresql.models import product as p
 
@@ -23,18 +23,6 @@ class ProductCreation(BaseModel):
 
 
 class MealKitCreation(ProductCreation):
-    product_name: str
-    available_quantity: int
-    price: float
-    sale_percent: float
-    day_before_expiry: int
-    description: str
-    article_md: str
-    infos: dict[str, str]
-    product_type: p.ProductType = Field(
-        default=p.ProductType.MEALKIT,
-        exclude=True,
-    )
     instructions: list[str]
     ingredients: list[str]
 
@@ -60,11 +48,7 @@ class ProductUpdate(BaseModel):
         return value
 
 
-class MealKitUpdate(ProductCreation):
-    day_before_expiry: int
-    description: str
-    article_md: str
-    infos: dict[str, str]
+class MealKitUpdate(ProductUpdate):
     instructions: list[str]
     ingredients: list[str]
 

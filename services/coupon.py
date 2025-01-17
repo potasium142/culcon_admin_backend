@@ -34,7 +34,10 @@ def create_coupon(c: CouponCreation):
 def disable_coupon(
     id: str,
 ):
-    coupon: Coupon = db_session.session.query(Coupon).get(id)
+    coupon: Coupon = db_session.session.get(Coupon, id)
+
+    if not coupon:
+        raise Exception("Coupon not found")
     coupon.usage_left = -1
 
     db_session.commit()

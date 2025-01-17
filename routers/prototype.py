@@ -1,12 +1,10 @@
-from fastapi import APIRouter, UploadFile, BackgroundTasks
+from fastapi import APIRouter, BackgroundTasks
 from fastapi.responses import StreamingResponse
 from dtos.request.account import AccountCreateDto
 
 from services import account_service as acc_sv
-from db.mongodb import db
-from db.mongodb.models.product_doc import ProductDoc
 from time import sleep
-from etc import cloudinary, progress_tracker
+from etc import progress_tracker
 
 
 router = APIRouter(prefix="/test", tags=["Prototype"])
@@ -23,21 +21,6 @@ async def create(account: AccountCreateDto) -> dict[str, str]:
     return {"access_token": token}
 
 
-@router.get("/mongo/get")
-async def get():
-    return db["Blog"].find()[0]
-
-
-@router.get("/mongo/get/id")
-async def get_id(id: str):
-    return db["Blog"].find_one({"_id": id})
-
-
-@router.post("/mongo/save", response_model=ProductDoc)
-async def save(blog: ProductDoc):
-    db["Blog"].insert_one(blog.model_dump(by_alias=True))
-
-
 def test_stream_response(time, iter):
     for i in range(iter):
         sleep(time)
@@ -48,16 +31,6 @@ def test_stream_response(time, iter):
 async def streaming_response():
     return StreamingResponse(
         test_stream_response(1, 10), media_type="text/event-stream"
-    )
-
-
-@router.post("/upload_image")
-async def upload(image: UploadFile):
-    image_preload = await image.read()
-    return cloudinary.upload(
-        image=image_preload,
-        dir="test",
-        public_id=image.filename,
     )
 
 
