@@ -1,4 +1,3 @@
-from webbrowser import get
 from db.postgresql.db_session import db_session
 from db.postgresql.models.staff_account import AccountStatus, AccountType, StaffAccount
 
@@ -25,7 +24,11 @@ def set_staff_status(
     id: str,
     status: AccountStatus,
 ):
-    staff: StaffAccount = db_session.session.query(StaffAccount).get(id)
-    staff.status = AccountStatus.DISABLE
+    staff: StaffAccount = db_session.session.get(StaffAccount, id)
+
+    if not staff:
+        raise Exception("Staff account not found")
+
+    staff.status = status
 
     db_session.commit()
