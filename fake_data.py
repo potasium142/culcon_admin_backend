@@ -1,4 +1,5 @@
-from datetime import date, datetime
+from datetime import datetime
+from typing import Any
 import faker
 from passlib.context import CryptContext
 import sqlalchemy as sqla
@@ -7,12 +8,20 @@ import random
 from tqdm.auto import tqdm
 import json
 
+
 # ========================================================
 URL_DATABASE = "postgresql+psycopg://culcon:culcon@localhost:5432/culcon"
 
-USER_AMOUNT = 0
-STAFF_AMOUNT = 0
+INSERT_PRODUCT = False
 VARIANCE_OF_PRICE = 7
+
+USER_AMOUNT = 10
+
+STAFF_AMOUNT = 10
+
+BLOG_AMOUNT = 10
+
+COUPON_AMOUNT = 14
 # ========================================================
 
 fake = faker.Faker()
@@ -52,6 +61,16 @@ PRODUCT_PRICE_HISTORY_STATEMENT = sqla.text(
 PRODUCT_DOC_STATEMENT = sqla.text(
     "INSERT INTO product_doc(id, description, images_url, infos, ingredients, instructions, article_md, day_before_expiry) "
     + "VALUES (:id, :description, :images_url, :infos, :ingredients, :instructions, :article_md, :day_before_expiry)"
+)
+
+BLOG_STATEMENT = sqla.text(
+    "INSERT INTO blog(id, title, description, article, thumbnail, infos) "
+    + "VALUES (:id, :title, :description, :article, :thumbnail, :infos)"
+)
+
+COUPON_STATEMENT = sqla.text(
+    "INSERT INTO coupon(id,expire_time,sale_percent,usage_amount,usage_left) "
+    + " VALUES (:id,:expire_time,:sale_percent,:usage_amount,:usage_left)"
 )
 
 PRODUCT_IMAGES = [
@@ -164,8 +183,7 @@ created_staff_id = []
 for _ in tqdm(range(USER_AMOUNT)):
     username = fake.user_name()
     id = str(uuid.uuid4())
-    created_user_id.append(id)
-    data = {
+    data: Any = {
         "id": id,
         "email": fake.email(),
         "username": username,
@@ -186,7 +204,6 @@ for _ in tqdm(range(USER_AMOUNT)):
 for _ in tqdm(range(STAFF_AMOUNT)):
     username = fake.user_name()
     id = str(uuid.uuid4())
-    created_staff_id.append(id)
 
     account_data = {
         "id": id,
@@ -210,74 +227,102 @@ for _ in tqdm(range(STAFF_AMOUNT)):
     conn.execute(EMPLOYEE_INFO_STATEMENT, info_data)
 
 
-for i, (cate, foods) in enumerate(PRODUCT_TYPE_FOOD_NAMES.items()):
-    for food in foods:
-        product_id = f"{cate}_{food}"
+if INSERT_PRODUCT:
+    for i, (cate, foods) in enumerate(PRODUCT_TYPE_FOOD_NAMES.items()):
+        for food in foods:
+            product_id = f"{cate}_{food}"
 
-        current_price = round(random.uniform(14.2, 142.0), 2)
-        current_sale = round(random.uniform(0.0, 50.0), 2)
+            current_price = round(random.uniform(14.2, 142.0), 2)
+            current_sale = round(random.uniform(0.0, 50.0), 2)
 
-        product_data = {
-            "id": product_id,
-            "product_name": food,
-            "available_quantity": random.randint(14, 142),
-            "product_types": cate,
-            "product_status": random.choice(PRODUCT_STATUS),
-            "image_url": fake.image_url(),
-            "price": current_price,
-            "sale_percent": current_sale,
-        }
+            product_data = {
+                "id": product_id,
+                "product_name": food,
+                "available_quantity": random.randint(14, 142),
+                "product_types": cate,
+                "product_status": random.choice(PRODUCT_STATUS),
+                "image_url": random.choice(PRODUCT_IMAGES),
+                "price": current_price,
+                "sale_percent": current_sale,
+            }
 
-        conn.execute(
-            PRODUCT_STATEMENT,
-            product_data,
-        )
+            conn.execute(
+                PRODUCT_STATEMENT,
+                product_data,
+            )
 
-        num_price_entries = random.randint(
-            1,
-            VARIANCE_OF_PRICE,
-        )
+            num_price_entries = random.randint(
+                1,
+                VARIANCE_OF_PRICE,
+            )
 
-        price_history_data = {
-            "price": current_price,
-            "sale_percent": current_sale,
-            "date": datetime.now(),
-            "product_id": product_id,
-        }
-        conn.execute(
-            PRODUCT_PRICE_HISTORY_STATEMENT,
-            price_history_data,
-        )
-        for _ in range(num_price_entries):
             price_history_data = {
-                "price": round(random.uniform(14.2, 142.0), 2),
-                "sale_percent": round(random.uniform(0.0, 50.0), 2),
-                "date": fake.date_time_between(
-                    start_date="-2y",
-                    end_date="now",
-                ),
+                "price": current_price,
+                "sale_percent": current_sale,
+                "date": datetime.now(),
                 "product_id": product_id,
             }
             conn.execute(
                 PRODUCT_PRICE_HISTORY_STATEMENT,
                 price_history_data,
             )
+            for _ in range(num_price_entries):
+                price_history_data = {
+                    "price": round(random.uniform(14.2, 142.0), 2),
+                    "sale_percent": round(random.uniform(0.0, 50.0), 2),
+                    "date": fake.date_time_between(
+                        start_date="-2y",
+                        end_date="now",
+                    ),
+                    "product_id": product_id,
+                }
+                conn.execute(
+                    PRODUCT_PRICE_HISTORY_STATEMENT,
+                    price_history_data,
+                )
 
-        product_doc_data = {
-            "id": product_id,
-            "description": fake.text(),
-            "images_url": random.choices(PRODUCT_IMAGES, k=3),
-            "infos": json.dumps({fake.word(): fake.word() for _ in range(5)}),
-            "ingredients": [fake.word() for _ in range(5)],
-            "instructions": [fake.sentence() for _ in range(3)],
-            "article_md": fake.text(),
-            "day_before_expiry": random.randint(142, 365),
-        }
+            product_doc_data = {
+                "id": product_id,
+                "description": fake.text(),
+                "images_url": random.choices(PRODUCT_IMAGES, k=3),
+                "infos": json.dumps({fake.word(): fake.word() for _ in range(5)}),
+                "ingredients": [fake.word() for _ in range(5)],
+                "instructions": [fake.sentence() for _ in range(3)],
+                "article_md": fake.text(),
+                "day_before_expiry": random.randint(142, 365),
+            }
 
-        conn.execute(
-            PRODUCT_DOC_STATEMENT,
-            product_doc_data,
-        )
+            conn.execute(
+                PRODUCT_DOC_STATEMENT,
+                product_doc_data,
+            )
+
+for _ in range(BLOG_AMOUNT):
+    data = {
+        "id": fake.uuid4(),
+        "title": fake.sentence(nb_words=6),
+        "description": fake.paragraph(nb_sentences=3),
+        "article": fake.text(max_nb_chars=2000),
+        "thumbnail": random.choice(PRODUCT_IMAGES),
+        "infos": json.dumps(
+            {fake.word(): fake.word() for _ in range(5)},
+        ),
+    }
+    conn.execute(BLOG_STATEMENT, data)
+
+for _ in range(COUPON_AMOUNT):
+    data = {
+        "id": str(uuid.uuid4()).replace("-", "")[:14],
+        "expire_time": fake.date_between(
+            start_date="-1y",
+            end_date="+1y",
+        ),
+        "sale_percent": random.uniform(0, 50),
+        "usage_amount": random.randint(70, 700),
+        "usage_left": random.randint(70, 700),
+    }
+
+    conn.execute(COUPON_STATEMENT, data)
 
 
 conn.commit()

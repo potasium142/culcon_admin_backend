@@ -1,6 +1,6 @@
 import sqlalchemy as sqla
 
-from uuid import UUID, uuid4
+from uuid import uuid4
 from sqlalchemy import orm
 from sqlalchemy.sql import sqltypes
 from enum import Enum, Flag

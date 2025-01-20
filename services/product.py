@@ -190,10 +190,9 @@ def product_creation(
             day_before_expiry=prod_info.day_before_expiry,
         )
 
-        match prod_info:
-            case MealKitCreation():
-                product_doc.ingredients = prod_info.ingredients
-                product_doc.instructions = prod_info.instructions
+        if product_doc is MealKitCreation:
+            product_doc.ingredients = prod_info.ingredients
+            product_doc.instructions = prod_info.instructions
 
         db_session.session.add(product_doc)
 
@@ -282,57 +281,57 @@ def update_status(
 
 
 def get_list_product():
-    products: list[prod.Product] = db_session.session.query(prod.Product).all()
+    with db_session.session as session:
+        products: list[prod.Product] = session.query(prod.Product).all()
 
-    rtn_products: list[
-        dict[str, str | float | int | prod.ProductStatus | prod.ProductType]
-    ] = list(
-        map(
-            lambda prod: {
-                "id": prod.id,
-                "name": prod.product_name,
-                "price": prod.price,
-                "type": prod.product_types,
-                "status": prod.product_status,
-                "image_url": prod.image_url,
-                "available_quantity": prod.available_quantity,
-            },
-            products,
+        rtn_products: list[
+            dict[str, str | float | int | prod.ProductStatus | prod.ProductType]
+        ] = list(
+            map(
+                lambda prod: {
+                    "id": prod.id,
+                    "name": prod.product_name,
+                    "price": prod.price,
+                    "type": prod.product_types,
+                    "status": prod.product_status,
+                    "image_url": prod.image_url,
+                    "available_quantity": prod.available_quantity,
+                },
+                products,
+            )
         )
-    )
 
-    return rtn_products
+        return rtn_products
 
 
 def get_product(prod_id: str):
-    product: prod.Product = db_session.session.get(prod.Product, prod_id)
-    product_price: list[prod.ProductPriceHistory] = (
-        db_session.session.query(prod.ProductPriceHistory)
-        .filter_by(product_id=prod_id)
-        .all()
-    )
+    with db_session.session as session:
+        product: prod.Product = session.get(prod.Product, prod_id)
+        product_price: list[prod.ProductPriceHistory] = (
+            session.query(prod.ProductPriceHistory).filter_by(product_id=prod_id).all()
+        )
 
-    product_doc = db_session.session.get(ProductDoc, prod_id)
+        product_doc = session.get(ProductDoc, prod_id)
 
-    if not product:
-        raise Exception("Product not found")
-    if not product_doc:
-        raise Exception("Product doc not found")
+        if not product:
+            raise Exception("Product not found")
+        if not product_doc:
+            raise Exception("Product doc not found")
 
-    base_info = {
-        "id": product.id,
-        "product_name": product.product_name,
-        "available_quantity": product.available_quantity,
-        "product_type": product.product_types,
-        "product_status": product.product_status,
-        "price_list": [price.to_list_instance() for price in product_price],
-        "info": product_doc.infos,
-        "images_url": product_doc.images_url,
-        "article": product_doc.article_md,
-    }
+        base_info = {
+            "id": product.id,
+            "product_name": product.product_name,
+            "available_quantity": product.available_quantity,
+            "product_type": product.product_types,
+            "product_status": product.product_status,
+            "price_list": [price.to_list_instance() for price in product_price],
+            "info": product_doc.infos,
+            "images_url": product_doc.images_url,
+            "article": product_doc.article_md,
+        }
 
-    if product_doc.ingredients and product_doc.instructions:
-        base_info["instructions"] = product_doc.instructions
-        base_info["ingredients"] = product_doc.ingredients
+        if product_doc.ingredients and product_doc.instructions:
+            base_info["instructions"] = product_doc.instructions
+            base_info["ingredients"] = product_doc.ingredients
 
-    return base_info
+        return base_info

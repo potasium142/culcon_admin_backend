@@ -1,3 +1,4 @@
+from typing import Any
 from db.postgresql.db_session import db_session
 from db.postgresql.models.order_history import Coupon
 
@@ -28,6 +29,35 @@ def create_coupon(c: CouponCreation):
         "expire_time": c.expire_date,
         "usage_amount": c.usage_amount,
         "sale_percent": c.sale_percent,
+    }
+
+
+def get_all_coupons() -> list[dict[str, Any]]:
+    coupons = db_session.session.query(Coupon).all()
+
+    coupon_dicts = [
+        {
+            "id": c.id,
+            "usage_left": c.usage_left,
+            "expire_time": c.expire_time,
+            "sale_percent": c.sale_percent,
+        }
+        for c in coupons
+    ]
+
+    return coupon_dicts
+
+
+def get_coupon(id: str) -> dict[str, Any]:
+    coupon: Coupon = db_session.session.get(Coupon, id)
+    if not coupon:
+        return {"error": "Coupon not found"}
+
+    return {
+        "id": coupon.id,
+        "usage_left": coupon.usage_left,
+        "expire_time": coupon.expire_time,
+        "sale_percent": coupon.sale_percent,
     }
 
 

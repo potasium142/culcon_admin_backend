@@ -12,7 +12,7 @@ import auth
 
 Permission = Annotated[bool, Depends(auth.staff_permission)]
 
-router = APIRouter(prefix="/api/staff", tags=["Staff"])
+router = APIRouter(prefix="/api/staff", tags=["Staff function"])
 
 oauth2_scheme = auth.oauth2_scheme
 
@@ -22,7 +22,10 @@ async def test(_permission: Permission):
     return "ok"
 
 
-@router.post("/product/create")
+@router.post(
+    "/product/create",
+    tags=["Product"],
+)
 async def create_product(
     _permission: Permission,
     bg_task: BackgroundTasks,
@@ -68,7 +71,10 @@ async def create_product(
     }
 
 
-@router.post("/mealkit/create")
+@router.post(
+    "/mealkit/create",
+    tags=["Product"],
+)
 async def create_mealkit(
     _permission: Permission,
     bg_task: BackgroundTasks,
@@ -115,7 +121,10 @@ async def create_mealkit(
     }
 
 
-@router.post("/product/update/info/prod")
+@router.post(
+    "/product/update/info/prod",
+    tags=["Product"],
+)
 async def update_info_prod(
     _: Permission,
     prod_id: str,
@@ -127,7 +136,10 @@ async def update_info_prod(
     )
 
 
-@router.post("/product/update/info/mealkit")
+@router.post(
+    "/product/update/info/mealkit",
+    tags=["Product"],
+)
 async def update_info_mk(
     _: Permission,
     prod_id: str,
@@ -139,7 +151,10 @@ async def update_info_mk(
     )
 
 
-@router.patch("/product/update/status")
+@router.patch(
+    "/product/update/status",
+    tags=["Product"],
+)
 async def update_status(
     _: Permission,
     prod_id: str,
@@ -148,7 +163,10 @@ async def update_status(
     ps.update_status(prod_id, status)
 
 
-@router.patch("/product/update/quantity")
+@router.patch(
+    "/product/update/quantity",
+    tags=["Product"],
+)
 async def update_quantity(
     _: Permission,
     prod_id: str,
@@ -157,7 +175,10 @@ async def update_quantity(
     ps.update_quantity(prod_id, quantity)
 
 
-@router.put("/product/update/price")
+@router.put(
+    "/product/update/price",
+    tags=["Product"],
+)
 async def update_price(
     _permission: Permission,
     product_id: str,
@@ -172,7 +193,10 @@ async def update_price(
     return {"message": "Price updated"}
 
 
-@router.post("/blog/create")
+@router.post(
+    "/blog/create",
+    tags=["Blog"],
+)
 async def create_blog(
     _: Permission,
     blog_info: BlogCreation,
@@ -186,7 +210,10 @@ async def create_blog(
     )
 
 
-@router.post("/blog/edit")
+@router.post(
+    "/blog/edit",
+    tags=["Blog"],
+)
 async def edit_blog(
     _: Permission,
     id: str,
@@ -195,7 +222,10 @@ async def edit_blog(
     blog.edit(id, blog_info)
 
 
-@router.get("/blog/comment")
+@router.get(
+    "/blog/comment",
+    tags=["Blog"],
+)
 async def get_blog_comment(
     _: Permission,
     id: str,
@@ -203,7 +233,10 @@ async def get_blog_comment(
     return blog.get_comment(id)
 
 
-@router.get("/blog/fetch")
+@router.get(
+    "/blog/fetch",
+    tags=["Blog"],
+)
 async def get_blog(
     _: Permission,
     id: str,
