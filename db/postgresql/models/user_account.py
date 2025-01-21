@@ -8,6 +8,7 @@ from sqlalchemy.dialects.postgresql import ARRAY, VARCHAR
 from sqlalchemy.sql import sqltypes
 
 from db.postgresql.models import Base
+from db.postgresql.models.blog import Blog
 
 
 class UserAccountStatus(Enum):
@@ -46,16 +47,34 @@ class Cart(Base):
     )
 
 
+class CommentType(str, Enum):
+    POST = "POST"
+    REPLY = "REPLY"
+
+
 class PostComment(Base):
     __tablename__: str = "post_comment"
+    id: orm.Mapped[str] = orm.mapped_column(
+        sqltypes.VARCHAR(255),
+        primary_key=True,
+    )
     timestamp: orm.Mapped[datetime] = orm.mapped_column(sqltypes.TIMESTAMP)
     post_id: orm.Mapped[str] = orm.mapped_column(
-        sqltypes.VARCHAR(255), primary_key=True
+        sqltypes.VARCHAR(255),
+        sqla.ForeignKey(Blog.id),
     )
     account_id: orm.Mapped[UserAccount] = orm.mapped_column(
-        sqltypes.VARCHAR(255), sqla.ForeignKey("user_account.id"), primary_key=True
+        sqltypes.VARCHAR(255),
+        sqla.ForeignKey("user_account.id"),
     )
-    comment: orm.Mapped[str] = orm.mapped_column(sqltypes.VARCHAR(255))
+    parent_comment: orm.Mapped[str | None] = orm.mapped_column(
+        sqla.ForeignKey("post_comment.id")
+    )
+    comment: orm.Mapped[str] = orm.mapped_column(
+        sqltypes.VARCHAR(255),
+    )
+    comment_type: orm.Mapped[CommentType]
+    children_comment = orm.relationship("post_comment")
 
 
 class AccountOTP(Base):

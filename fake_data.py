@@ -15,13 +15,15 @@ URL_DATABASE = "postgresql+psycopg://culcon:culcon@localhost:5432/culcon"
 INSERT_PRODUCT = False
 VARIANCE_OF_PRICE = 7
 
-USER_AMOUNT = 10
+USER_AMOUNT = 7
 
-STAFF_AMOUNT = 10
+STAFF_AMOUNT = 7
 
-BLOG_AMOUNT = 10
+BLOG_AMOUNT = 7
 
 COUPON_AMOUNT = 14
+
+COMMENT_EACH_BLOG = 10
 # ========================================================
 
 fake = faker.Faker()
@@ -71,6 +73,11 @@ BLOG_STATEMENT = sqla.text(
 COUPON_STATEMENT = sqla.text(
     "INSERT INTO coupon(id,expire_time,sale_percent,usage_amount,usage_left) "
     + " VALUES (:id,:expire_time,:sale_percent,:usage_amount,:usage_left)"
+)
+
+COMMENT_STATMENT = sqla.text(
+    "INSERT INTO post_comment(id,timestamp,post_id,account_id,comment,comment_type,parent_comment) "
+    + "VALUES (:id,:timestamp,:post_id,:account_id,:comment,:comment_type,:parent_comment)"
 )
 
 PRODUCT_IMAGES = [
@@ -177,12 +184,14 @@ PRODUCT_TYPE_FOOD_NAMES = {
     ],
 }
 
-created_user_id = []
-created_staff_id = []
+created_user_id: list[str] = []
+created_staff_id: list[str] = []
+created_blog_id: list[str] = []
 
 for _ in tqdm(range(USER_AMOUNT)):
     username = fake.user_name()
     id = str(uuid.uuid4())
+    created_user_id.append(id)
     data: Any = {
         "id": id,
         "email": fake.email(),
@@ -297,9 +306,12 @@ if INSERT_PRODUCT:
                 product_doc_data,
             )
 
+
 for _ in range(BLOG_AMOUNT):
+    id = str(uuid.uuid4())
+    created_blog_id.append(id)
     data = {
-        "id": fake.uuid4(),
+        "id": id,
         "title": fake.sentence(nb_words=6),
         "description": fake.paragraph(nb_sentences=3),
         "article": fake.text(max_nb_chars=2000),
@@ -309,6 +321,68 @@ for _ in range(BLOG_AMOUNT):
         ),
     }
     conn.execute(BLOG_STATEMENT, data)
+
+
+def generate_comment(
+    post_id: str,
+    cmt_id: str,
+    odd: int,
+    current_lv: int,
+    max_depth: int,
+    max_reply: int,
+):
+    rng = random.randint(0, 10)
+
+    end = rng < odd
+
+    current_lv += 1
+
+    if end:
+        return
+
+    if current_lv >= max_depth:
+        return
+
+    reply_amount = random.randint(0, max_reply)
+
+    for _ in range(reply_amount):
+        id = str(uuid.uuid4())
+        data = {
+            "id": id,
+            "timestamp": fake.date_time_between(
+                start_date="-1y",
+                end_date="now",
+            ),
+            "post_id": post_id,
+            "account_id": random.choice(created_user_id),
+            "comment": fake.paragraph(nb_sentences=3),
+            "parent_comment": cmt_id,
+            "comment_type": "REPLY",
+        }
+        conn.execute(COMMENT_STATMENT, data)
+
+        generate_comment(post_id, id, 4, current_lv, max_depth, max_reply)
+
+
+for b in created_blog_id:
+    comment_id = []
+    for _ in range(COMMENT_EACH_BLOG):
+        pid = str(uuid.uuid4())
+        comment_id.append(id)
+        data = {
+            "id": pid,
+            "timestamp": fake.date_time_between(
+                start_date="-1y",
+                end_date="now",
+            ),
+            "post_id": b,
+            "account_id": random.choice(created_user_id),
+            "comment": fake.paragraph(nb_sentences=3),
+            "parent_comment": None,
+            "comment_type": "POST",
+        }
+        conn.execute(COMMENT_STATMENT, data)
+        generate_comment(b, pid, 1, 0, 4, 7)
 
 for _ in range(COUPON_AMOUNT):
     data = {
