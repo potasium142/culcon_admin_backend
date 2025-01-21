@@ -2,7 +2,14 @@ import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from auth import api as auth_api
-from routers import prototype, staff, manager, general, dev
+from routers import (
+    prototype,
+    staff,
+    manager,
+    general,
+    dev,
+    websocket,
+)
 from contextlib import asynccontextmanager
 import ai
 
@@ -36,6 +43,7 @@ app.include_router(manager.router)
 app.include_router(staff.router)
 app.include_router(auth_api.router)
 app.include_router(prototype.router)
+app.include_router(websocket.router)
 
 
 @app.exception_handler(Exception)

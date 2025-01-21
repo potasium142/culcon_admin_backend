@@ -74,7 +74,6 @@ class PostComment(Base):
         sqltypes.VARCHAR(255),
     )
     comment_type: orm.Mapped[CommentType]
-    children_comment = orm.relationship("post_comment")
 
 
 class AccountOTP(Base):

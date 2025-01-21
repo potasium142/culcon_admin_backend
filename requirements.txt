@@ -12,6 +12,7 @@ pydantic-settings==2.7.1
 ultralytics==8.3.57
 python-multipart
 cloudinary==1.42.1
+websocket==0.2.1
 --extra-index-url https://download.pytorch.org/whl/cpu
 torch==2.5.1+cpu
 torchaudio==2.5.1+cpu
