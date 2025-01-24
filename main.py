@@ -1,5 +1,7 @@
+from typing import Annotated
+import uuid
 import uvicorn
-from fastapi import FastAPI, Request
+from fastapi import Cookie, FastAPI, Request
 from fastapi.responses import JSONResponse
 from auth import api as auth_api
 from routers import (
@@ -19,7 +21,7 @@ preload = dict()
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(_: FastAPI):
     yield {"ai_models": ai.load_all_model(), "test": "lesus"}
 
 
@@ -52,17 +54,27 @@ async def validation_exception_handler(request: Request, exc: Exception):
     return JSONResponse(
         status_code=500,
         content={
-            "message": (
-                f"Failed method {request.method} at URL {request.url}."
-                f" Exception message is {exc!r}."
-            )
+            "api": str(request.url),
+            "method": request.method,
+            "message": (f"{exc!r}"),
         },
     )
 
 
 @app.get("/")
-async def read_root():
-    return {"Hello": "World"}
+async def read_root(cookie: Annotated[str, Cookie()] = None):
+    response = JSONResponse(
+        content={
+            "sussy": "wussy",
+            "cookie": cookie,
+        }
+    )
+    if not cookie:
+        response.set_cookie(
+            key="guest_session",
+            value=str(uuid.uuid4()),
+        )
+    return response
 
 
 if __name__ == "__main__":

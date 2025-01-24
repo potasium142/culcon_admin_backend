@@ -1,10 +1,12 @@
 from typing import Annotated
 
+from db.postgresql.models.user_account import UserAccountStatus
 from dtos.request import product as prod
 from fastapi import APIRouter, Depends, File, Request, UploadFile, BackgroundTasks
 from dtos.request.blog import BlogCreation
 from services import product as ps
 from services import blog
+from services import customer as c_ss
 from etc.progress_tracker import pp
 from db.postgresql.models import product
 
@@ -223,8 +225,8 @@ async def edit_blog(
 
 
 @router.get(
-    "/blog/comment",
-    tags=["Blog"],
+    "/comment/fetch",
+    tags=["Blog", "Comment"],
 )
 async def get_blog_comment(
     _: Permission,
@@ -234,7 +236,17 @@ async def get_blog_comment(
 
 
 @router.get(
-    "/blog/fetch",
+    "/blog/fetch/all",
+    tags=["Blog"],
+)
+async def get_blogs(
+    _: Permission,
+):
+    return blog.get_blog_list()
+
+
+@router.get(
+    "/blog/fetch/{id}",
     tags=["Blog"],
 )
 async def get_blog(
@@ -242,3 +254,47 @@ async def get_blog(
     id: str,
 ):
     return blog.get(id)
+
+
+@router.get(
+    "/customer/fetch/comment",
+    tags=["Blog", "Comment", "Customer"],
+)
+async def get_customer_comment(
+    _: Permission,
+    id: str,
+):
+    return blog.get_comment_by_customer(id)
+
+
+@router.get(
+    "/customer/fetch/all",
+    tags=["Customer"],
+)
+async def get_list_customer(
+    _: Permission,
+):
+    return c_ss.get_all_customer()
+
+
+@router.get(
+    "/customer/fetch/id/{id}",
+    tags=["Customer"],
+)
+async def get_customer(
+    _: Permission,
+    id: str,
+):
+    return c_ss.get_customer(id)
+
+
+@router.patch(
+    "/customer/edit/status",
+    tags=["Customer"],
+)
+async def change_customer_status(
+    _: Permission,
+    id: str,
+    status: UserAccountStatus,
+):
+    c_ss.set_account_status(id, status)

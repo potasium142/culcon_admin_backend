@@ -1,8 +1,10 @@
+from db.postgresql.models.user_account import UserAccount
 from db.postgresql.repos import account_repo
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, APIRouter
 from fastapi.security import OAuth2PasswordRequestForm
+from db.postgresql.db_session import db_session
 
 import auth
 
@@ -18,7 +20,12 @@ async def test(token: Annotated[str, Depends(auth.oauth2_scheme)]):
 
 
 @router.post("/login")
-async def login(login_form: Annotated[OAuth2PasswordRequestForm, Depends()]) -> Token:
+async def login(
+    login_form: Annotated[
+        OAuth2PasswordRequestForm,
+        Depends(),
+    ],
+) -> Token:
     user = account_repo.find_by_username(
         login_form.username,
     )

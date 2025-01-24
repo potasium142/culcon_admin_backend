@@ -7,6 +7,7 @@ from db.postgresql.models.staff_account import AccountType
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
+
 CREDENTIAL_EXCEPTION = HTTPException(
     status_code=status.HTTP_401_UNAUTHORIZED,
     detail="Could not validate credentials",

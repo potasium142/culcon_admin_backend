@@ -9,6 +9,7 @@ from sqlalchemy.sql import sqltypes
 
 from db.postgresql.models import Base
 from db.postgresql.models.blog import Blog
+from db.postgresql.models.product import Product
 
 
 class UserAccountStatus(Enum):
@@ -42,8 +43,8 @@ class Cart(Base):
     account_id: orm.Mapped[str] = orm.mapped_column(
         sqla.ForeignKey("user_account.id"), primary_key=True
     )
-    product_id: orm.Mapped[str] = orm.mapped_column(
-        sqla.ForeignKey("product.id"), primary_key=True
+    product_id: orm.Mapped[Product] = orm.mapped_column(
+        sqla.ForeignKey(Product.id), primary_key=True
     )
 
 
@@ -63,7 +64,7 @@ class PostComment(Base):
         sqltypes.VARCHAR(255),
         sqla.ForeignKey(Blog.id),
     )
-    account_id: orm.Mapped[UserAccount] = orm.mapped_column(
+    account_id: orm.Mapped[UserAccount | None] = orm.mapped_column(
         sqltypes.VARCHAR(255),
         sqla.ForeignKey("user_account.id"),
     )

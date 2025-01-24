@@ -328,6 +328,7 @@ def get_product(prod_id: str):
             "info": product_doc.infos,
             "images_url": product_doc.images_url,
             "article": product_doc.article_md,
+            "day_before_expiry": product_doc.day_before_expiry,
         }
 
         if product_doc.ingredients and product_doc.instructions:

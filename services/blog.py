@@ -51,4 +51,33 @@ def get(id: str):
 
 
 def get_comment(post_id: str):
-    return db_session.session.query(PostComment).filter_by(post_id=post_id).all()
+    return (
+        db_session.session.query(PostComment)
+        .filter_by(
+            post_id=post_id,
+            comment_type="POST",
+        )
+        .all()
+    )
+
+
+def get_blog_list() -> list[dict[str, str]]:
+    blogs = db_session.session.query(Blog).all()
+    return [
+        {
+            "id": b.id,
+            "title": b.title,
+            "description": b.description,
+        }
+        for b in blogs
+    ]
+
+
+def get_comment_by_customer(user_id: str):
+    return (
+        db_session.session.query(PostComment)
+        .filter_by(
+            account_id=user_id,
+        )
+        .all()
+    )
