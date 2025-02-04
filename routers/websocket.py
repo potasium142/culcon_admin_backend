@@ -5,6 +5,8 @@ from fastapi import (
     Depends,
     WebSocket,
     WebSocketDisconnect,
+    Cookie,
+    Response,
 )
 
 import auth
@@ -16,10 +18,20 @@ router = APIRouter(prefix="/ws", tags=["WebSocket"])
 chat_socket = dict[str, WebSocket]
 
 
+@router.get("/create/public/session")
+async def connect_chat_session(
+    res: Response,
+    cookie: Annotated[str | None, Cookie()] = None,
+):
+    if not cookie:
+        res.set_cookie(key="test", value="test", max_age=36000000)
+    print(cookie)
+
+
 @router.websocket("/public/chat/{id}")
 async def public_chat_socket(ws: WebSocket):
     try:
-        cookie = ws.cookies.get("guest_cookie")
+        cookie = ws.cookies.get("test")
 
         await ws.accept()
 

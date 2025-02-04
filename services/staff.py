@@ -71,7 +71,6 @@ def edit_staff_account(
 
     staff.password = new_password
     staff.username = info.username
-    staff.status = info.status
 
     db_session.commit()
 

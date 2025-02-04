@@ -34,7 +34,11 @@ class UserAccount(Base):
     profile_description: orm.Mapped[str]
     token: orm.Mapped[str]
     cart: orm.Mapped[list["Cart"]] = orm.relationship()
-    bookmarked_posts: orm.Mapped[list[str]] = orm.mapped_column(ARRAY(VARCHAR(255)))
+    bookmarked_posts: orm.Mapped[list[str]] = orm.mapped_column(
+        ARRAY(
+            VARCHAR(255),
+        ),
+    )
 
 
 class Cart(Base):
@@ -73,6 +77,10 @@ class PostComment(Base):
     )
     comment: orm.Mapped[str] = orm.mapped_column(
         sqltypes.VARCHAR(255),
+    )
+    deleted: orm.Mapped[bool] = orm.mapped_column(
+        sqltypes.BOOLEAN(),
+        default=False,
     )
     comment_type: orm.Mapped[CommentType]
 

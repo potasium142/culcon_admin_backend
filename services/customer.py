@@ -1,4 +1,5 @@
 from typing import Any
+from auth import encryption
 from db.postgresql.db_session import db_session
 from db.postgresql.models.user_account import (
     Cart,
@@ -6,6 +7,7 @@ from db.postgresql.models.user_account import (
     UserAccount,
     UserAccountStatus,
 )
+from dtos.request.user_account import EditCustomerAccount, EditCustomerInfo
 
 
 def set_account_status(id: str, status: UserAccountStatus):
@@ -25,7 +27,7 @@ def delete_comment(id: str, comment_id: str):
     if not comment:
         raise Exception("Comment not found")
 
-    comment.account_id = None
+    comment.deleted = True
 
     db_session.commit()
 
@@ -58,6 +60,34 @@ def get_customer(id: str):
             "phone": c.phone,
             "profile_pic": c.profile_pic_uri,
         }
+
+
+def edit_customer_info(id: str, info: EditCustomerInfo):
+    with db_session.session as ss:
+        c = ss.get(UserAccount, id)
+
+        if not c:
+            raise Exception("Customer not found")
+
+        c.email = info.email
+        c.address = info.address
+        c.phone = info.phone
+        c.profile_description = info.profile_description
+
+        db_session.commit()
+
+
+def edit_customer_account(id: str, info: EditCustomerAccount):
+    with db_session.session as ss:
+        c = ss.get(UserAccount, id)
+
+        if not c:
+            raise Exception("Customer not found")
+
+        c.username = info.username
+        c.password = encryption.hash(info.password)
+
+        db_session.commit()
 
 
 def get_customer_cart(id):

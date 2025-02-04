@@ -4,6 +4,7 @@ from db.postgresql.models.user_account import UserAccountStatus
 from dtos.request import product as prod
 from fastapi import APIRouter, Depends, File, Request, UploadFile, BackgroundTasks
 from dtos.request.blog import BlogCreation
+from dtos.request.user_account import EditCustomerAccount, EditCustomerInfo
 from services import product as ps
 from services import blog
 from services import customer as c_ss
@@ -298,3 +299,27 @@ async def change_customer_status(
     status: UserAccountStatus,
 ):
     c_ss.set_account_status(id, status)
+
+
+@router.patch(
+    "/customer/edit/account",
+    tags=["Customer"],
+)
+async def change_customer_account(
+    _: Permission,
+    id: str,
+    info: EditCustomerAccount,
+):
+    c_ss.edit_customer_account(id, info)
+
+
+@router.patch(
+    "/customer/edit/info",
+    tags=["Customer"],
+)
+async def change_customer_info(
+    _: Permission,
+    id: str,
+    info: EditCustomerInfo,
+):
+    c_ss.edit_customer_info(id, info)

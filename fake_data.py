@@ -76,8 +76,8 @@ COUPON_STATEMENT = sqla.text(
 )
 
 COMMENT_STATMENT = sqla.text(
-    "INSERT INTO post_comment(id,timestamp,post_id,account_id,comment,comment_type,parent_comment) "
-    + "VALUES (:id,:timestamp,:post_id,:account_id,:comment,:comment_type,:parent_comment)"
+    "INSERT INTO post_comment(id,timestamp,post_id,account_id,comment,comment_type,parent_comment,deleted) "
+    + "VALUES (:id,:timestamp,:post_id,:account_id,:comment,:comment_type,:parent_comment,:deleted)"
 )
 
 PRODUCT_IMAGES = [
@@ -358,6 +358,7 @@ def generate_comment(
             "comment": fake.paragraph(nb_sentences=3),
             "parent_comment": cmt_id,
             "comment_type": "REPLY",
+            "deleted": random.choice([True, False, False, False]),
         }
         conn.execute(COMMENT_STATMENT, data)
 
@@ -380,6 +381,7 @@ for b in created_blog_id:
             "comment": fake.paragraph(nb_sentences=3),
             "parent_comment": None,
             "comment_type": "POST",
+            "deleted": random.choice([True, False, False, False]),
         }
         conn.execute(COMMENT_STATMENT, data)
         generate_comment(b, pid, 1, 0, 4, 7)
