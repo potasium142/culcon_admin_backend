@@ -12,7 +12,7 @@ import json
 # ========================================================
 URL_DATABASE = "postgresql+psycopg://culcon:culcon@localhost:5432/culcon"
 
-INSERT_PRODUCT = False
+INSERT_PRODUCT = True
 VARIANCE_OF_PRICE = 7
 
 USER_AMOUNT = 7
@@ -61,8 +61,12 @@ PRODUCT_PRICE_HISTORY_STATEMENT = sqla.text(
 )
 
 PRODUCT_DOC_STATEMENT = sqla.text(
-    "INSERT INTO product_doc(id, description, images_url, infos, ingredients, instructions, article_md, day_before_expiry) "
-    + "VALUES (:id, :description, :images_url, :infos, :ingredients, :instructions, :article_md, :day_before_expiry)"
+    "INSERT INTO product_doc(id, description, images_url, infos,  instructions, article_md, day_before_expiry) "
+    + "VALUES (:id, :description, :images_url, :infos, :instructions, :article_md, :day_before_expiry)"
+)
+
+PRODUCT_MEALKIT_STATEMENT = sqla.text(
+    "INSERT INTO mealkit_ingredients(mealkit_id, ingredient) VALUES (:mealkit_id, :ingredient)"
 )
 
 BLOG_STATEMENT = sqla.text(
@@ -71,8 +75,8 @@ BLOG_STATEMENT = sqla.text(
 )
 
 COUPON_STATEMENT = sqla.text(
-    "INSERT INTO coupon(id,expire_time,sale_percent,usage_amount,usage_left) "
-    + " VALUES (:id,:expire_time,:sale_percent,:usage_amount,:usage_left)"
+    "INSERT INTO coupon(id,expire_time,sale_percent,usage_amount,usage_left,minimum_price) "
+    + " VALUES (:id,:expire_time,:sale_percent,:usage_amount,:usage_left,:minimum_price)"
 )
 
 COMMENT_STATMENT = sqla.text(
@@ -236,10 +240,17 @@ for _ in tqdm(range(STAFF_AMOUNT)):
     conn.execute(EMPLOYEE_INFO_STATEMENT, info_data)
 
 
+created_product = []
+created_mealkit = []
 if INSERT_PRODUCT:
     for i, (cate, foods) in enumerate(PRODUCT_TYPE_FOOD_NAMES.items()):
         for food in foods:
             product_id = f"{cate}_{food}"
+
+            if cate == "MEALKIT":
+                created_mealkit.append(product_id)
+            else:
+                created_product.append(product_id)
 
             current_price = round(random.uniform(14.2, 142.0), 2)
             current_sale = round(random.uniform(0.0, 50.0), 2)
@@ -295,7 +306,6 @@ if INSERT_PRODUCT:
                 "description": fake.text(),
                 "images_url": random.choices(PRODUCT_IMAGES, k=3),
                 "infos": json.dumps({fake.word(): fake.word() for _ in range(5)}),
-                "ingredients": [fake.word() for _ in range(5)],
                 "instructions": [fake.sentence() for _ in range(3)],
                 "article_md": fake.text(),
                 "day_before_expiry": random.randint(142, 365),
@@ -305,6 +315,19 @@ if INSERT_PRODUCT:
                 PRODUCT_DOC_STATEMENT,
                 product_doc_data,
             )
+
+
+for foods in created_mealkit:
+    ingredients = random.sample(created_product, k=random.randint(1, 5))
+    for ingredient in ingredients:
+        mealkit_data = {
+            "mealkit_id": foods,
+            "ingredient": ingredient,
+        }
+        conn.execute(
+            PRODUCT_MEALKIT_STATEMENT,
+            mealkit_data,
+        )
 
 
 for _ in range(BLOG_AMOUNT):
@@ -396,6 +419,7 @@ for _ in range(COUPON_AMOUNT):
         "sale_percent": random.uniform(0, 50),
         "usage_amount": random.randint(70, 700),
         "usage_left": random.randint(70, 700),
+        "minimum_price": random.uniform(0, 10),
     }
 
     conn.execute(COUPON_STATEMENT, data)

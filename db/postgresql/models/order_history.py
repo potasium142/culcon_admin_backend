@@ -37,6 +37,7 @@ class Coupon(Base):
     sale_percent: orm.Mapped[float] = orm.mapped_column(sqltypes.REAL)
     usage_amount: orm.Mapped[int] = orm.mapped_column(sqltypes.INTEGER)
     usage_left: orm.Mapped[int] = orm.mapped_column(sqltypes.INTEGER)
+    minimum_price: orm.Mapped[float] = orm.mapped_column(sqltypes.REAL)
 
 
 OrderHistoryItems = Table(

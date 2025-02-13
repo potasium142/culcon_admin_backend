@@ -11,6 +11,7 @@ from routers import (
     general,
     dev,
     websocket,
+    public,
 )
 from contextlib import asynccontextmanager
 import ai
@@ -46,6 +47,7 @@ app.include_router(staff.router)
 app.include_router(auth_api.router)
 app.include_router(prototype.router)
 app.include_router(websocket.router)
+app.include_router(public.router)
 
 
 @app.exception_handler(Exception)

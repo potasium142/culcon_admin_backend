@@ -29,21 +29,15 @@ def __embed_data(
     yolo_model: yolo.YOLOEmbed,
     clip_model: clip.OpenCLIP,
     description: str,
-    additional_images: list[bytes] | None,
     main_image: bytes,
 ) -> tuple[ndarray, ndarray, ndarray]:
-    if additional_images is None:
-        images_bytes = []
-    else:
-        images_bytes = [read_image(f) for f in additional_images]
-
-    images_bytes.append(read_image(main_image))
+    images_bytes = [read_image(main_image)]
 
     description_embed = clip_model.encode_text(description)[0]
 
-    images_embed_clip = clip_model.encode_image(images_bytes)
+    images_embed_clip = clip_model.encode_image(images_bytes)[0]
 
-    images_embed_yolo = yolo_model.embed(images_bytes)
+    images_embed_yolo = yolo_model.embed(images_bytes)[0]
 
     return description_embed, images_embed_clip, images_embed_yolo
 
@@ -91,13 +85,12 @@ def __create_general_product(
     clip_model: clip.OpenCLIP,
     pp: ProgressTracker,
     prog_id: int,
-) -> None:
+):
     embed_task_id = pp.new_subtask(prog_id, "Embedding")
     description_embed, images_embed_clip, images_embed_yolo = __embed_data(
         yolo_model,
         clip_model,
         prod_info.description,
-        additional_images,
         main_image,
     )
     pp.close_subtask(
@@ -117,15 +110,12 @@ def __create_general_product(
         image_url=main_image_url,
     )
 
-    db_session.session.add(product)
-
     product_price = prod.ProductPriceHistory(
         price=prod_info.price,
         sale_percent=prod_info.sale_percent,
         date=datetime.now(),
         product_id=prod_id,
     )
-    db_session.session.add(product_price)
 
     product_embedded = prod.ProductEmbedding(
         id=prod_id,
@@ -134,11 +124,11 @@ def __create_general_product(
         description_embed=description_embed,
     )
 
-    db_session.session.add(product_embedded)
-
     db_session.commit()
 
     pp.close_subtask(prog_id, save_db_task)
+
+    return product, product_price, product_embedded
 
 
 def product_creation(
@@ -169,7 +159,7 @@ def product_creation(
             prog_id,
         )
 
-        __create_general_product(
+        product, product_price, product_embedded = __create_general_product(
             prod_id=prod_id,
             prod_info=prod_info,
             additional_images=additional_images,
@@ -191,9 +181,18 @@ def product_creation(
         )
 
         if product_doc is MealKitCreation:
-            product_doc.ingredients = prod_info.ingredients
             product_doc.instructions = prod_info.instructions
 
+            for ing in prod_info.ingredients:
+                ingredient = prod.MealkitIngredients(
+                    mealkit_id=prod_id,
+                    ingredient=ing,
+                )
+                db_session.session.add(ingredient)
+
+        db_session.session.add(product)
+        db_session.session.add(product_price)
+        db_session.session.add(product_embedded)
         db_session.session.add(product_doc)
 
         pp.complete(
@@ -220,8 +219,14 @@ def update_info(
     prod_doc.infos = prod_info.infos
 
     if type(prod_info) is MealKitUpdate:
-        prod_doc.ingredients = prod_info.ingredients
         prod_doc.instructions = prod_info.instructions
+
+        for ing in prod_info.ingredients:
+            ingredient = prod.MealkitIngredients(
+                mealkit_id=prod_id,
+                ingredient=ing,
+            )
+            db_session.session.add(ingredient)
 
     db_session.commit()
 
@@ -321,6 +326,7 @@ def get_product(prod_id: str):
         base_info = {
             "id": product.id,
             "product_name": product.product_name,
+            "description": product_doc.description,
             "available_quantity": product.available_quantity,
             "product_type": product.product_types,
             "product_status": product.product_status,

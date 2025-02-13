@@ -38,6 +38,7 @@ class Product(Base):
     image_url: orm.Mapped[str]
     price: orm.Mapped[float] = orm.mapped_column(sqltypes.REAL)
     sale_percent: orm.Mapped[float] = orm.mapped_column(sqltypes.REAL)
+    embed: orm.Mapped["ProductEmbedding"] = orm.relationship(back_populates="product")
 
 
 class ProductPriceHistory(Base):
@@ -68,16 +69,25 @@ class ProductPriceHistory(Base):
         }
 
 
-class ProductEmbedding(Base):
-    __tablename__: str = "product_embedding"
-    id: orm.Mapped[Product] = orm.mapped_column(
+class MealkitIngredients(Base):
+    __tablename__: str = "mealkit_ingredients"
+    mealkit_id: orm.Mapped[str] = orm.mapped_column(
         sqla.ForeignKey(Product.id),
         primary_key=True,
     )
-    images_embed_yolo: orm.Mapped[list[Vector]] = orm.mapped_column(
-        postgresql.ARRAY(Vector(512))
+    ingredient: orm.Mapped[str] = orm.mapped_column(
+        sqla.ForeignKey(Product.id),
+        primary_key=True,
     )
-    images_embed_clip: orm.Mapped[list[Vector]] = orm.mapped_column(
-        postgresql.ARRAY(Vector(768))
+
+
+class ProductEmbedding(Base):
+    __tablename__: str = "product_embedding"
+    id: orm.Mapped[str] = orm.mapped_column(
+        sqla.ForeignKey(Product.id),
+        primary_key=True,
     )
+    images_embed_yolo: orm.Mapped[Vector] = orm.mapped_column(Vector(512))
+    images_embed_clip: orm.Mapped[Vector] = orm.mapped_column(Vector(768))
     description_embed: orm.Mapped[Vector] = orm.mapped_column(Vector(768))
+    product: orm.Mapped[Product] = orm.relationship(back_populates="embed")

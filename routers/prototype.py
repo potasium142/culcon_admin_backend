@@ -1,8 +1,8 @@
-from fastapi import APIRouter, BackgroundTasks
+from fastapi import APIRouter, BackgroundTasks, Request
 from fastapi.responses import StreamingResponse
 from dtos.request.account import AccountCreateDto
 
-from services import account_service as acc_sv
+from services import account_service as acc_sv, public
 from time import sleep
 from etc import progress_tracker
 
@@ -69,3 +69,12 @@ async def progress_tracker_test_fetch(id: int):
         pp.get(id),
         media_type="text/event-stream",
     )
+
+
+@router.get("/vector/search")
+async def search_vec(
+    prompt: str,
+    req: Request,
+):
+    yolo_model = req.state.ai_models["clip"]
+    return public.vector_search_image_clip(prompt, yolo_model)

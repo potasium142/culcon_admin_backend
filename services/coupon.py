@@ -19,6 +19,7 @@ def create_coupon(c: CouponCreation):
         usage_amount=c.usage_amount,
         usage_left=c.usage_amount,
         sale_percent=c.sale_percent,
+        minimum_price=c.minimum_price,
     )
 
     db_session.session.add(coupon)
@@ -29,6 +30,7 @@ def create_coupon(c: CouponCreation):
         "expire_time": c.expire_date,
         "usage_amount": c.usage_amount,
         "sale_percent": c.sale_percent,
+        "minimum_price": c.minimum_price,
     }
 
 
@@ -41,6 +43,7 @@ def get_all_coupons() -> list[dict[str, Any]]:
             "usage_left": c.usage_left,
             "expire_time": c.expire_time,
             "sale_percent": c.sale_percent,
+            "minimum_price": c.minimum_price,
         }
         for c in coupons
     ]
@@ -58,6 +61,7 @@ def get_coupon(id: str) -> dict[str, Any]:
         "usage_left": coupon.usage_left,
         "expire_time": coupon.expire_time,
         "sale_percent": coupon.sale_percent,
+        "minimum_price": coupon.minimum_price,
     }
 
 
