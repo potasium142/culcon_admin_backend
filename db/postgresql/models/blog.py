@@ -30,6 +30,8 @@ class ProductDoc(Base):
     article_md: orm.Mapped[str] = orm.mapped_column(psql.TEXT())
     day_before_expiry: orm.Mapped[int]
 
+    product: orm.Mapped[prod.Product] = orm.relationship(back_populates="doc")
+
 
 class Blog(Base):
     __tablename__: str = "blog"

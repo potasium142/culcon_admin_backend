@@ -190,10 +190,12 @@ def product_creation(
                 )
                 db_session.session.add(ingredient)
 
+        product.doc = product_doc
+
         db_session.session.add(product)
         db_session.session.add(product_price)
         db_session.session.add(product_embedded)
-        db_session.session.add(product_doc)
+        # db_session.session.add(product_doc)
 
         pp.complete(
             prog_id,

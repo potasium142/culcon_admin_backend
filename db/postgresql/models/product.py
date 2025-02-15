@@ -38,7 +38,12 @@ class Product(Base):
     image_url: orm.Mapped[str]
     price: orm.Mapped[float] = orm.mapped_column(sqltypes.REAL)
     sale_percent: orm.Mapped[float] = orm.mapped_column(sqltypes.REAL)
-    embed: orm.Mapped["ProductEmbedding"] = orm.relationship(back_populates="product")
+    embed: orm.Mapped["ProductEmbedding"] = orm.relationship(
+        back_populates="product",
+    )
+    doc: orm.Mapped["ProductDoc"] = orm.relationship(
+        back_populates="product",
+    )
 
 
 class ProductPriceHistory(Base):

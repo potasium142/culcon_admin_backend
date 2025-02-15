@@ -1,7 +1,7 @@
 from io import BytesIO
 from typing import Any
 from PIL import Image, ImageFile
-from sqlalchemy import select, text
+from sqlalchemy import select
 from db.postgresql.db_session import db_session
 from db.postgresql.models.product import Product, ProductEmbedding
 from ai import clip, yolo
@@ -37,7 +37,7 @@ def vector_search_prompt(
                     prompt_vec,
                 )
             )
-            .limit(14)
+            .limit(142)
         )
 
         return [__prod_dto(r) for r in results]
@@ -56,7 +56,7 @@ def vector_search_image_clip(
                     prompt_vec,
                 )
             )
-            .limit(14)
+            .limit(142)
         )
 
         return [__prod_dto(r) for r in results]
@@ -76,7 +76,7 @@ def vector_search_image_yolo(
                     prompt_vec,
                 )
             )
-            .limit(14)
+            .limit(142)
         )
 
         return [__prod_dto(r) for r in results]
