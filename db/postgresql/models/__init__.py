@@ -7,5 +7,6 @@ __all__ = [
     "order_history",
     "transaction",
     "blog",
+    "chat",
 ]
 Base = declarative_base()

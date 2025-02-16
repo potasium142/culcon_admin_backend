@@ -4,6 +4,7 @@ from sqlalchemy import orm
 
 
 class ChatHistory(Base):
+    __tablename__ = "chat_history"
     id: orm.Mapped[str] = orm.mapped_column(
         psql.VARCHAR(255),
         primary_key=True,
