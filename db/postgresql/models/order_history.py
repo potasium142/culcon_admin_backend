@@ -17,8 +17,9 @@ class OrderStatus(Enum):
 
 
 class PaymentMethod(Enum):
-    BANKING = 1
-    COD = 2
+    PAYPAL = 1
+    VNPAY = 2
+    COD = 3
 
 
 class PaymentStatus(Enum):
