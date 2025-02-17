@@ -25,6 +25,11 @@ async def get_all_product():
     return ps.get_list_product()
 
 
+@router.get("/mealkit/fetch_all", tags=["Product"])
+async def get_all_mealkit():
+    return ps.get_list_mealkit()
+
+
 @router.get("/progress/get")
 async def get_progress(prog_id: int):
     return StreamingResponse(

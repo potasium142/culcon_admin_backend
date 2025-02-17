@@ -302,6 +302,34 @@ def update_status(
     db_session.commit()
 
 
+def get_list_mealkit():
+    with db_session.session as session:
+        products: list[prod.Product] = (
+            session.query(prod.Product)
+            .filter_by(product_types=prod.ProductType.MEALKIT)
+            .all()
+        )
+
+        rtn_products: list[
+            dict[str, str | float | int | prod.ProductStatus | prod.ProductType]
+        ] = list(
+            map(
+                lambda prod: {
+                    "id": prod.id,
+                    "name": prod.product_name,
+                    "price": prod.price,
+                    "type": prod.product_types,
+                    "status": prod.product_status,
+                    "image_url": prod.image_url,
+                    "available_quantity": prod.available_quantity,
+                },
+                products,
+            )
+        )
+
+        return rtn_products
+
+
 def get_list_product():
     with db_session.session as session:
         products: list[prod.Product] = session.query(prod.Product).all()

@@ -5,7 +5,7 @@ from dtos.request import product as prod
 from fastapi import APIRouter, Depends, File, Request, UploadFile, BackgroundTasks
 from dtos.request.blog import BlogCreation
 from dtos.request.user_account import EditCustomerAccount, EditCustomerInfo
-from services import product as ps
+from services import product as ps, product_
 from services import blog
 from services import customer as c_ss
 from etc.progress_tracker import pp
@@ -328,3 +328,8 @@ async def change_customer_info(
     info: EditCustomerInfo,
 ):
     c_ss.edit_customer_info(id, info)
+
+
+@router.get("/product/history/stock", tags=["Product"])
+async def fetch_product_stock_history(_: Permission, prod_id: str):
+    return product_.get_product_stock_history(prod_id)
