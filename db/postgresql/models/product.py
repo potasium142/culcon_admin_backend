@@ -7,7 +7,6 @@ from sqlalchemy import orm
 from sqlalchemy.sql import sqltypes
 
 from db.postgresql.models import Base
-from sqlalchemy.dialects import postgresql
 
 from pgvector.sqlalchemy import Vector
 
@@ -96,3 +95,27 @@ class ProductEmbedding(Base):
     images_embed_clip: orm.Mapped[Vector] = orm.mapped_column(Vector(768))
     description_embed: orm.Mapped[Vector] = orm.mapped_column(Vector(768))
     product: orm.Mapped[Product] = orm.relationship(back_populates="embed")
+
+
+class ProductStockHistory(Base):
+    __tablename__: str = "product_stock_history"
+    product_id: orm.Mapped[str] = orm.mapped_column(
+        sqla.ForeignKey(Product.id),
+        primary_key=True,
+    )
+    date: orm.Mapped[datetime] = orm.mapped_column(
+        sqltypes.TIMESTAMP,
+        primary_key=True,
+    )
+    in_price: orm.Mapped[float] = orm.mapped_column(
+        sqltypes.REAL,
+    )
+    in_stock: orm.Mapped[int]
+
+    __table_args__ = (
+        sqla.UniqueConstraint(
+            "date",
+            "product_id",
+            name="product_stock_history_pk",
+        ),
+    )

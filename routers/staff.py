@@ -174,8 +174,13 @@ async def update_quantity(
     _: Permission,
     prod_id: str,
     quantity: int,
+    price: float,
 ):
-    ps.update_quantity(prod_id, quantity)
+    return ps.restock_product(
+        prod_id,
+        quantity,
+        price,
+    )
 
 
 @router.put(

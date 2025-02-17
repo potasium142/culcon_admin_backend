@@ -102,7 +102,7 @@ def __create_general_product(
     product = prod.Product(
         id=prod_id,
         product_name=prod_info.product_name,
-        available_quantity=prod_info.available_quantity,
+        available_quantity=0,
         product_types=prod_info.product_type,
         product_status=prod.ProductStatus.IN_STOCK,
         price=prod_info.price,
@@ -258,19 +258,34 @@ def update_price(
     db_session.commit()
 
 
-def update_quantity(
+def restock_product(
     prod_id: str,
     amount: int,
+    import_price: float,
 ):
     product: prod.Product = db_session.session.get(prod.Product, prod_id)
 
     if not product:
         raise Exception("Product not found")
 
+    product_stock = prod.ProductStockHistory(
+        product_id=product.id,
+        date=datetime.now(),
+        in_price=import_price,
+        in_stock=amount,
+    )
     product.available_quantity = amount
     product.product_status = prod.ProductStatus.IN_STOCK
 
+    db_session.session.add(product_stock)
     db_session.commit()
+
+    return (
+        db_session.session.query(prod.ProductStockHistory)
+        .filter_by(product_id=product.id)
+        .order_by(prod.ProductStockHistory.date.desc())
+        .first()
+    )
 
 
 def update_status(

@@ -58,3 +58,9 @@ class MealKitUpdate(ProductUpdate):
         if isinstance(value, str):
             return from_json(value)
         return value
+
+
+class ProductRestock(BaseModel):
+    product_id: str
+    restock_amount: int
+    restock_price: float
