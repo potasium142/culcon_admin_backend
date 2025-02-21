@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 import faker
 from passlib.context import CryptContext
@@ -8,16 +8,20 @@ import random
 from tqdm.auto import tqdm
 import json
 
+from db.postgresql.models import order_history
+
 
 # ========================================================
 URL_DATABASE = "postgresql+psycopg://culcon:culcon@localhost:5432/culcon"
 
 INSERT_PRODUCT = True
-VARIANCE_OF_PRICE = 7
+VARIANCE_OF_PRICE = 20
 
-USER_AMOUNT = 7
+USER_AMOUNT = 20
 
-STAFF_AMOUNT = 7
+PRODUCT_STOCK_AMOUNT = 10
+
+STAFF_AMOUNT = 10
 
 BLOG_AMOUNT = 7
 
@@ -30,6 +34,7 @@ fake = faker.Faker()
 engine = sqla.create_engine(URL_DATABASE)
 conn = engine.connect()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+price_dict: dict[str, list[datetime]] = {}
 
 USER_STATEMENT = sqla.text(
     "INSERT INTO "
@@ -69,6 +74,15 @@ PRODUCT_MEALKIT_STATEMENT = sqla.text(
     "INSERT INTO mealkit_ingredients(mealkit_id, ingredient) VALUES (:mealkit_id, :ingredient)"
 )
 
+ORDER_HISTORY_STATEMENT = sqla.text(
+    "INSERT INTO order_history (id, user_id, order_date, delivery_address, note, total_price, receiver, phonenumber, coupon, updated_coupon, updated_payment, payment_method, payment_status, order_status) "
+    + "VALUES (:id, :user_id, :order_date, :delivery_address, :note, :total_price, :receiver, :phonenumber, :coupon, :updated_coupon, :updated_payment, :payment_method, :payment_status, :order_status)"
+)
+ORDER_HISTORY_ITEMS_STATEMENT = sqla.text(
+    "INSERT INTO order_history_items "
+    + "(order_history_id, product_id_product_id, product_id_date, quantity) "
+    + "VALUES (:order_history_id, :product_id_product_id, :product_id_date, :quantity)"
+)
 BLOG_STATEMENT = sqla.text(
     "INSERT INTO blog(id, title, description, article, thumbnail, infos) "
     + "VALUES (:id, :title, :description, :article, :thumbnail, :infos)"
@@ -82,6 +96,11 @@ COUPON_STATEMENT = sqla.text(
 COMMENT_STATMENT = sqla.text(
     "INSERT INTO post_comment(id,timestamp,post_id,account_id,comment,comment_type,parent_comment,deleted) "
     + "VALUES (:id,:timestamp,:post_id,:account_id,:comment,:comment_type,:parent_comment,:deleted)"
+)
+
+PRODUCT_STOCK_HISTORY_STATEMENT = sqla.text(
+    "INSERT INTO product_stock_history(product_id, date, in_price, in_stock) "
+    "VALUES (:product_id, :date, :in_price, :in_stock)"
 )
 
 PRODUCT_IMAGES = [
@@ -247,6 +266,7 @@ if INSERT_PRODUCT:
         for food in foods:
             product_id = f"{cate}_{food}"
 
+            price_dict[product_id] = list()
             if cate == "MEALKIT":
                 created_mealkit.append(product_id)
             else:
@@ -287,18 +307,37 @@ if INSERT_PRODUCT:
                 price_history_data,
             )
             for _ in range(num_price_entries):
+                pdate = fake.date_time_between(
+                    start_date="-2y",
+                    end_date="now",
+                )
+
+                price = round(random.uniform(14.2, 142.0), 2)
                 price_history_data = {
-                    "price": round(random.uniform(14.2, 142.0), 2),
+                    "price": price,
                     "sale_percent": round(random.uniform(0.0, 50.0), 2),
+                    "date": pdate,
+                    "product_id": product_id,
+                }
+                price_dict[product_id].append(pdate)
+                conn.execute(
+                    PRODUCT_PRICE_HISTORY_STATEMENT,
+                    price_history_data,
+                )
+
+            for _ in range(PRODUCT_STOCK_AMOUNT):
+                product_stock_data = {
+                    "product_id": product_id,
                     "date": fake.date_time_between(
                         start_date="-2y",
                         end_date="now",
                     ),
-                    "product_id": product_id,
+                    "in_price": random.uniform(6.0, 60.0),
+                    "in_stock": random.randint(50, 100),
                 }
                 conn.execute(
-                    PRODUCT_PRICE_HISTORY_STATEMENT,
-                    price_history_data,
+                    PRODUCT_STOCK_HISTORY_STATEMENT,
+                    product_stock_data,
                 )
 
             product_doc_data = {
@@ -318,15 +357,15 @@ if INSERT_PRODUCT:
 
 
 for foods in created_mealkit:
-    ingredients = random.sample(created_product, k=random.randint(1, 5))
-    for ingredient in ingredients:
-        mealkit_data = {
+    prods = random.sample(created_product, k=random.randint(1, 5))
+    for prod in prods:
+        order_items_data = {
             "mealkit_id": foods,
-            "ingredient": ingredient,
+            "ingredient": prod,
         }
         conn.execute(
             PRODUCT_MEALKIT_STATEMENT,
-            mealkit_data,
+            order_items_data,
         )
 
 
@@ -423,6 +462,69 @@ for _ in range(COUPON_AMOUNT):
     }
 
     conn.execute(COUPON_STATEMENT, data)
+
+for u in created_user_id:
+    oid = str(uuid.uuid4())
+    order_history_data = {
+        "id": oid,
+        "user_id": u,
+        "order_date": fake.date_time_between(
+            start_date="-2y",
+            end_date="-2m",
+        ),
+        "delivery_address": fake.address(),
+        "note": fake.sentence(5),
+        "total_price": random.uniform(70, 142),
+        "receiver": fake.name(),
+        "phonenumber": fake.phone_number(),
+        "coupon": None,
+        "updated_coupon": False,
+        "updated_payment": False,
+        "payment_method": random.choice([
+            "PAYPAL",
+            "VNPAY",
+            "COD",
+        ]),
+        "payment_status": random.choice([
+            "PENDING",
+            "RECEIVED",
+            "REFUNDED",
+            "REFUNDING",
+            "CREATED",
+            "CHANGED",
+        ]),
+        "order_status": random.choice([
+            "ON_CONFIRM",
+            "ON_CONFIRM",
+            "ON_CONFIRM",
+            "ON_CONFIRM",
+            "ON_CONFIRM",
+            "ON_PROCESSING",
+            "ON_SHIPPING",
+            "SHIPPED",
+            "CANCELLED",
+        ]),
+    }
+    conn.execute(
+        ORDER_HISTORY_STATEMENT,
+        order_history_data,
+    )
+    prods = random.sample(
+        created_product,
+        k=random.randint(1, 5),
+    )
+    for prod in prods:
+        print(price_dict[prod])
+        order_items_data = {
+            "order_history_id": oid,
+            "product_id_product_id": prod,
+            "product_id_date": random.choice(price_dict[prod]),
+            "quantity": random.randint(10, 70),
+        }
+        conn.execute(
+            ORDER_HISTORY_ITEMS_STATEMENT,
+            order_items_data,
+        )
 
 
 conn.commit()
