@@ -174,12 +174,12 @@ async def update_quantity(
     _: Permission,
     prod_id: str,
     quantity: int,
-    price: float,
+    in_price: float,
 ):
     return ps.restock_product(
         prod_id,
         quantity,
-        price,
+        in_price,
     )
 
 

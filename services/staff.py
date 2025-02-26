@@ -92,6 +92,8 @@ def edit_employee_info(
     staff.dob = emp_info.dob
     staff.realname = emp_info.realname
 
+    db_session.commit()
+
     return get_staff_profile(staff_id)
 
 
