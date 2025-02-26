@@ -57,10 +57,7 @@ OrderHistoryItems = Table(
 
 class OrderHistory(Base):
     __tablename__: str = "order_history"
-    id: orm.Mapped[str] = orm.mapped_column(
-        sqltypes.VARCHAR(255),
-        primary_key=True,
-    )
+    id: orm.Mapped[int] = orm.mapped_column(sqltypes.BIGINT, primary_key=True)
     user_id: orm.Mapped[str] = orm.mapped_column(ForeignKey("user_account.id"))
     order_date: orm.Mapped[datetime] = orm.mapped_column(sqltypes.TIMESTAMP)
     delivery_address: orm.Mapped[str] = orm.mapped_column(sqltypes.VARCHAR(255))
