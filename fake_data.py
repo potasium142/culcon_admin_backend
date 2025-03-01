@@ -463,8 +463,8 @@ for _ in range(COUPON_AMOUNT):
 
     conn.execute(COUPON_STATEMENT, data)
 
-for u in created_user_id:
-    oid = str(uuid.uuid4())
+for i, u in enumerate(created_user_id):
+    oid = str(i)
     order_history_data = {
         "id": oid,
         "user_id": u,
@@ -514,7 +514,6 @@ for u in created_user_id:
         k=random.randint(1, 5),
     )
     for prod in prods:
-        print(price_dict[prod])
         order_items_data = {
             "order_history_id": oid,
             "product_id_product_id": prod,
