@@ -5,7 +5,6 @@ from db.postgresql.models import product as p
 
 class ProductCreation(BaseModel):
     product_name: str
-    available_quantity: int
     product_type: p.ProductType
     price: float
     sale_percent: float

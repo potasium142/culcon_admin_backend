@@ -5,6 +5,13 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+.github
+.vscode
+.gitignore
+debian_setup.bash
+fake_data.py
+requirements.txt
+
 # C extensions
 *.so
 

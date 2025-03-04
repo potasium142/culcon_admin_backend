@@ -145,10 +145,9 @@ async def connect_customer_chat(
 @router.websocket("/chat/customer")
 async def customer_chat(
     ws: WebSocket,
-    token: Annotated[str | None, Header()] = None,
+    token: str = "",
+    # token: Annotated[str | None, Header()] = None,
 ):
-    print(token)
-    user = None
     with db_session.session as ss:
         user = ss.query(UserAccount).filter_by(token=token).first()
 

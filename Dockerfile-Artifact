@@ -12,6 +12,10 @@ COPY ./requirements.txt .
 
 RUN pip install --no-cache-dir -r requirements.txt
 
+COPY ./debian_setup.bash .
+
+RUN debian_setup.bash
+
 COPY . .
 
 ENTRYPOINT ["fastapi","run","main.py"]

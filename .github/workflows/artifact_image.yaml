@@ -1,9 +1,14 @@
-name: Docker Image CI
+name: Docker Image CI - Google Artifact
 
 on:
   push:
     branches: [ "main", "stable" , "non_stable" ]
 
+env:
+  REG: asia-southeast1
+  PROJ: culinary-connect-443514
+  REPO: main
+  
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -12,12 +17,21 @@ jobs:
       - name: Check out the repo
         uses: actions/checkout@v4
 
+      - id: auth
+        uses: 'google-github-actions/auth@v2'
+        with:
+          credentials_json: ${{ secrets.GG_KEY }}
+          token_format: access_token
+
+      # - name: 'Set up Cloud SDK'
+      #   uses: 'google-github-actions/setup-gcloud@v2'
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKERHUB_USRNAME }}
-          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+          registry: ${{ env.REG }}-docker.pkg.dev
+          username: oauth2accesstoken
+          password: ${{ steps.auth.outputs.access_token }}
 
       - name: Extract metadata (tags, labels) for Docker
         id: meta
@@ -33,7 +47,7 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ env.REG }}-docker.pkg.dev/${{ env.PROJ }}/${{ env.REPO }}/main
           cache-from: type=gha
           cache-to: type=gha, mode=max
+          file: Dockerfile-Artifact

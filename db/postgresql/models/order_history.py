@@ -64,8 +64,10 @@ class OrderHistory(Base):
     note: orm.Mapped[str] = orm.mapped_column(sqltypes.VARCHAR(255))
     total_price: orm.Mapped[float] = orm.mapped_column(sqltypes.REAL)
     receiver: orm.Mapped[str] = orm.mapped_column(sqltypes.VARCHAR(255))
-    phonenumber: orm.Mapped[str] = orm.mapped_column(sqltypes.VARCHAR(12))
-    coupon: orm.Mapped[Coupon | None] = orm.mapped_column(ForeignKey("coupon.id"))
+    phonenumber: orm.Mapped[str] = orm.mapped_column(sqltypes.VARCHAR(255))
+    coupon: orm.Mapped[Coupon | None] = orm.mapped_column(
+        ForeignKey("coupon.id"),
+    )
     updated_coupon: orm.Mapped[bool]
     updated_payment: orm.Mapped[bool]
     payment_method: orm.Mapped[PaymentMethod]
