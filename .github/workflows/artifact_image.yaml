@@ -50,4 +50,4 @@ jobs:
           tags: ${{ env.REG }}-docker.pkg.dev/${{ env.PROJ }}/${{ env.REPO }}/main
           cache-from: type=gha
           cache-to: type=gha, mode=max
-          file: {context}/Dockerfile-Artifact
+          file: Dockerfile-Artifact
