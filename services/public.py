@@ -30,33 +30,14 @@ def vector_search_prompt(
 ):
     prompt_vec = clip_model.encode_text(prompt)[0]
     with db_session.session as ss:
-        results = ss.scalars(
-            select(ProductEmbedding)
-            .order_by(
-                ProductEmbedding.description_embed.l2_distance(
-                    prompt_vec,
-                )
+        dist_text = ProductEmbedding.description_embed.l2_distance(prompt_vec)
+        dist_img = ProductEmbedding.images_embed_clip.l2_distance(prompt_vec)
+        results = (
+            ss.query(ProductEmbedding)
+            .filter(
+                (dist_img < 0.8) | (dist_text < 0.8),
             )
-            .limit(142)
-        )
-
-        return [__prod_dto(r) for r in results]
-
-
-def vector_search_image_clip(
-    prompt: str,
-    clip_model: clip.OpenCLIP,
-):
-    prompt_vec = clip_model.encode_text(prompt)[0]
-    with db_session.session as ss:
-        results = ss.scalars(
-            select(ProductEmbedding)
-            .order_by(
-                ProductEmbedding.images_embed_clip.l2_distance(
-                    prompt_vec,
-                )
-            )
-            .limit(142)
+            .limit(70)
         )
 
         return [__prod_dto(r) for r in results]
@@ -65,18 +46,20 @@ def vector_search_image_clip(
 def vector_search_image_yolo(
     image_bytes: bytes,
     yolo_: yolo.YOLOEmbed,
+    clip_model: clip.OpenCLIP,
 ):
-    image = read_image(image_bytes)
+    image = [read_image(image_bytes)]
     prompt_vec = yolo_.embed(image)[0]
+    clip_vec = clip_model.encode_image(image)[0]
     with db_session.session as ss:
-        results = ss.scalars(
-            select(ProductEmbedding)
-            .order_by(
-                ProductEmbedding.images_embed_yolo.l2_distance(
-                    prompt_vec,
-                )
+        dist_img_yolo = ProductEmbedding.images_embed_yolo.l2_distance(prompt_vec)
+        dist_img_clip = ProductEmbedding.images_embed_clip.l2_distance(clip_vec)
+        results = (
+            ss.query(ProductEmbedding)
+            .filter(
+                (dist_img_yolo < 2) | (dist_img_clip < 0.8),
             )
-            .limit(142)
+            .limit(70)
         )
 
         return [__prod_dto(r) for r in results]
