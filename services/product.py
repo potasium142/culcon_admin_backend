@@ -124,8 +124,6 @@ def __create_general_product(
         description_embed=description_embed,
     )
 
-    db_session.commit()
-
     pp.close_subtask(prog_id, save_db_task)
 
     return product, product_price, product_embedded
@@ -203,6 +201,7 @@ def product_creation(
         )
         db_session.commit()
     except Exception as e:
+        db_session.session.rollback()
         pp.halt(prog_id, str(e))
 
 
