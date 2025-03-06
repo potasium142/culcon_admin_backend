@@ -178,7 +178,7 @@ def product_creation(
             day_before_expiry=prod_info.day_before_expiry,
         )
 
-        with db_session.session as ss, ss.begin():
+        with db_session.session as ss:
             if product_doc is MealKitCreation:
                 product_doc.instructions = prod_info.instructions
 
@@ -194,7 +194,8 @@ def product_creation(
             ss.add(product)
             ss.add(product_price)
             ss.add(product_embedded)
-            # db_session.session.add(product_doc)
+
+            ss.commit()
 
         pp.complete(
             prog_id,

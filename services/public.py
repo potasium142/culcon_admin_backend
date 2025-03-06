@@ -3,7 +3,7 @@ from typing import Any
 from PIL import Image, ImageFile
 from sqlalchemy import select
 from db.postgresql.db_session import db_session
-from db.postgresql.models.product import Product, ProductEmbedding
+from db.postgresql.models.product import Product, ProductEmbedding, ProductType
 from ai import clip, yolo
 
 
@@ -62,4 +62,11 @@ def vector_search_image_yolo(
             .limit(70)
         )
 
-        return [__prod_dto(r) for r in results]
+        r_results = []
+
+        for r in results:
+            if r.product.product_types != ProductType.MEALKIT:
+                continue
+            r_results.append(__prod_dto(r))
+
+        return r_results
