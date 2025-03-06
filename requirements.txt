@@ -17,5 +17,6 @@ websocket==0.2.1
 torch==2.5.1+cpu
 torchaudio==2.5.1+cpu
 torchvision==0.20.1+cpu
-
+scikit-learn==1.6.1
+lightgbm==4.6.0
 open_clip_torch==2.30.0
