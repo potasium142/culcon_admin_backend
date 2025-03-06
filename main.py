@@ -1,9 +1,12 @@
 from typing import Annotated
 import uuid
+import sqlalchemy
+import sqlalchemy.exc
 import uvicorn
 from fastapi import Cookie, FastAPI, Request
 from fastapi.responses import JSONResponse
 from auth import api as auth_api
+from db.postgresql.db_session import db_session
 from routers import (
     prototype,
     staff,
@@ -61,6 +64,22 @@ async def validation_exception_handler(request: Request, exc: Exception):
         content={
             "api": str(request.url),
             "method": request.method,
+            "message": (f"{exc!r}"),
+        },
+    )
+
+
+@app.exception_handler(sqlalchemy.exc.SQLAlchemyError)
+async def db_exception_handler(
+    req: Request,
+    exc: sqlalchemy.exc.SQLAlchemyError,
+):
+    db_session.session.rollback()
+    return JSONResponse(
+        status_code=500,
+        content={
+            "api": str(req.url),
+            "method": req.method,
             "message": (f"{exc!r}"),
         },
     )

@@ -178,30 +178,29 @@ def product_creation(
             day_before_expiry=prod_info.day_before_expiry,
         )
 
-        if product_doc is MealKitCreation:
-            product_doc.instructions = prod_info.instructions
+        with db_session.session as ss, ss.begin():
+            if product_doc is MealKitCreation:
+                product_doc.instructions = prod_info.instructions
 
-            for ing in prod_info.ingredients:
-                ingredient = prod.MealkitIngredients(
-                    mealkit_id=prod_id,
-                    ingredient=ing,
-                )
-                db_session.session.add(ingredient)
+                for ing in prod_info.ingredients:
+                    ingredient = prod.MealkitIngredients(
+                        mealkit_id=prod_id,
+                        ingredient=ing,
+                    )
+                    ss.add(ingredient)
 
-        product.doc = product_doc
+            product.doc = product_doc
 
-        db_session.session.add(product)
-        db_session.session.add(product_price)
-        db_session.session.add(product_embedded)
-        # db_session.session.add(product_doc)
+            ss.add(product)
+            ss.add(product_price)
+            ss.add(product_embedded)
+            # db_session.session.add(product_doc)
 
         pp.complete(
             prog_id,
             {"product_id": prod_id},
         )
-        db_session.commit()
     except Exception as e:
-        db_session.session.rollback()
         pp.halt(prog_id, str(e))
 
 
