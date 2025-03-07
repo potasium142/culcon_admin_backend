@@ -1,7 +1,6 @@
 from io import BytesIO
 from typing import Any
 from PIL import Image, ImageFile
-from sqlalchemy import select
 from db.postgresql.db_session import db_session
 from db.postgresql.models.product import Product, ProductEmbedding, ProductType
 from ai import clip, yolo

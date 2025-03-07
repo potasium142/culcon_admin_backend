@@ -13,7 +13,7 @@ from routers import (
     manager,
     general,
     dev,
-    websocket,
+    websocket_,
     public,
 )
 from contextlib import asynccontextmanager
@@ -52,7 +52,7 @@ app.include_router(manager.router)
 app.include_router(staff.router)
 app.include_router(auth_api.router)
 app.include_router(prototype.router)
-app.include_router(websocket.router)
+app.include_router(websocket_.router)
 app.include_router(public.router)
 
 
@@ -78,8 +78,6 @@ async def db_exception_handler(
     return JSONResponse(
         status_code=500,
         content={
-            "api": str(req.url),
-            "method": req.method,
             "message": (f"{exc!r}"),
         },
     )
