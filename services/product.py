@@ -4,8 +4,11 @@ from numpy import ndarray
 from db.postgresql.models.blog import ProductDoc
 from datetime import datetime
 from db.postgresql.models import product as prod
+from db.postgresql.models.order_history import OrderHistoryItems
 from db.postgresql.db_session import db_session
+from sqlalchemy.orm import Session
 from io import BytesIO
+from db.postgresql.models.order_history import OrderHistory
 from dtos.request.product import (
     ProductCreation,
     MealKitCreation,
@@ -16,6 +19,7 @@ from ai import clip, yolo
 from PIL import Image, ImageFile
 from etc.progress_tracker import ProgressTracker
 from etc import cloudinary
+from sqlalchemy import func
 
 
 def read_image(file: bytes) -> ImageFile.ImageFile:
@@ -144,7 +148,8 @@ def product_creation(
         image_dir = f"{IMG_DIR}/{prod_id}"
 
         if (
-            db_session.session.query(prod.Product).filter_by(id=prod_id).first()
+            db_session.session.query(
+                prod.Product).filter_by(id=prod_id).first()
             is not None
         ):
             raise Exception("Product exist")
@@ -178,7 +183,7 @@ def product_creation(
             day_before_expiry=prod_info.day_before_expiry,
         )
 
-        with db_session.session as ss, ss.begin():
+        with db_session.session as ss:
             if product_doc is MealKitCreation:
                 product_doc.instructions = prod_info.instructions
 
@@ -194,7 +199,8 @@ def product_creation(
             ss.add(product)
             ss.add(product_price)
             ss.add(product_embedded)
-            # db_session.session.add(product_doc)
+
+            ss.commit()
 
         pp.complete(
             prog_id,
@@ -356,7 +362,8 @@ def get_product(prod_id: str):
     with db_session.session as session:
         product: prod.Product = session.get(prod.Product, prod_id)
         product_price: list[prod.ProductPriceHistory] = (
-            session.query(prod.ProductPriceHistory).filter_by(product_id=prod_id).all()
+            session.query(prod.ProductPriceHistory).filter_by(
+                product_id=prod_id).all()
         )
 
         product_doc = session.get(ProductDoc, prod_id)
@@ -385,3 +392,37 @@ def get_product(prod_id: str):
             base_info["ingredients"] = product_doc.ingredients
 
         return base_info
+
+
+def get_top_10_products_month(db: Session, year: int, month: int) -> list[dict[str, int]]:
+    results = (
+        db.query(
+            prod.Product.product_name.label("product_name"),
+            func.sum(OrderHistoryItems.c.quantity).label("total_quantity"),
+        )
+        .join(OrderHistoryItems, prod.Product.id == OrderHistoryItems.c.product_id_product_id)
+        .join(OrderHistory, OrderHistory.id == OrderHistoryItems.c.order_history_id)
+        .filter(func.extract("year", OrderHistory.order_date) == year)
+        .filter(func.extract("month", OrderHistory.order_date) == month)
+        .group_by(prod.Product.product_name)
+        .order_by(func.sum(OrderHistoryItems.c.quantity).desc())
+        .limit(10)
+        .all()
+    )
+    return [{"product_name": row.product_name, "total_quantity": row.total_quantity} for row in results]
+
+
+def get_top_10_products_all_time(db: Session) -> list[dict[str, int]]:
+    results = (
+        db.query(
+            prod.Product.product_name.label("product_name"),
+            func.sum(OrderHistoryItems.c.quantity).label("total_quantity"),
+        )
+        .join(OrderHistoryItems, prod.Product.id == OrderHistoryItems.c.product_id_product_id)
+        .join(OrderHistory, OrderHistory.id == OrderHistoryItems.c.order_history_id)
+        .group_by(prod.Product.product_name)
+        .order_by(func.sum(OrderHistoryItems.c.quantity).desc())
+        .limit(10)
+        .all()
+    )
+    return [{"product_name": row.product_name, "total_quantity": row.total_quantity} for row in results]

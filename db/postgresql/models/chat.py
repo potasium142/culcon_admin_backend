@@ -12,6 +12,6 @@ class ChatHistory(Base):
         sqla.ForeignKey(UserAccount.id),
         primary_key=True,
     )
-    chatlog: orm.Mapped[dict[str, str]] = orm.mapped_column(
+    chatlog: orm.Mapped[list[dict[str, str]]] = orm.mapped_column(
         psql.JSONB(),
     )
