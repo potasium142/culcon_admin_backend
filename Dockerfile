@@ -1,17 +1,42 @@
+# Build stage
+FROM docker.io/python:3.10.15-slim-bookworm AS builder
+
+WORKDIR /build
+
+# Install system dependencies needed for building
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    wget \
+    curl \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy and install requirements
+COPY ./requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Runtime stage
 FROM docker.io/python:3.10.15-slim-bookworm
 
 WORKDIR /workdir
 
 EXPOSE 8000
 
-RUN apt update
+# Install only runtime dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq-dev \
+    libgl1 \
+    libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
 
-RUN apt install wget curl libpq-dev libgl1 libglib2.0-0 -y 
+# Copy installed Python packages from builder
+COPY --from=builder /usr/local/lib/python3.10/site-packages /usr/local/lib/python3.10/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
 
-COPY ./requirements.txt .
+# Copy AI weights from builder
+COPY --from=builder /build/ai/weights /workdir/ai/weights
 
-RUN pip install --no-cache-dir -r requirements.txt
-
+# Copy application code
 COPY . .
 
-ENTRYPOINT ["fastapi","run","main.py"]
+ENTRYPOINT ["fastapi", "run", "main.py"]
+

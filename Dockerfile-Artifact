@@ -29,7 +29,6 @@ WORKDIR /workdir
 
 EXPOSE 8000
 
-ENV DB_URL=postgresql+psycopg://postgres.vybaqlunzfrjpxsnnvmn:gPk9zs4HHefgHk9T@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres
 
 # Install only runtime dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
