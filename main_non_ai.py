@@ -26,7 +26,7 @@ preload: dict[Any, Any] = dict()
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    yield {"ai_models": ai.load_all_model(), "test": "lesus"}
+    yield {"ai_models": ai.load_all_stub_model(), "test": "lesus"}
 
 
 app = FastAPI(lifespan=lifespan)

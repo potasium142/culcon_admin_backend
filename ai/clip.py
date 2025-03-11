@@ -1,12 +1,15 @@
 import open_clip
-import numpy as np
 import torch
-
-from PIL import Image
+import numpy as np
 
 
 class OpenCLIP:
-    def __init__(self, model_name: str, pretrained: str, device: str = "cpu") -> None:
+    def __init__(
+        self,
+        model_name: str,
+        pretrained: str,
+        device: str = "cpu",
+    ) -> None:
         self.device = self.__get_device(device)
         self.model, self.tokenizer, self.preprocess = self.__eval_model(
             model_name, pretrained
@@ -22,7 +25,7 @@ class OpenCLIP:
 
                 print("CUDA is not available, fallback to cpu")
                 return torch.device("cpu")
-            case "_":
+            case _:
                 raise Exception(f"Unknow device:{device}")
 
     def __eval_model(
@@ -38,7 +41,7 @@ class OpenCLIP:
         tokenizer = open_clip.get_tokenizer(model_name)
         return model, tokenizer, preprocess
 
-    def encode_text(self, search_text: str | list[str]) -> np.ndarray:
+    def encode_text(self, search_text: str | list[str]):
         text_tokens = self.tokenizer(search_text)
 
         with torch.no_grad():
@@ -48,7 +51,7 @@ class OpenCLIP:
 
         return text_features.numpy()
 
-    def encode_image(self, images) -> np.ndarray:
+    def encode_image(self, images):
         image = [self.preprocess(img).unsqueeze(0) for img in images]
         image = torch.cat(image)
         with torch.no_grad():
@@ -57,3 +60,16 @@ class OpenCLIP:
         image_features /= image_features.norm(dim=-1, keepdim=True)
 
         return image_features.numpy()
+
+
+class OpenCLIPStub:
+    def __init__(
+        self,
+    ) -> None:
+        pass
+
+    def encode_text(self, search_text: str | list[str]):
+        return [np.ones(768)]
+
+    def encode_image(self, images):
+        return [np.ones(768)]
