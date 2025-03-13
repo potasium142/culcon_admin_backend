@@ -1,13 +1,16 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
-import os
 
 
 class Environment(BaseSettings):
     SECRET_KEY: str = ""
-    TOKEN_EXPIRE_MINUTES: int = 30
+    TOKEN_EXPIRE_MINUTES: int = 30000
     DB_URL: str = ""
     DB_URL_SUPA: str = ""
-    MONGODB_URL: str = ""
+    DB_USERNAME: str = "postgres"
+    DB_PASSWORD: str = "postgres"
+    DB_NAME: str = "postgres"
+    DB_PORT: int = 5432
+    DB_DRIVER: str = "postgresql+psycopg"
     CLOUDINARY_NAME: str = ""
     CLOUDINARY_API_KEY: str = ""
     CLOUDINARY_API_SECRET: str = ""

@@ -2,11 +2,12 @@ from datetime import datetime, timedelta
 import random
 import uuid
 import faker
-from sqlalchemy import create_engine, text
+
+import sqlalchemy as sqla
 
 # Kết nối đến cơ sở dữ liệu
-URL_DATABASE = "postgresql+psycopg2://culcon:culcon@localhost:5432/culcon"
-engine = create_engine(URL_DATABASE)
+URL_DATABASE = "postgresql+psycopg://culcon:culcon@localhost:5432/culcon_test"
+engine = sqla.create_engine(URL_DATABASE)
 conn = engine.connect()
 
 fake = faker.Faker()
@@ -22,33 +23,26 @@ NUM_COUPONS = 10
 PRODUCT_TYPES = ["VEGETABLE", "MEAT", "SEASON", "MEALKIT"]
 PRODUCT_STATUSES = ["IN_STOCK", "OUT_OF_STOCK", "NO_LONGER_IN_SALE"]
 PAYMENT_METHODS = ["PAYPAL", "VNPAY", "COD"]
-PAYMENT_STATUSES = ["PENDING", "RECEIVED",
-                    "REFUNDED", "REFUNDING", "CREATED", "CHANGED"]
-ORDER_STATUSES = ["ON_CONFIRM", "ON_PROCESSING",
-                  "ON_SHIPPING", "SHIPPED", "CANCELLED"]
+PAYMENT_STATUSES = [
+    "PENDING",
+    "RECEIVED",
+    "REFUNDED",
+    "REFUNDING",
+    "CREATED",
+    "CHANGED",
+]
+ORDER_STATUSES = ["ON_CONFIRM", "ON_PROCESSING", "ON_SHIPPING", "SHIPPED", "CANCELLED"]
 
 # Thêm sản phẩm
-product_ids = []
-for _ in range(NUM_PRODUCTS):
-    product_id = str(uuid.uuid4())
-    product_ids.append(product_id)
-    product_data = {
-        "id": product_id,
-        "product_name": fake.word(),
-        "available_quantity": random.randint(10, 100),
-        "product_types": random.choice(PRODUCT_TYPES),
-        "product_status": random.choice(PRODUCT_STATUSES),
-        "image_url": fake.image_url(),
-        "price": round(random.uniform(10, 100), 2),
-        "sale_percent": round(random.uniform(0, 50), 2),
-    }
-    conn.execute(
-        text(
-            "INSERT INTO public.product (id, product_name, available_quantity, product_types, product_status, image_url, price, sale_percent) "
-            "VALUES (:id, :product_name, :available_quantity, :product_types, :product_status, :image_url, :price, :sale_percent)"
-        ),
-        product_data,
-    )
+product_ids = [
+    "VEG_WholeGarlicBulb",
+    "VEG_FreshCarrots",
+    "MEAT_BonelessChickenBreast",
+    "MEAT_FreshAtlanticSalmon",
+    "SS_BlackPepperPowder",
+    "MEAT_GarlicButterSalmonwithRoastedCarrots",
+    "MK_GarlicPepperChickenStir-Fry",
+]
 
 # Thêm lịch sử giá sản phẩm
 for product_id in product_ids:
@@ -60,7 +54,7 @@ for product_id in product_ids:
             "product_id": product_id,
         }
         conn.execute(
-            text(
+            sqla.text(
                 "INSERT INTO public.product_price_history (price, sale_percent, date, product_id) "
                 "VALUES (:price, :sale_percent, :date, :product_id)"
             ),
@@ -77,7 +71,7 @@ for product_id in product_ids:
             "in_stock": random.randint(10, 50),
         }
         conn.execute(
-            text(
+            sqla.text(
                 "INSERT INTO public.product_stock_history (product_id, date, in_price, in_stock) "
                 "VALUES (:product_id, :date, :in_price, :in_stock)"
             ),
@@ -103,7 +97,7 @@ for _ in range(NUM_USERS):
         "bookmarked_posts": [],
     }
     conn.execute(
-        text(
+        sqla.text(
             "INSERT INTO public.user_account (id, email, username, password, status, address, phone, profile_pic_uri, profile_description, token, bookmarked_posts) "
             "VALUES (:id, :email, :username, :password, :status, :address, :phone, :profile_pic_uri, :profile_description, :token, :bookmarked_posts)"
         ),
@@ -131,30 +125,13 @@ for _ in range(NUM_ORDERS):
         "order_status": random.choice(ORDER_STATUSES),
     }
     conn.execute(
-        text(
+        sqla.text(
             "INSERT INTO public.order_history (id, user_id, order_date, delivery_address, note, total_price, receiver, phonenumber, coupon, updated_coupon, updated_payment, payment_method, payment_status, order_status) "
             "VALUES (:id, :user_id, :order_date, :delivery_address, :note, :total_price, :receiver, :phonenumber, :coupon, :updated_coupon, :updated_payment, :payment_method, :payment_status, :order_status)"
         ),
         order_data,
     )
 
-# Thêm blog
-for _ in range(NUM_BLOGS):
-    blog_data = {
-        "id": str(uuid.uuid4()),
-        "title": fake.sentence(),
-        "description": fake.paragraph(),
-        "article": fake.text(),
-        "thumbnail": fake.image_url(),
-        "infos": fake.json(),
-    }
-    conn.execute(
-        text(
-            "INSERT INTO public.blog (id, title, description, article, thumbnail, infos) "
-            "VALUES (:id, :title, :description, :article, :thumbnail, :infos)"
-        ),
-        blog_data,
-    )
 
 # Thêm phiếu giảm giá
 for _ in range(NUM_COUPONS):
@@ -167,7 +144,7 @@ for _ in range(NUM_COUPONS):
         "minimum_price": round(random.uniform(20, 100), 2),
     }
     conn.execute(
-        text(
+        sqla.text(
             "INSERT INTO public.coupon (id, expire_time, sale_percent, usage_amount, usage_left, minimum_price) "
             "VALUES (:id, :expire_time, :sale_percent, :usage_amount, :usage_left, :minimum_price)"
         ),
@@ -175,12 +152,11 @@ for _ in range(NUM_COUPONS):
     )
 
 # Lấy danh sách các đơn hàng từ bảng order_history
-order_ids = conn.execute(
-    text("SELECT id FROM public.order_history")).fetchall()
+order_ids = conn.execute(sqla.text("SELECT id FROM public.order_history")).fetchall()
 order_ids = [row[0] for row in order_ids]
 
 product_price_history = conn.execute(
-    text("SELECT product_id, date FROM public.product_price_history")
+    sqla.text("SELECT product_id, date FROM public.product_price_history")
 ).fetchall()
 
 for order_id in order_ids:
@@ -198,7 +174,7 @@ for order_id in order_ids:
         }
 
         conn.execute(
-            text(
+            sqla.text(
                 "INSERT INTO public.order_history_items (order_history_id, product_id_product_id, product_id_date, quantity) "
                 "VALUES (:order_history_id, :product_id_product_id, :product_id_date, :quantity)"
             ),
@@ -207,12 +183,18 @@ for order_id in order_ids:
 
 # Lấy danh sách các đơn hàng từ bảng order_history
 order_data = conn.execute(
-    text("SELECT id, total_price FROM public.order_history")
+    sqla.text("SELECT id, total_price FROM public.order_history")
 ).fetchall()
 
 # Các trạng thái thanh toán
-PAYMENT_STATUSES = ["PENDING", "RECEIVED",
-                    "REFUNDED", "REFUNDING", "CREATED", "CHANGED"]
+PAYMENT_STATUSES = [
+    "PENDING",
+    "RECEIVED",
+    "REFUNDED",
+    "REFUNDING",
+    "CREATED",
+    "CHANGED",
+]
 
 # Thêm dữ liệu vào bảng payment_transaction
 for order in order_data:
@@ -236,25 +218,24 @@ for order in order_data:
 
     # Chèn dữ liệu vào bảng payment_transaction
     conn.execute(
-        text(
+        sqla.text(
             "INSERT INTO public.payment_transaction (order_id, create_time, payment_id, refund_id, url, transaction_id, status, amount) "
             "VALUES (:order_id, :create_time, :payment_id, :refund_id, :url, :transaction_id, :status, :amount)"
         ),
         payment_data,
     )
 # Lấy danh sách người dùng từ bảng user_account
-user_ids = conn.execute(text("SELECT id FROM public.user_account")).fetchall()
+user_ids = conn.execute(sqla.text("SELECT id FROM public.user_account")).fetchall()
 user_ids = [row[0] for row in user_ids]
 
 # Lấy danh sách sản phẩm từ bảng product
-product_ids = conn.execute(text("SELECT id FROM public.product")).fetchall()
+product_ids = conn.execute(sqla.text("SELECT id FROM public.product")).fetchall()
 product_ids = [row[0] for row in product_ids]
 
 # Thêm dữ liệu vào bảng cart
 for user_id in user_ids:
     # Chọn ngẫu nhiên số lượng sản phẩm trong giỏ hàng (1-5 sản phẩm)
-    num_items = random.randint(1, 5)
-    for _ in range(num_items):
+    for _ in range(1):
         # Chọn ngẫu nhiên một sản phẩm
         product_id = random.choice(product_ids)
 
@@ -267,7 +248,7 @@ for user_id in user_ids:
 
         # Chèn dữ liệu vào bảng cart
         conn.execute(
-            text(
+            sqla.text(
                 "INSERT INTO public.cart (amount, account_id, product_id) "
                 "VALUES (:amount, :account_id, :product_id)"
             ),

@@ -1,3 +1,4 @@
 {
-    "python.analysis.typeEvaluation.strictParameterNoneValue": false
+    "python.analysis.typeEvaluation.strictParameterNoneValue": false,
+    "remote.autoForwardPorts": false
 }

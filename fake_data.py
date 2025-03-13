@@ -12,7 +12,7 @@ from db.postgresql.models import order_history
 
 
 # ========================================================
-URL_DATABASE = "postgresql+psycopg://culcon:culcon@localhost:5432/culcon"
+URL_DATABASE = "postgresql+psycopg://culcon:culcon@localhost:5432/culcon_test"
 
 INSERT_PRODUCT = True
 VARIANCE_OF_PRICE = 20
@@ -142,68 +142,18 @@ PRODUCT_STATUS = [
 
 PRODUCT_TYPE_FOOD_NAMES = {
     "VEGETABLE": [
-        "carrot",
-        "broccoli",
-        "spinach",
-        "potato",
-        "tomato",
-        "cucumber",
-        "lettuce",
-        "pepper",
-        "onion",
-        "garlic",
-        "peas",
-        "corn",
-        "cabbage",
-        "zucchini",
+        "VEG_WholeGarlicBulbVEG_FreshCarrots",
     ],
     "MEAT": [
-        "chicken",
-        "beef",
-        "pork",
-        "lamb",
-        "turkey",
-        "duck",
-        "bacon",
-        "sausage",
-        "ham",
-        "salami",
-        "venison",
-        "rabbit",
-        "goose",
-        "quail",
+        "MEAT_BonelessChickenBreast",
+        "MEAT_FreshAtlanticSalmon",
     ],
     "SEASON": [
-        "salt",
-        "pepper",
-        "paprika",
-        "cumin",
-        "oregano",
-        "basil",
-        "thyme",
-        "rosemary",
-        "cinnamon",
-        "nutmeg",
-        "clove",
-        "coriander",
-        "turmeric",
-        "ginger",
+        "SS_BlackPepperPowder",
     ],
     "MEALKIT": [
-        "spaghetti_bolognese",
-        "chicken_curry",
-        "taco",
-        "sushi",
-        "pizza",
-        "burger",
-        "salad",
-        "bbq",
-        "pasta",
-        "soup",
-        "stir_fry",
-        "wrap",
-        "sandwich",
-        "breakfast",
+        "MEAT_GarlicButterSalmonwithRoastedCarrots",
+        "MK_GarlicPepperChickenStir-Fry",
     ],
 }
 
