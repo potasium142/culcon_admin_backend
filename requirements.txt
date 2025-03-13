@@ -1,6 +1,5 @@
 fastapi[standard]==0.115.6
 fastapi-cli==0.0.7
-psycopg[binary]==3.2.3
 pyjwt==2.10.1
 passlib==1.7.4
 sqlalchemy==2.0.36

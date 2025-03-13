@@ -1,6 +1,5 @@
 import sqlalchemy as sqla
 import sqlalchemy_utils as sqlau
-from pgvector.psycopg import register_vector
 from sqlalchemy import event, text
 from config import env
 import os
@@ -32,9 +31,9 @@ with engine.connect() as connection:
 DBSession: sqla.orm.Session = sqla.orm.sessionmaker(engine)
 
 
-@event.listens_for(engine, "connect")
-def connect(dbapi_connection, _):
-    register_vector(dbapi_connection)
+# @event.listens_for(engine, "connect")
+# def connect(dbapi_connection, _):
+#     register_vector(dbapi_connection)
 
 
 Base.metadata.create_all(engine)
