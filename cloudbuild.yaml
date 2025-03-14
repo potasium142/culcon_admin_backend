@@ -1,16 +1,18 @@
 steps:
   - name: gcr.io/cloud-builders/docker
     args:
-      - pull
+      - "-c"
       - >-
+        docker pull
         $_AR_HOSTNAME/$_AR_PROJECT_ID/$_AR_REPOSITORY/$REPO_NAME/$_SERVICE_NAME:latest
+        || exit 0
     id: Pull
+    entrypoint: bash
   - name: gcr.io/cloud-builders/docker
     args:
       - build
       - "-t"
-      - >-
-        $_AR_HOSTNAME/$_AR_PROJECT_ID/$_AR_REPOSITORY/$REPO_NAME/$_SERVICE_NAME
+      - $_AR_HOSTNAME/$_AR_PROJECT_ID/$_AR_REPOSITORY/$REPO_NAME/$_SERVICE_NAME
       - "--cache-from"
       - >-
         $_AR_HOSTNAME/$_AR_PROJECT_ID/$_AR_REPOSITORY/$REPO_NAME/$_SERVICE_NAME:latest
@@ -21,8 +23,7 @@ steps:
   - name: gcr.io/cloud-builders/docker
     args:
       - push
-      - >-
-        $_AR_HOSTNAME/$_AR_PROJECT_ID/$_AR_REPOSITORY/$REPO_NAME/$_SERVICE_NAME
+      - $_AR_HOSTNAME/$_AR_PROJECT_ID/$_AR_REPOSITORY/$REPO_NAME/$_SERVICE_NAME
     id: Push
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk:slim"
     args:
@@ -40,8 +41,7 @@ steps:
     id: Deploy
     entrypoint: gcloud
 images:
-  - >-
-    $_AR_HOSTNAME/$_AR_PROJECT_ID/$_AR_REPOSITORY/$REPO_NAME/$_SERVICE_NAME
+  - $_AR_HOSTNAME/$_AR_PROJECT_ID/$_AR_REPOSITORY/$REPO_NAME/$_SERVICE_NAME
 options:
   substitutionOption: ALLOW_LOOSE
   logging: CLOUD_LOGGING_ONLY
