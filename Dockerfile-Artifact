@@ -16,7 +16,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Download AI model weights
 RUN mkdir -p /build/ai/weights
-RUN curl -sS -L -o /tmp/model.tar.gz "https://www.kaggle.com/api/v1/models/letruonggiangk17ct/culcon_yolo/pyTorch/default/2/download" && \
+RUN curl -sS -L -o /tmp/model.tar.gz "https://www.kaggle.com/api/v1/models/letruonggiangk17ct/culcon_yolo/pyTorch/default/3/download" && \
     tar -xf /tmp/model.tar.gz -C /build/ai/weights && \
     rm /tmp/model.tar.gz
     
