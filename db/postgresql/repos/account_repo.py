@@ -23,12 +23,12 @@ def update_token(id: str, token: str) -> None:
     with _session as ss:
         acc: StaffAccount = ss.get(StaffAccount, id)
 
-    if not acc:
-        raise Exception("Account not exist")
+        if not acc:
+            raise Exception("Account not exist")
 
-    acc.token = token
+        acc.token = token
 
-    commit()
+        commit()
 
 
 def find_by_username(username: str) -> StaffAccount | None:
