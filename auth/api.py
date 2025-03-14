@@ -1,8 +1,10 @@
+from db.postgresql.models import staff_account
 from db.postgresql.repos import account_repo
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, APIRouter
 from fastapi.security import OAuth2PasswordRequestForm
+from db.postgresql.db_session import db_session
 
 import auth
 
@@ -14,7 +16,29 @@ router = APIRouter(prefix="/api/auth", tags=["Auth"])
 
 @router.get("/permission_test")
 async def test(token: Annotated[str, Depends(auth.oauth2_scheme)]):
-    return "ok"
+    return token
+
+
+@router.get("/profile")
+async def get_profile(token: Annotated[str, Depends(auth.oauth2_scheme)]):
+    with db_session.session as ss:
+        acc: staff_account.StaffAccount = (
+            ss.query(
+                staff_account.StaffAccount,
+            )
+            .filter_by(token=token)
+            .scalar()
+        )
+
+        if not acc:
+            return {"error": "token is invalid"}
+
+        return {
+            "id": acc.id,
+            "type": acc.type,
+            "status": acc.status,
+            "username": acc.username,
+        }
 
 
 @router.post("/login")
