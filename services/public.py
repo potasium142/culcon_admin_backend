@@ -10,16 +10,18 @@ def read_image(file: bytes) -> ImageFile.ImageFile:
     return Image.open(BytesIO(file))
 
 
-def __prod_dto(r: Product) -> dict[str, Any]:
+def __prod_dto(r: tuple[Product, float, float]) -> dict[str, Any]:
     return {
-        "id": r.product.id,
-        "product_name": r.product.product_name,
-        "available_quantity": r.product.available_quantity,
-        "product_types": r.product.product_types,
-        "product_status": r.product.product_status,
-        "image_url": r.product.image_url,
-        "price": r.product.price,
-        "sale_percent": r.product.sale_percent,
+        "id": r[0].product.id,
+        "product_name": r[0].product.product_name,
+        "available_quantity": r[0].product.available_quantity,
+        "product_types": r[0].product.product_types,
+        "product_status": r[0].product.product_status,
+        "image_url": r[0].product.image_url,
+        "price": r[0].product.price,
+        "sale_percent": r[0].product.sale_percent,
+        "dist_1": r[1],
+        "dist_2": r[2],
     }
 
 
@@ -32,7 +34,11 @@ def vector_search_prompt(
         dist_text = ProductEmbedding.description_embed.l2_distance(prompt_vec)
         dist_img = ProductEmbedding.images_embed_clip.l2_distance(prompt_vec)
         results = (
-            ss.query(ProductEmbedding)
+            ss.query(
+                ProductEmbedding,
+                dist_text,
+                dist_img,
+            )
             .filter(
                 (dist_img < 0.8) | (dist_text < 0.8),
             )
@@ -54,17 +60,19 @@ def vector_search_image_yolo(
         dist_img_yolo = ProductEmbedding.images_embed_yolo.l2_distance(prompt_vec)
         dist_img_clip = ProductEmbedding.images_embed_clip.l2_distance(clip_vec)
         results = (
-            ss.query(ProductEmbedding)
-            .filter(
-                (dist_img_yolo < 2) | (dist_img_clip < 0.8),
+            ss.query(
+                ProductEmbedding,
+                dist_img_clip,
+                dist_img_yolo,
             )
+            .filter((dist_img_yolo < 1.4))
             .limit(70)
         )
 
-        r_results = []
+        r_results: list[dict[str, str | float]] = []
 
         for r in results:
-            if r.product.product_types != ProductType.MEALKIT:
+            if r[0].product.product_types != ProductType.MEALKIT:
                 continue
             r_results.append(__prod_dto(r))
 
