@@ -63,13 +63,14 @@ app.include_router(public.router)
 @app.exception_handler(Exception)
 async def validation_exception_handler(request: Request, exc: Exception):
     # Change here to Logger
+    stacktrace = traceback.format_exc().splitlines()
     return JSONResponse(
         status_code=500,
         content={
             "api": str(request.url),
             "method": request.method,
             "message": (f"{exc!r}"),
-            "stack_trace": traceback.format_exc(),
+            "stack_trace": stacktrace,
         },
     )
 
@@ -79,12 +80,13 @@ async def db_exception_handler(
     req: Request,
     exc: sqlalchemy.exc.SQLAlchemyError,
 ):
+    stacktrace = traceback.format_exc().splitlines()
     db_session.session.rollback()
     return JSONResponse(
         status_code=500,
         content={
             "message": (f"{exc!r}"),
-            "stack_trace": traceback.format_exc(),
+            "stack_trace": stacktrace,
         },
     )
 

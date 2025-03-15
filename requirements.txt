@@ -19,4 +19,4 @@ torchvision==0.20.1+cpu
 scikit-learn==1.6.1
 lightgbm==4.6.0
 open_clip_torch==2.30.0
-pg8000==1.31.2
+psycopg[binary]==3.2.3
