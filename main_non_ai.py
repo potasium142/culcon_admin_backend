@@ -6,6 +6,7 @@ import uvicorn
 from fastapi import Cookie, FastAPI, Request
 from fastapi.responses import JSONResponse
 from auth import api as auth_api
+import traceback
 from db.postgresql.db_session import db_session
 from routers import (
     prototype,
@@ -68,6 +69,7 @@ async def validation_exception_handler(request: Request, exc: Exception):
             "api": str(request.url),
             "method": request.method,
             "message": (f"{exc!r}"),
+            "stack_trace": traceback.format_exc(),
         },
     )
 
@@ -82,6 +84,7 @@ async def db_exception_handler(
         status_code=500,
         content={
             "message": (f"{exc!r}"),
+            "stack_trace": traceback.format_exc(),
         },
     )
 
