@@ -82,6 +82,7 @@ async def db_exception_handler(
 ):
     stacktrace = traceback.format_exc().splitlines()
     db_session.session.rollback()
+    print(stacktrace)
     return JSONResponse(
         status_code=500,
         content={
