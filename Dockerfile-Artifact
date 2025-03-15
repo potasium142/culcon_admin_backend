@@ -1,7 +1,7 @@
 # Build stage
 FROM docker.io/python:3.10.15-slim-bookworm
 
-WORKDIR /build
+WORKDIR /workdir
 
 # Copy and install requirements
 COPY ./requirements.txt .
