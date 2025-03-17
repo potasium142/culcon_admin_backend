@@ -15,8 +15,9 @@ def commit() -> None:
 
 
 def add_account(account: StaffAccount) -> None:
-    _session.add(account)
-    commit()
+    with _session as ss:
+        ss.add(account)
+        commit()
 
 
 def update_token(id: str, token: str) -> None:
@@ -32,18 +33,13 @@ def update_token(id: str, token: str) -> None:
 
 
 def find_by_username(username: str) -> StaffAccount | None:
-    with _session as ss:
-        try:
-            return (
-                ss.query(StaffAccount)
-                .filter_by(
-                    username=username,
-                )
-                .first()
-            )
-        except Exception as e:
-            ss.rollback()
-            raise (e)
+    return (
+        _session.query(StaffAccount)
+        .filter_by(
+            username=username,
+        )
+        .first()
+    )
 
 
 def find_by_token(token: str) -> StaffAccount | None:

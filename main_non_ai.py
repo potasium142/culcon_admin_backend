@@ -6,7 +6,9 @@ import uvicorn
 from fastapi import Cookie, FastAPI, Request
 from fastapi.responses import JSONResponse
 from auth import api as auth_api
+import traceback
 from db.postgresql.db_session import db_session
+from etc.local_error import HandledError
 from routers import (
     prototype,
     staff,
@@ -62,12 +64,24 @@ app.include_router(public.router)
 @app.exception_handler(Exception)
 async def validation_exception_handler(request: Request, exc: Exception):
     # Change here to Logger
+    stacktrace = traceback.format_exc().splitlines()
     return JSONResponse(
         status_code=500,
         content={
             "api": str(request.url),
             "method": request.method,
             "message": (f"{exc!r}"),
+            "stack_trace": stacktrace,
+        },
+    )
+
+
+@app.exception_handler(HandledError)
+async def local_error_handler(_: Request, exc: HandledError):
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error": f"{exc}",
         },
     )
 
@@ -77,11 +91,13 @@ async def db_exception_handler(
     req: Request,
     exc: sqlalchemy.exc.SQLAlchemyError,
 ):
+    stacktrace = traceback.format_exc().splitlines()
     db_session.session.rollback()
     return JSONResponse(
         status_code=500,
         content={
             "message": (f"{exc!r}"),
+            "stack_trace": stacktrace,
         },
     )
 

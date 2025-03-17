@@ -14,9 +14,8 @@ cloudinary==1.42.1
 websocket==0.2.1
 --extra-index-url https://download.pytorch.org/whl/cpu
 torch==2.5.1+cpu
-torchaudio==2.5.1+cpu
 torchvision==0.20.1+cpu
 scikit-learn==1.6.1
 lightgbm==4.6.0
 open_clip_torch==2.30.0
-pg8000==1.31.2
+psycopg[binary]==3.2.3
