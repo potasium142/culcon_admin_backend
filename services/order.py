@@ -1,10 +1,151 @@
-def accept_order(order_id: int):
-    pass
+from db.postgresql.db_session import db_session
+from db.postgresql.models.order_history import OrderHistory, OrderStatus
+from etc.local_error import HandledError
 
 
-def cancel_order(order_id: int):
-    pass
+def __order_detail_json(o: OrderHistory):
+    cp = o.coupon
+    if cp:
+        coupon_detail = {
+            "id": cp.id,
+            "sale_percent": cp.sale_percent,
+        }
+    else:
+        coupon_detail = {}
+
+    return {
+        "id": o.id,
+        "order_date": o.order_date,
+        "delivery_address": o.delivery_address,
+        "receiver": o.receiver,
+        "phonenumber": o.phonenumber,
+        "order_status": o.order_status,
+        "payment_status": o.payment_status,
+        "payment_method": o.payment_method,
+        "total_price": o.total_price,
+        "note": o.note,
+        "coupon": coupon_detail,
+        "items": [
+            {
+                "id": i.product_id,
+                "price": i.price,
+                "price_date": i.date,
+                "sale_percent": i.sale_percent,
+                "image": i.product.image_url,
+                "name": i.product.product_name,
+                "type": i.product.product_types,
+            }
+            for i in o.order_history_items
+        ],
+    }
 
 
-def get_order_info(order_id: int):
-    pass
+def get_all_orders():
+    with db_session.session as ss:
+        orders = ss.query(OrderHistory).all()
+
+        return [
+            {
+                "id": o.id,
+                "order_date": o.order_date,
+                "delivery_address": o.delivery_address,
+                "receiver": o.receiver,
+                "phonenumber": o.phonenumber,
+                "order_status": o.order_status,
+                "payment_status": o.payment_status,
+                "payment_method": o.payment_method,
+                "total_price": o.total_price,
+                "coupon_sale": o.coupon.sale_percent if o.coupon else "",
+            }
+            for o in orders
+        ]
+
+
+def get_orders_with_status(status: OrderStatus):
+    with db_session.session as ss:
+        orders = (
+            ss.query(OrderHistory)
+            .filter(
+                OrderHistory.order_status == status,
+            )
+            .all()
+        )
+
+        return [
+            {
+                "id": o.id,
+                "order_date": o.order_date,
+                "delivery_address": o.delivery_address,
+                "receiver": o.receiver,
+                "phonenumber": o.phonenumber,
+                "order_status": o.order_status,
+                "payment_status": o.payment_status,
+                "payment_method": o.payment_method,
+                "total_price": o.total_price,
+                "coupon_sale": o.coupon.sale_percent if o.coupon else "",
+            }
+            for o in orders
+        ]
+
+
+def get_order_detail(id: str):
+    with db_session.session as ss:
+        order = ss.get(OrderHistory, id)
+
+        if not order:
+            raise HandledError("Order does not exist")
+
+        return __order_detail_json(order)
+
+
+def change_order_status(
+    id: str,
+    prev_status: OrderStatus,
+    status: OrderStatus,
+):
+    with db_session.session as ss:
+        order = ss.get(OrderHistory, id)
+
+        if not order:
+            raise HandledError("Order does not exist")
+
+        if order.order_status != prev_status:
+            raise HandledError(f"Status of order must be {prev_status}")
+
+        order.order_status = status
+
+        db_session.commit()
+
+        order_refetch = ss.get(OrderHistory, id)
+
+        if not order_refetch:
+            raise HandledError("Failed to refetch order")
+
+        return order.order_status == order_refetch.order_status
+
+
+def cancel_order(id: str):
+    with db_session.session as ss:
+        order = ss.get(OrderHistory, id)
+
+        if not order:
+            raise HandledError("Order does not exist")
+
+        if order.order_status in (OrderStatus.ON_SHIPPING, OrderStatus.SHIPPED):
+            raise HandledError("Order already in delivering or delivered")
+
+        if order.order_status is OrderStatus.CANCELLED:
+            raise HandledError("Order already cancelled")
+
+        order.order_status = OrderStatus.CANCELLED
+
+        db_session.commit()
+
+        # TODO:refund
+
+        order_refetch = ss.get(OrderHistory, id)
+
+        if not order_refetch:
+            raise HandledError("Failed to refetch order")
+
+        return order.order_status == order_refetch.order_status

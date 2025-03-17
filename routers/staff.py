@@ -1,5 +1,6 @@
 from typing import Annotated
 
+from db.postgresql.models.order_history import OrderStatus
 from db.postgresql.models.user_account import UserAccountStatus
 from dtos.request import product as prod
 from fastapi import APIRouter, Depends, File, Request, UploadFile, BackgroundTasks
@@ -8,6 +9,7 @@ from dtos.request.user_account import EditCustomerAccount, EditCustomerInfo
 from services import product as ps, product_
 from services import blog
 from services import customer as c_ss
+from services import order as ord_ss
 from etc.progress_tracker import pp
 from db.postgresql.models import product
 
@@ -333,3 +335,74 @@ async def change_customer_info(
 @router.get("/product/history/stock", tags=["Product"])
 async def fetch_product_stock_history(_: Permission, prod_id: str):
     return product_.get_product_stock_history(prod_id)
+
+
+@router.get(
+    "/order/fetch/all",
+    tags=["Order"],
+)
+async def get_all_orders(_: Permission):
+    return ord_ss.get_all_orders()
+
+
+@router.get(
+    "/order/fetch/status",
+    tags=["Order"],
+)
+async def get_order_by_status(
+    _: Permission,
+    status: OrderStatus,
+):
+    return ord_ss.get_orders_with_status(status)
+
+
+@router.get(
+    "/order/fetch/{id}",
+    tags=["Order"],
+)
+async def get_order(
+    _: Permission,
+    id: str,
+):
+    return ord_ss.get_order_detail(id)
+
+
+@router.post(
+    "/order/accept/{id}",
+    tags=["Order"],
+)
+async def accept_order(
+    _: Permission,
+    id: str,
+):
+    return ord_ss.change_order_status(
+        id,
+        OrderStatus.ON_CONFIRM,
+        OrderStatus.ON_PROCESSING,
+    )
+
+
+@router.post(
+    "/order/ship/{id}",
+    tags=["Order"],
+)
+async def ship_order(
+    _: Permission,
+    id: str,
+):
+    return ord_ss.change_order_status(
+        id,
+        OrderStatus.ON_PROCESSING,
+        OrderStatus.ON_SHIPPING,
+    )
+
+
+@router.post(
+    "/order/cancel/{id}",
+    tags=["Order"],
+)
+async def cancel_order(
+    _: Permission,
+    id: str,
+):
+    return ord_ss.cancel_order(id)
