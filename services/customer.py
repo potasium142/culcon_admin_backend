@@ -9,6 +9,8 @@ from db.postgresql.models.user_account import (
 )
 from dtos.request.user_account import EditCustomerAccount, EditCustomerInfo
 
+from services.order import order_list_item
+
 
 def set_account_status(id: str, status: UserAccountStatus):
     account = db_session.session.get(UserAccount, id)
@@ -59,6 +61,7 @@ def get_customer(id: str):
             "address": c.address,
             "phone": c.phone,
             "profile_pic": c.profile_pic_uri,
+            "order_history": [order_list_item(o) for o in c.order_history],
         }
 
 

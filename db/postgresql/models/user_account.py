@@ -39,6 +39,9 @@ class UserAccount(Base):
             VARCHAR(255),
         ),
     )
+    order_history: orm.Mapped[list["OrderHistory"]] = orm.relationship(
+        back_populates="user"
+    )
 
 
 class Cart(Base):

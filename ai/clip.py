@@ -8,7 +8,7 @@ class OpenCLIP:
         self,
         model_name: str,
         pretrained: str,
-        device: str = "cuda",
+        device: str = "cpu",
     ) -> None:
         self.device = self.__get_device(device)
         self.model, self.tokenizer, self.preprocess = self.__eval_model(
