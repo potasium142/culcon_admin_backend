@@ -1,5 +1,10 @@
 from db.postgresql.db_session import db_session
-from db.postgresql.models.order_history import OrderHistory, OrderStatus
+from db.postgresql.models.order_history import (
+    OrderHistory,
+    OrderStatus,
+    PaymentMethod,
+    PaymentStatus,
+)
 from etc.local_error import HandledError
 
 
@@ -15,6 +20,8 @@ def __order_detail_json(o: OrderHistory):
 
     return {
         "id": o.id,
+        "user_id": o.user.id,
+        "user_pfp": o.user.profile_pic_uri,
         "order_date": o.order_date,
         "delivery_address": o.delivery_address,
         "receiver": o.receiver,
@@ -40,25 +47,26 @@ def __order_detail_json(o: OrderHistory):
     }
 
 
+def order_list_item(o: OrderHistory):
+    return {
+        "id": o.id,
+        "order_date": o.order_date,
+        "delivery_address": o.delivery_address,
+        "receiver": o.receiver,
+        "phonenumber": o.phonenumber,
+        "order_status": o.order_status,
+        "payment_status": o.payment_status,
+        "payment_method": o.payment_method,
+        "total_price": o.total_price,
+        "coupon_sale": o.coupon.sale_percent if o.coupon else "",
+    }
+
+
 def get_all_orders():
     with db_session.session as ss:
         orders = ss.query(OrderHistory).all()
 
-        return [
-            {
-                "id": o.id,
-                "order_date": o.order_date,
-                "delivery_address": o.delivery_address,
-                "receiver": o.receiver,
-                "phonenumber": o.phonenumber,
-                "order_status": o.order_status,
-                "payment_status": o.payment_status,
-                "payment_method": o.payment_method,
-                "total_price": o.total_price,
-                "coupon_sale": o.coupon.sale_percent if o.coupon else "",
-            }
-            for o in orders
-        ]
+        return [order_list_item(o) for o in orders]
 
 
 def get_orders_with_status(status: OrderStatus):
@@ -71,21 +79,7 @@ def get_orders_with_status(status: OrderStatus):
             .all()
         )
 
-        return [
-            {
-                "id": o.id,
-                "order_date": o.order_date,
-                "delivery_address": o.delivery_address,
-                "receiver": o.receiver,
-                "phonenumber": o.phonenumber,
-                "order_status": o.order_status,
-                "payment_status": o.payment_status,
-                "payment_method": o.payment_method,
-                "total_price": o.total_price,
-                "coupon_sale": o.coupon.sale_percent if o.coupon else "",
-            }
-            for o in orders
-        ]
+        return [order_list_item(o) for o in orders]
 
 
 def get_order_detail(id: str):
@@ -102,6 +96,7 @@ def change_order_status(
     id: str,
     prev_status: OrderStatus,
     status: OrderStatus,
+    check_payment: bool = True,
 ):
     with db_session.session as ss:
         order = ss.get(OrderHistory, id)
@@ -111,6 +106,12 @@ def change_order_status(
 
         if order.order_status != prev_status:
             raise HandledError(f"Status of order must be {prev_status}")
+
+        if check_payment:
+            payment_received = order.payment_status == PaymentStatus.RECEIVED
+            cod = order.payment_method == PaymentMethod.COD
+            if not (payment_received or cod):
+                raise HandledError("Order has not paid")
 
         order.order_status = status
 

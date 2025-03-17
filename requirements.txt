@@ -9,7 +9,7 @@ bcrypt==4.2.1
 pgvector==0.3.6
 pydantic-settings==2.7.1
 ultralytics==8.3.57
-python-multipart
+python-multipart==0.0.20
 cloudinary==1.42.1
 websocket==0.2.1
 --extra-index-url https://download.pytorch.org/whl/cpu

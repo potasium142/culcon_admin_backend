@@ -7,6 +7,7 @@ from sqlalchemy.sql import sqltypes
 
 from db.postgresql.models import Base
 from db.postgresql.models.product import ProductPriceHistory
+from db.postgresql.models.user_account import UserAccount
 
 
 class OrderStatus(str, Enum):
@@ -14,6 +15,7 @@ class OrderStatus(str, Enum):
     ON_PROCESSING = "ON_PROCESSING"
     ON_SHIPPING = "ON_SHIPPING"
     SHIPPED = "SHIPPED"
+    DELIVERED = "DELIVERED"
     CANCELLED = "CANCELLED"
 
 
@@ -79,3 +81,4 @@ class OrderHistory(Base):
     order_history_items: orm.Mapped[list[ProductPriceHistory]] = orm.relationship(
         secondary=OrderHistoryItems
     )
+    user: orm.Mapped[UserAccount] = orm.relationship(back_populates="order_history")
