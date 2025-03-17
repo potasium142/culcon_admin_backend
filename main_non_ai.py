@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 from auth import api as auth_api
 import traceback
 from db.postgresql.db_session import db_session
+from etc.local_error import HandledError
 from routers import (
     prototype,
     staff,
@@ -71,6 +72,16 @@ async def validation_exception_handler(request: Request, exc: Exception):
             "method": request.method,
             "message": (f"{exc!r}"),
             "stack_trace": stacktrace,
+        },
+    )
+
+
+@app.exception_handler(HandledError)
+async def local_error_handler(_: Request, exc: HandledError):
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error": f"{exc}",
         },
     )
 

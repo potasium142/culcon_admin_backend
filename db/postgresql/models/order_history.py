@@ -1,5 +1,6 @@
 from datetime import datetime, date
 from enum import Enum
+from uuid import uuid4
 
 from sqlalchemy import Column, ForeignKey, Table, orm, ForeignKeyConstraint
 from sqlalchemy.sql import sqltypes
@@ -8,27 +9,27 @@ from db.postgresql.models import Base
 from db.postgresql.models.product import ProductPriceHistory
 
 
-class OrderStatus(Enum):
-    ON_CONFIRM = 1
-    ON_PROCESSING = 2
-    ON_SHIPPING = 3
-    SHIPPED = 4
-    CANCELLED = 5
+class OrderStatus(str, Enum):
+    ON_CONFIRM = "ON_CONFIRM"
+    ON_PROCESSING = "ON_PROCESSING"
+    ON_SHIPPING = "ON_SHIPPING"
+    SHIPPED = "SHIPPED"
+    CANCELLED = "CANCELLED"
 
 
-class PaymentMethod(Enum):
-    PAYPAL = 1
-    VNPAY = 2
-    COD = 3
+class PaymentMethod(str, Enum):
+    PAYPAL = "PAYPAL"
+    VNPAY = "VNPAY"
+    COD = "COD"
 
 
-class PaymentStatus(Enum):
-    PENDING = 1
-    RECEIVED = 2
-    REFUNDED = 3
-    REFUNDING = 4
-    CREATED = 5
-    CHANGED = 6
+class PaymentStatus(str, Enum):
+    PENDING = "PENDING"
+    RECEIVED = "RECEIVED"
+    REFUNDED = "REFUNDED"
+    REFUNDING = "REFUNDING"
+    CREATED = "CREATED"
+    CHANGED = "CHANGED"
 
 
 class Coupon(Base):
@@ -57,10 +58,8 @@ OrderHistoryItems = Table(
 
 class OrderHistory(Base):
     __tablename__: str = "order_history"
-    id: orm.Mapped[int] = orm.mapped_column(
-        sqltypes.BIGINT,
-        primary_key=True,
-        autoincrement=True,
+    id: orm.Mapped[str] = orm.mapped_column(
+        sqltypes.VARCHAR(255), primary_key=True, default=uuid4
     )
     user_id: orm.Mapped[str] = orm.mapped_column(ForeignKey("user_account.id"))
     order_date: orm.Mapped[datetime] = orm.mapped_column(sqltypes.TIMESTAMP)

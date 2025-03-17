@@ -148,8 +148,7 @@ def product_creation(
         image_dir = f"{IMG_DIR}/{prod_id}"
 
         if (
-            db_session.session.query(
-                prod.Product).filter_by(id=prod_id).first()
+            db_session.session.query(prod.Product).filter_by(id=prod_id).first()
             is not None
         ):
             raise Exception("Product exist")
@@ -184,7 +183,7 @@ def product_creation(
         )
 
         with db_session.session as ss:
-            if product_doc is MealKitCreation:
+            if prod_info is MealKitCreation:
                 product_doc.instructions = prod_info.instructions
 
                 for ing in prod_info.ingredients:
@@ -362,8 +361,7 @@ def get_product(prod_id: str):
     with db_session.session as session:
         product: prod.Product = session.get(prod.Product, prod_id)
         product_price: list[prod.ProductPriceHistory] = (
-            session.query(prod.ProductPriceHistory).filter_by(
-                product_id=prod_id).all()
+            session.query(prod.ProductPriceHistory).filter_by(product_id=prod_id).all()
         )
 
         product_doc = session.get(ProductDoc, prod_id)
@@ -394,13 +392,18 @@ def get_product(prod_id: str):
         return base_info
 
 
-def get_top_10_products_month(db: Session, year: int, month: int) -> list[dict[str, int]]:
+def get_top_10_products_month(
+    db: Session, year: int, month: int
+) -> list[dict[str, int]]:
     results = (
         db.query(
             prod.Product.product_name.label("product_name"),
             func.sum(OrderHistoryItems.c.quantity).label("total_quantity"),
         )
-        .join(OrderHistoryItems, prod.Product.id == OrderHistoryItems.c.product_id_product_id)
+        .join(
+            OrderHistoryItems,
+            prod.Product.id == OrderHistoryItems.c.product_id_product_id,
+        )
         .join(OrderHistory, OrderHistory.id == OrderHistoryItems.c.order_history_id)
         .filter(func.extract("year", OrderHistory.order_date) == year)
         .filter(func.extract("month", OrderHistory.order_date) == month)
@@ -409,7 +412,10 @@ def get_top_10_products_month(db: Session, year: int, month: int) -> list[dict[s
         .limit(10)
         .all()
     )
-    return [{"product_name": row.product_name, "total_quantity": row.total_quantity} for row in results]
+    return [
+        {"product_name": row.product_name, "total_quantity": row.total_quantity}
+        for row in results
+    ]
 
 
 def get_top_10_products_all_time(db: Session) -> list[dict[str, int]]:
@@ -418,11 +424,17 @@ def get_top_10_products_all_time(db: Session) -> list[dict[str, int]]:
             prod.Product.product_name.label("product_name"),
             func.sum(OrderHistoryItems.c.quantity).label("total_quantity"),
         )
-        .join(OrderHistoryItems, prod.Product.id == OrderHistoryItems.c.product_id_product_id)
+        .join(
+            OrderHistoryItems,
+            prod.Product.id == OrderHistoryItems.c.product_id_product_id,
+        )
         .join(OrderHistory, OrderHistory.id == OrderHistoryItems.c.order_history_id)
         .group_by(prod.Product.product_name)
         .order_by(func.sum(OrderHistoryItems.c.quantity).desc())
         .limit(10)
         .all()
     )
-    return [{"product_name": row.product_name, "total_quantity": row.total_quantity} for row in results]
+    return [
+        {"product_name": row.product_name, "total_quantity": row.total_quantity}
+        for row in results
+    ]
