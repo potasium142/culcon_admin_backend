@@ -7,6 +7,7 @@ from db.postgresql.models.staff_account import (
     StaffAccount,
 )
 from dtos.request.staff import EditEmployeeInfo, EditStaffAccount
+from etc.local_error import HandledError
 
 
 def map_staff_output(s: StaffAccount):
@@ -43,7 +44,7 @@ def get_staff_profile(id: str):
         s: StaffAccount = session.get(StaffAccount, id)
 
         if not s:
-            raise Exception("Staff not found")
+            raise HandledError("Staff not found")
 
         return {
             "id": s.id,
@@ -65,7 +66,7 @@ def edit_staff_account(
     staff: StaffAccount = db_session.session.get(StaffAccount, staff_id)
 
     if not staff:
-        raise Exception("Staff account not found")
+        raise HandledError("Staff account not found")
 
     new_password = encryption.hash(info.password)
 
@@ -84,7 +85,7 @@ def edit_employee_info(
     staff: EmployeeInfo = db_session.session.get(EmployeeInfo, staff_id)
 
     if not staff:
-        raise Exception("Staff account not found")
+        raise HandledError("Staff account not found")
 
     staff.ssn = emp_info.ssn
     staff.email = emp_info.email
@@ -104,7 +105,7 @@ def set_staff_status(
     staff: StaffAccount = db_session.session.get(StaffAccount, id)
 
     if not staff:
-        raise Exception("Staff account not found")
+        raise HandledError("Staff account not found")
 
     staff.status = status
 

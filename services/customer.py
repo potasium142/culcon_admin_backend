@@ -9,6 +9,7 @@ from db.postgresql.models.user_account import (
 )
 from dtos.request.user_account import EditCustomerAccount, EditCustomerInfo
 
+from etc.local_error import HandledError
 from services.order import order_list_item
 
 
@@ -16,7 +17,7 @@ def set_account_status(id: str, status: UserAccountStatus):
     account = db_session.session.get(UserAccount, id)
 
     if not account:
-        raise Exception("Customer account not found")
+        raise HandledError("Customer account not found")
 
     account.status = status
 
@@ -27,7 +28,7 @@ def delete_comment(id: str, comment_id: str):
     comment = db_session.session.get(PostComment, {"account_id": id, "id": id})
 
     if not comment:
-        raise Exception("Comment not found")
+        raise HandledError("Comment not found")
 
     comment.deleted = True
 
@@ -52,7 +53,7 @@ def get_customer(id: str):
         c = session.get(UserAccount, id)
 
         if not c:
-            raise Exception("Customer not found")
+            raise HandledError("Customer not found")
 
         return {
             "id": str(c.id),
@@ -70,7 +71,7 @@ def edit_customer_info(id: str, info: EditCustomerInfo):
         c = ss.get(UserAccount, id)
 
         if not c:
-            raise Exception("Customer not found")
+            raise HandledError("Customer not found")
 
         c.email = info.email
         c.address = info.address
@@ -85,7 +86,7 @@ def edit_customer_account(id: str, info: EditCustomerAccount):
         c = ss.get(UserAccount, id)
 
         if not c:
-            raise Exception("Customer not found")
+            raise HandledError("Customer not found")
 
         c.username = info.username
         c.password = encryption.hash(info.password)

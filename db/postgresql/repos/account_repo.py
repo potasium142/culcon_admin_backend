@@ -2,6 +2,7 @@ import sqlalchemy.orm
 
 from db.postgresql import DBSession
 from db.postgresql.models.staff_account import StaffAccount
+from etc.local_error import HandledError
 
 _session: sqlalchemy.orm.Session = DBSession()
 
@@ -25,7 +26,7 @@ def update_token(id: str, token: str) -> None:
         acc: StaffAccount = ss.get(StaffAccount, id)
 
         if not acc:
-            raise Exception("Account not exist")
+            raise HandledError("Account not exist")
 
         acc.token = token
 
