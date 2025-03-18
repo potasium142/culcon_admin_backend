@@ -7,10 +7,11 @@ from fastapi import (
     WebSocket,
     WebSocketDisconnect,
 )
+import sqlalchemy
 from db.postgresql.db_session import db_session
 
 import auth
-from db.postgresql.models.chat import ChatHistory
+from db.postgresql.models.chat import ChatSession
 from db.postgresql.models.staff_account import StaffAccount
 from db.postgresql.models.user_account import UserAccount
 
@@ -73,13 +74,30 @@ class ChatInstance:
     async def c_connect(self, ws: WebSocket):
         self.customer_ws = ws
         await self.__connect(self.customer_ws, self.staff_ws, self.cid)
+        self.toggle_connection_status(True)
+
+    def toggle_connection_status(self, status: bool):
+        with db_session.session as ss:
+            chat_session = ss.get(ChatSession, self.cid)
+            if chat_session:
+                chat_session.connected = status
+            else:
+                chat_session = ChatSession(
+                    id=self.cid,
+                    chatlog=[],
+                    connected=status,
+                )
+            try:
+                ss.commit()
+            except Exception:
+                ss.rollback()
 
     def load_chat_history(
         self,
         cid: str,
     ):
         with db_session.session as ss:
-            chat_history = ss.get(ChatHistory, cid)
+            chat_history = ss.get(ChatSession, cid)
 
         if chat_history:
             chatlog = chat_history.chatlog
@@ -90,7 +108,7 @@ class ChatInstance:
 
     def save_chat_history(self):
         with db_session.session as ss:
-            chat_history = ss.get(ChatHistory, self.cid)
+            chat_history = ss.get(ChatSession, self.cid)
 
             if chat_history:
                 chatlog = chat_history.chatlog
@@ -99,7 +117,7 @@ class ChatInstance:
 
             chatlog[-14:] = self.chat_history
 
-            chat_history = ChatHistory(id=self.cid, chatlog=chatlog)
+            chat_history = ChatSession(id=self.cid, chatlog=chatlog)
 
             ss.merge(chat_history)
             ss.commit()
@@ -128,6 +146,8 @@ class ChatInstance:
             "type": MsgType.INFO,
             "info": f"{self.cid} has left the chat.",
         }
+        self.save_chat_history()
+        self.toggle_connection_status(False)
         if self.staff_ws:
             await self.staff_ws.send_json(msg)
 
@@ -139,7 +159,7 @@ class ChatInstance:
             "type": MsgType.INFO,
             "info": "staff has left the chat.",
         }
-
+        self.save_chat_history()
         if self.customer_ws:
             await self.customer_ws.send_json(msg)
 
@@ -149,7 +169,41 @@ chatlist: dict[str, ChatInstance] = dict()
 
 @router.get("/chat/queue")
 async def get_chat_queue():
-    return [k for k, _ in chatlist.items()]
+    with db_session.session as ss:
+        chatlist = ss.query(ChatSession).all()
+
+        return [
+            {
+                "id": ci.id,
+                "username": ci.user.username,
+                "user_pfp": ci.user.profile_pic_uri,
+                "online": ci.connected,
+            }
+            for ci in chatlist
+        ]
+
+
+@router.get("/chat/list")
+async def get_all_chat_customer():
+    with db_session.session as ss:
+        chatlist = ss.execute(
+            sqlalchemy.select(
+                UserAccount.id,
+                UserAccount.username,
+                UserAccount.profile_pic_uri,
+                ChatSession.connected,
+            ).join_from(UserAccount, ChatSession,full=True)
+        )
+
+        return [
+            {
+                "id": ci[0],
+                "username": ci[1],
+                "user_pfp": ci[2],
+                "has_chat": ci[3],
+            }
+            for ci in chatlist
+        ]
 
 
 @router.websocket("/chat/connect/{id}")
@@ -212,7 +266,6 @@ async def connect_customer_chat(
         await chatlist[id].s_left_chat()
 
         if chatlist[id].closable():
-            chatlist[id].save_chat_history()
             del chatlist[id]
 
 
@@ -259,5 +312,4 @@ async def customer_chat(
         await chatlist[id].c_left_chat()
 
         if chatlist[id].closable():
-            chatlist[id].save_chat_history()
             del chatlist[id]

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 import faker
 from passlib.context import CryptContext
@@ -8,11 +8,11 @@ import random
 from tqdm.auto import tqdm
 import json
 
-from config import env
+from db.postgresql.models import order_history
 
 
 # ========================================================
-URL_DATABASE = "postgresql+psycopg://culcon:culcon@localhost:5432/culcon_test"
+URL_DATABASE = "postgresql+psycopg://culcon:culcon@localhost:5432/culcon"
 
 INSERT_PRODUCT = True
 VARIANCE_OF_PRICE = 20
@@ -31,16 +31,7 @@ COMMENT_EACH_BLOG = 10
 # ========================================================
 
 fake = faker.Faker()
-engine = sqla.create_engine(
-    sqla.URL.create(
-        host=env.DB_URL,
-        drivername=env.DB_DRIVER,
-        username=env.DB_USERNAME,
-        password=env.DB_PASSWORD,
-        port=env.DB_PORT,
-        database=env.DB_NAME,
-    )
-)
+engine = sqla.create_engine(URL_DATABASE)
 conn = engine.connect()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 price_dict: dict[str, list[datetime]] = {}
@@ -215,7 +206,6 @@ PRODUCT_TYPE_FOOD_NAMES = {
         "breakfast",
     ],
 }
-
 
 created_user_id: list[str] = []
 created_staff_id: list[str] = []
@@ -474,7 +464,7 @@ for _ in range(COUPON_AMOUNT):
     conn.execute(COUPON_STATEMENT, data)
 
 for i, u in enumerate(created_user_id):
-    oid = str(uuid.uuid4())
+    oid = str(i)
     order_history_data = {
         "id": oid,
         "user_id": u,
