@@ -4,6 +4,7 @@ from db.postgresql.models.user_account import PostComment
 from dtos.request.blog import BlogCreation
 from etc import cloudinary
 from db.postgresql.db_session import db_session
+from etc.local_error import HandledError
 
 
 def create(
@@ -36,7 +37,7 @@ def edit(
     blog: Blog = db_session.session.get(Blog, id)
 
     if not blog:
-        raise Exception("Blog not found")
+        raise HandledError("Blog not found")
 
     blog.article = blog_dto.markdown_text
     blog.title = blog_dto.title

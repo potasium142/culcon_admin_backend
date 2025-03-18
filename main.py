@@ -98,7 +98,7 @@ async def local_error_handler(_: Request, exc: HandledError):
     return JSONResponse(
         status_code=500,
         content={
-            "error": {exc},
+            "message": {exc},
         },
     )
 
