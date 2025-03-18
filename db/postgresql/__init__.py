@@ -17,7 +17,8 @@ engine = sqla.create_engine(
         password=env.DB_PASSWORD,
         port=env.DB_PORT,
         database=env.DB_NAME,
-    )
+    ),
+    pool_pre_ping=True,
 )
 
 if not sqlau.database_exists(engine.url):

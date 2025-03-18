@@ -30,7 +30,7 @@ class UserAccount(Base):
     password: orm.Mapped[str]
     status: orm.Mapped[UserAccountStatus]
     address: orm.Mapped[str]
-    phone: orm.Mapped[str]
+    phone: orm.Mapped[str] = orm.mapped_column(unique=True)
     profile_pic_uri: orm.Mapped[str]
     profile_description: orm.Mapped[str]
     token: orm.Mapped[str]

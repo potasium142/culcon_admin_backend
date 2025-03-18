@@ -17,6 +17,7 @@ from dtos.request.product import (
 )
 from ai import clip, yolo
 from PIL import Image, ImageFile
+from etc.local_error import HandledError
 from etc.progress_tracker import ProgressTracker
 from etc import cloudinary
 from sqlalchemy import func
@@ -151,7 +152,7 @@ def product_creation(
             db_session.session.query(prod.Product).filter_by(id=prod_id).first()
             is not None
         ):
-            raise Exception("Product exist")
+            raise HandledError("Product exist")
 
         main_image_url, images_url = __upload_images(
             image_dir,
@@ -183,7 +184,7 @@ def product_creation(
         )
 
         with db_session.session as ss:
-            if prod_info is MealKitCreation:
+            if type(prod_info) is MealKitCreation:
                 product_doc.instructions = prod_info.instructions
 
                 for ing in prod_info.ingredients:
@@ -216,7 +217,7 @@ def update_info(
     prod_doc = db_session.session.get(ProductDoc, prod_id)
 
     if not prod_doc:
-        raise Exception("Product doc not found")
+        raise HandledError("Product doc not found")
 
     prod_doc.day_before_expiry = prod_info.day_before_expiry
     prod_doc.description = prod_info.description
@@ -253,7 +254,7 @@ def update_price(
     product: prod.Product = db_session.session.get(prod.Product, prod_id)
 
     if not product:
-        raise Exception("Product not found")
+        raise HandledError("Product not found")
 
     product.price = price
     product.sale_percent = sale_percent
@@ -269,7 +270,7 @@ def restock_product(
     product: prod.Product = db_session.session.get(prod.Product, prod_id)
 
     if not product:
-        raise Exception("Product not found")
+        raise HandledError("Product not found")
 
     product_stock = prod.ProductStockHistory(
         product_id=product.id,
@@ -298,7 +299,7 @@ def update_status(
     product: prod.Product = db_session.session.get(prod.Product, prod_id)
 
     if not product:
-        raise Exception("Product not found")
+        raise HandledError("Product not found")
 
     product.product_status = status
 
@@ -367,9 +368,9 @@ def get_product(prod_id: str):
         product_doc = session.get(ProductDoc, prod_id)
 
         if not product:
-            raise Exception("Product not found")
+            raise HandledError("Product not found")
         if not product_doc:
-            raise Exception("Product doc not found")
+            raise HandledError("Product doc not found")
 
         base_info = {
             "id": product.id,

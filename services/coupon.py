@@ -5,6 +5,7 @@ from db.postgresql.models.order_history import Coupon
 import uuid
 
 from dtos.request.coupon import CouponCreation
+from etc.local_error import HandledError
 
 
 def create_coupon(c: CouponCreation):
@@ -71,7 +72,7 @@ def disable_coupon(
     coupon: Coupon = db_session.session.get(Coupon, id)
 
     if not coupon:
-        raise Exception("Coupon not found")
+        raise HandledError("Coupon not found")
     coupon.usage_left = -1
 
     db_session.commit()
