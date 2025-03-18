@@ -6,6 +6,7 @@ import sqlalchemy as sqla
 from sqlalchemy import orm
 from sqlalchemy.dialects.postgresql import ARRAY, VARCHAR
 from sqlalchemy.sql import sqltypes
+from torchgen.model import BACKEND_COMPONENTS
 
 from db.postgresql.models import Base
 from db.postgresql.models.blog import Blog
@@ -42,6 +43,7 @@ class UserAccount(Base):
     order_history: orm.Mapped[list["OrderHistory"]] = orm.relationship(
         back_populates="user"
     )
+    chatlog: orm.Mapped["ChatSession"] = orm.relationship(back_populates="user")
 
 
 class Cart(Base):
