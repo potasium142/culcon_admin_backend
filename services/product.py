@@ -1,6 +1,7 @@
 import re
 
 from numpy import ndarray
+import sqlalchemy as sqla
 from db.postgresql.models.blog import ProductDoc
 from datetime import datetime
 from db.postgresql.models import product as prod
@@ -21,6 +22,7 @@ from etc.local_error import HandledError
 from etc.progress_tracker import ProgressTracker
 from etc import cloudinary
 from sqlalchemy import func
+from db.postgresql.paging import Page, paging
 
 
 def read_image(file: bytes) -> ImageFile.ImageFile:
@@ -148,10 +150,7 @@ def product_creation(
         prod_id = f"{prod_info.product_type}_{name}"
         image_dir = f"{IMG_DIR}/{prod_id}"
 
-        if (
-            db_session.session.query(prod.Product).filter_by(id=prod_id).first()
-            is not None
-        ):
+        if db_session.session.get(prod.Product, prod_id) is not None:
             raise HandledError("Product exist")
 
         main_image_url, images_url = __upload_images(
@@ -284,12 +283,11 @@ def restock_product(
     db_session.session.add(product_stock)
     db_session.commit()
 
-    return (
-        db_session.session.query(prod.ProductStockHistory)
-        .filter_by(product_id=product.id)
+    return db_session.session.execute(
+        sqla.select(prod.ProductStockHistory)
+        .filter(prod.ProductStockHistory.product_id == product.id)
         .order_by(prod.ProductStockHistory.date.desc())
-        .first()
-    )
+    ).scalar_one_or_none()
 
 
 def update_status(
@@ -306,12 +304,15 @@ def update_status(
     db_session.commit()
 
 
-def get_list_mealkit():
-    with db_session.session as session:
-        products: list[prod.Product] = (
-            session.query(prod.Product)
-            .filter_by(product_types=prod.ProductType.MEALKIT)
-            .all()
+def get_list_mealkit(pg: Page):
+    with db_session.session as ss:
+        products = ss.scalars(
+            paging(
+                sqla.select(prod.Product).filter(
+                    prod.Product.product_types == prod.ProductType.MEALKIT
+                ),
+                pg,
+            )
         )
 
         rtn_products: list[
@@ -334,9 +335,14 @@ def get_list_mealkit():
         return rtn_products
 
 
-def get_list_product():
-    with db_session.session as session:
-        products: list[prod.Product] = session.query(prod.Product).all()
+def get_list_product(pg: Page):
+    with db_session.session as ss:
+        products = ss.scalars(
+            paging(
+                sqla.select(prod.Product),
+                pg,
+            )
+        )
 
         rtn_products: list[
             dict[str, str | float | int | prod.ProductStatus | prod.ProductType]
@@ -359,16 +365,27 @@ def get_list_product():
 
 
 def get_product(prod_id: str):
-    with db_session.session as session:
-        product: prod.Product = session.get(prod.Product, prod_id)
-        product_price: list[prod.ProductPriceHistory] = (
-            session.query(prod.ProductPriceHistory).filter_by(product_id=prod_id).all()
-        )
+    with db_session.session as ss:
+        product: prod.Product = ss.get(prod.Product, prod_id)
 
-        product_doc = session.get(ProductDoc, prod_id)
+        product_price = ss.scalars(
+            sqla.select(prod.ProductPriceHistory)
+            .filter(prod.ProductPriceHistory.product_id == prod_id)
+            .order_by(prod.ProductPriceHistory.date.desc())
+            .limit(7)
+        )
+        product_stock = ss.scalars(
+            sqla.select(prod.ProductStockHistory)
+            .filter(prod.ProductStockHistory.product_id == prod_id)
+            .order_by(prod.ProductStockHistory.date.desc())
+            .limit(7)
+        )
 
         if not product:
             raise HandledError("Product not found")
+
+        product_doc = product.doc
+
         if not product_doc:
             raise HandledError("Product doc not found")
 
@@ -380,6 +397,14 @@ def get_product(prod_id: str):
             "product_type": product.product_types,
             "product_status": product.product_status,
             "price_list": [price.to_list_instance() for price in product_price],
+            "stock_list": [
+                {
+                    "date": s.date,
+                    "import_price": s.in_price,
+                    "import_amount": s.in_stock,
+                }
+                for s in product_stock
+            ],
             "info": product_doc.infos,
             "images_url": product_doc.images_url,
             "article": product_doc.article_md,

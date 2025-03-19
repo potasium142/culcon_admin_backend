@@ -12,7 +12,7 @@ from db.postgresql.models import order_history
 
 
 # ========================================================
-URL_DATABASE = "postgresql+psycopg://culcon:culcon@localhost:5432/culcon"
+URL_DATABASE = "postgresql+psycopg://postgres:postgres@localhost:5432/postgres"
 
 INSERT_PRODUCT = True
 VARIANCE_OF_PRICE = 20

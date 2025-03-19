@@ -3,7 +3,9 @@ from db.postgresql.db_session import db_session
 from db.postgresql.models.order_history import Coupon
 
 import uuid
+import sqlalchemy as sqla
 
+from db.postgresql.paging import Page, paging
 from dtos.request.coupon import CouponCreation
 from etc.local_error import HandledError
 
@@ -35,35 +37,42 @@ def create_coupon(c: CouponCreation):
     }
 
 
-def get_all_coupons() -> list[dict[str, Any]]:
-    coupons = db_session.session.query(Coupon).all()
+def get_all_coupons(pg: Page) -> list[dict[str, Any]]:
+    with db_session.session as ss:
+        coupons = ss.scalars(
+            paging(
+                sqla.select(Coupon),
+                pg,
+            )
+        )
 
-    coupon_dicts = [
-        {
-            "id": c.id,
-            "usage_left": c.usage_left,
-            "expire_time": c.expire_time,
-            "sale_percent": c.sale_percent,
-            "minimum_price": c.minimum_price,
-        }
-        for c in coupons
-    ]
+        coupon_dicts = [
+            {
+                "id": c.id,
+                "usage_left": c.usage_left,
+                "expire_time": c.expire_time,
+                "sale_percent": c.sale_percent,
+                "minimum_price": c.minimum_price,
+            }
+            for c in coupons
+        ]
 
-    return coupon_dicts
+        return coupon_dicts
 
 
 def get_coupon(id: str) -> dict[str, Any]:
-    coupon: Coupon = db_session.session.get(Coupon, id)
-    if not coupon:
-        return {"error": "Coupon not found"}
+    with db_session.session as ss:
+        coupon: Coupon = ss.get(Coupon, id)
+        if not coupon:
+            return {"error": "Coupon not found"}
 
-    return {
-        "id": coupon.id,
-        "usage_left": coupon.usage_left,
-        "expire_time": coupon.expire_time,
-        "sale_percent": coupon.sale_percent,
-        "minimum_price": coupon.minimum_price,
-    }
+        return {
+            "id": coupon.id,
+            "usage_left": coupon.usage_left,
+            "expire_time": coupon.expire_time,
+            "sale_percent": coupon.sale_percent,
+            "minimum_price": coupon.minimum_price,
+        }
 
 
 def disable_coupon(

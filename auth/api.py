@@ -1,5 +1,4 @@
-from db.postgresql.models import staff_account
-from db.postgresql.repos import account_repo
+from db.postgresql.models.staff_account import StaffAccount
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, APIRouter
@@ -7,6 +6,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from db.postgresql.db_session import db_session
 
 import auth
+import sqlalchemy as sqla
 
 from auth import encryption, jwt_token
 from auth.token import Token
@@ -22,13 +22,11 @@ async def test(token: Annotated[str, Depends(auth.oauth2_scheme)]):
 @router.get("/profile")
 async def get_profile(token: Annotated[str, Depends(auth.oauth2_scheme)]):
     with db_session.session as ss:
-        acc: staff_account.StaffAccount = (
-            ss.query(
-                staff_account.StaffAccount,
+        acc = ss.execute(
+            sqla.select(StaffAccount).filter(
+                StaffAccount.token == token,
             )
-            .filter_by(token=token)
-            .scalar()
-        )
+        ).scalar_one_or_none()
 
         if not acc:
             return {"error": "token is invalid"}
@@ -48,40 +46,52 @@ async def login(
         Depends(),
     ],
 ) -> Token:
-    user = account_repo.find_by_username(
-        login_form.username,
-    )
+    with db_session.session as ss:
+        user = ss.execute(
+            sqla.select(StaffAccount).filter(
+                StaffAccount.username == login_form.username
+            )
+        ).scalar_one_or_none()
 
-    if not user:
-        raise HTTPException(
-            status_code=400,
-            detail="No such account with username",
-        )
+        if not user:
+            raise HTTPException(
+                status_code=400,
+                detail="No such account with username",
+            )
 
-    is_password_match = encryption.verify(login_form.password, user.password)
+        is_password_match = encryption.verify(login_form.password, user.password)
 
-    if not is_password_match:
-        raise HTTPException(status_code=400, detail="Password incorrect")
+        if not is_password_match:
+            raise HTTPException(status_code=400, detail="Password incorrect")
 
-    token = jwt_token.encode(user)
+        token = jwt_token.encode(user)
 
-    account_repo.update_token(user.id, token)
+        user.token = token
 
-    return Token(access_token=token)
+        db_session.commit()
+
+        return Token(access_token=token)
 
 
 @router.post("/logout")
 async def logout(token: str) -> dict[str, str]:
-    user = account_repo.find_by_token(token)
+    with db_session.session as ss:
+        acc = ss.execute(
+            sqla.select(StaffAccount).filter(
+                StaffAccount.token == token,
+            )
+        ).scalar_one_or_none()
 
-    if not user:
-        raise HTTPException(
-            status_code=400,
-            detail="No such account with token",
-        )
+        if not acc:
+            raise HTTPException(
+                status_code=400,
+                detail="No such account with token",
+            )
 
-    account_repo.update_token(user.id, "")
+        acc.token = ""
 
-    return {
-        "message": "Logout successfully",
-    }
+        db_session.commit()
+
+        return {
+            "message": "Logout successfully",
+        }
