@@ -7,17 +7,20 @@ from fastapi import (
     WebSocket,
     WebSocketDisconnect,
 )
-import sqlalchemy
+import sqlalchemy as sqla
 from db.postgresql.db_session import db_session
 
 import auth
 from db.postgresql.models.chat import ChatSession
 from db.postgresql.models.staff_account import StaffAccount
 from db.postgresql.models.user_account import UserAccount
+from db.postgresql.paging import Page, page_param, paging
 
 Permission = Annotated[bool, Depends(auth.staff_permission)]
 
 router = APIRouter(prefix="/ws", tags=["WebSocket"])
+
+Paging = Annotated[Page, Depends(page_param)]
 
 
 class MsgType(str, Enum):
@@ -168,9 +171,16 @@ chatlist: dict[str, ChatInstance] = dict()
 
 
 @router.get("/chat/queue")
-async def get_chat_queue():
+async def get_chat_queue(page: Paging):
     with db_session.session as ss:
-        chatlist = ss.query(ChatSession).all()
+        chatlist = ss.scalars(
+            paging(
+                sqla.select(
+                    ChatSession,
+                ),
+                page,
+            )
+        )
 
         return [
             {
@@ -184,15 +194,22 @@ async def get_chat_queue():
 
 
 @router.get("/chat/list")
-async def get_all_chat_customer():
+async def get_all_chat_customer(pg: Paging):
     with db_session.session as ss:
-        chatlist = ss.execute(
-            sqlalchemy.select(
-                UserAccount.id,
-                UserAccount.username,
-                UserAccount.profile_pic_uri,
-                ChatSession.connected,
-            ).join_from(UserAccount, ChatSession,full=True)
+        chatlist = ss.scalars(
+            paging(
+                sqla.select(
+                    UserAccount.id,
+                    UserAccount.username,
+                    UserAccount.profile_pic_uri,
+                    ChatSession.connected,
+                ).join_from(
+                    UserAccount,
+                    ChatSession,
+                    full=True,
+                ),
+                pg,
+            )
         )
 
         return [
@@ -213,7 +230,10 @@ async def connect_customer_chat(
     token: str = "",
 ):
     with db_session.session as ss:
-        staff = ss.query(StaffAccount).filter_by(token=token).first()
+        staff = ss.execute(
+            sqla.select(StaffAccount).filter(StaffAccount.token == token)
+        ).scalar_one_or_none()
+
         customer = ss.get(UserAccount, id)
 
     try:
@@ -275,7 +295,9 @@ async def customer_chat(
     token: str = "",
 ):
     with db_session.session as ss:
-        user = ss.query(UserAccount).filter_by(token=token).first()
+        user = ss.execute(
+            sqla.select(UserAccount).filter(UserAccount.token == token)
+        ).scalar_one_or_none()
 
     id = ""
 

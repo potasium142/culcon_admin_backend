@@ -2,8 +2,12 @@ from datetime import date
 from typing import Annotated
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
-from typing import List
-from services.predict import load_product_model, predict_top_selling_products, load_revenue_model, predict_next_month_revenue
+from services.predict import (
+    load_product_model,
+    predict_top_selling_products,
+    load_revenue_model,
+    predict_next_month_revenue,
+)
 from db.postgresql.models.staff_account import AccountStatus
 from dtos.request.account import AccountCreateDto
 from dtos.request.coupon import CouponCreation
@@ -19,6 +23,9 @@ from services.revenue import get_last_7_days_revenue, get_last_6_months_revenue
 from db.postgresql.db_session import db_session
 import auth
 
+from db.postgresql.paging import page_param, Page
+
+Paging = Annotated[Page, Depends(page_param)]
 Permission = Annotated[bool, Depends(auth.manager_permission)]
 
 router = APIRouter(prefix="/api/manager", tags=["Manager function"])
@@ -40,8 +47,8 @@ class MonthlyRevenue(BaseModel):
 
 
 class RevenueResponse(BaseModel):
-    last_7_days_revenue: List[DailyRevenue]
-    last_6_months_revenue: List[MonthlyRevenue]
+    last_7_days_revenue: list[DailyRevenue]
+    last_6_months_revenue: list[MonthlyRevenue]
 
 
 class TopProduct(BaseModel):
@@ -50,8 +57,8 @@ class TopProduct(BaseModel):
 
 
 class TopProductsResponse(BaseModel):
-    top_10_products_month: List[TopProduct]
-    top_10_products_all_time: List[TopProduct]
+    top_10_products_month: list[TopProduct]
+    top_10_products_all_time: list[TopProduct]
 
 
 class CombinedRevenueAndProductsResponse(BaseModel):
@@ -65,7 +72,7 @@ class PredictedProduct(BaseModel):
 
 
 class PredictedProductsResponse(BaseModel):
-    top_predicted_products: List[PredictedProduct]
+    top_predicted_products: list[PredictedProduct]
 
 
 class RevenuePredictionResponse(BaseModel):
@@ -114,10 +121,8 @@ async def disable_coupon(
 @router.get(
     "/staff/fetch/all",
 )
-def read_all_staff(
-    _: Permission,
-):
-    staff = staff_sv.get_all_staff()
+def read_all_staff(_: Permission, pg: Paging):
+    staff = staff_sv.get_all_staff(pg)
     return staff
 
 
@@ -202,6 +207,7 @@ def get_next_month_revenue_prediction() -> RevenuePredictionResponse:
     next_year = today.year if today.month < 12 else today.year + 1
 
     predicted_revenue = predict_next_month_revenue(
-        db_session.session, revenue_model, next_year, next_month)
+        db_session.session, revenue_model, next_year, next_month
+    )
 
     return RevenuePredictionResponse(predicted_revenue=predicted_revenue)

@@ -6,8 +6,10 @@ from db.postgresql.models.staff_account import (
     EmployeeInfo,
     StaffAccount,
 )
+from db.postgresql.paging import Page, paging
 from dtos.request.staff import EditEmployeeInfo, EditStaffAccount
 from etc.local_error import HandledError
+import sqlalchemy as sqla
 
 
 def map_staff_output(s: StaffAccount):
@@ -19,14 +21,15 @@ def map_staff_output(s: StaffAccount):
     }
 
 
-def get_all_staff():
-    with db_session.session as session:
-        data = (
-            session.query(StaffAccount)
-            .filter_by(
-                type=AccountType.STAFF,
+def get_all_staff(pg: Page):
+    with db_session.session as ss:
+        data = ss.scalars(
+            paging(
+                sqla.select(StaffAccount).filter(
+                    StaffAccount.type == AccountType.STAFF,
+                ),
+                pg,
             )
-            .all()
         )
 
         data = list(

@@ -11,6 +11,8 @@ from dtos.request.user_account import EditCustomerAccount, EditCustomerInfo
 
 from etc.local_error import HandledError
 from services.order import order_list_item
+from db.postgresql.paging import paging, Page
+import sqlalchemy as sqla
 
 
 def set_account_status(id: str, status: UserAccountStatus):
@@ -35,17 +37,23 @@ def delete_comment(id: str, comment_id: str):
     db_session.commit()
 
 
-def get_all_customer() -> list[dict[str, Any]]:
-    customers = db_session.session.query(UserAccount).all()
-    return [
-        {
-            "id": str(c.id),
-            "username": c.username,
-            "status": c.status,
-            "profile_pic": c.profile_pic_uri,
-        }
-        for c in customers
-    ]
+def get_all_customer(pg: Page) -> list[dict[str, Any]]:
+    with db_session.session as ss:
+        customers = ss.scalars(
+            paging(
+                sqla.select(UserAccount),
+                pg,
+            )
+        )
+        return [
+            {
+                "id": str(c.id),
+                "username": c.username,
+                "status": c.status,
+                "profile_pic": c.profile_pic_uri,
+            }
+            for c in customers
+        ]
 
 
 def get_customer(id: str):
@@ -94,10 +102,16 @@ def edit_customer_account(id: str, info: EditCustomerAccount):
         db_session.commit()
 
 
-def get_customer_cart(id):
-    with db_session.session as session:
-        cart = session.query(Cart).filter_by(account_id=id)
-
+def get_customer_cart(id, pg: Page):
+    with db_session.session as ss:
+        cart = ss.scalars(
+            paging(
+                sqla.select(Cart).filter(
+                    Cart.account_id == id,
+                ),
+                pg,
+            )
+        )
         return [
             {
                 "id": i.product_id.id,
