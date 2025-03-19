@@ -48,6 +48,9 @@ def __order_detail_json(o: OrderHistory):
 
 
 def order_list_item(o: OrderHistory):
+    coupon_sale = ""
+    if o.coupon:
+        coupon_sale = o.coupon.sale_percent
     return {
         "id": o.id,
         "order_date": o.order_date,
@@ -58,7 +61,7 @@ def order_list_item(o: OrderHistory):
         "payment_status": o.payment_status,
         "payment_method": o.payment_method,
         "total_price": o.total_price,
-        "coupon_sale": o.coupon.sale_percent if o.coupon else "",
+        "coupon_sale": coupon_sale,
     }
 
 

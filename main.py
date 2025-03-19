@@ -19,8 +19,8 @@ from routers import (
     public,
 )
 from contextlib import asynccontextmanager
+import logging
 import ai
-
 from fastapi.middleware.cors import CORSMiddleware
 
 preload: dict[Any, Any] = dict()
@@ -32,6 +32,8 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+
+logger = logging.getLogger("uvicorn.error")
 
 origins = [
     "http://localhost:3000",
@@ -62,16 +64,21 @@ app.include_router(public.router)
 
 
 @app.exception_handler(Exception)
-async def validation_exception_handler(request: Request, exc: Exception):
+async def validation_exception_handler(
+    req: Request,
+    exc: Exception,
+):
     # Change here to Logger
-    stacktrace = traceback.format_exc().splitlines()
+    stacktrace = traceback.format_exc()
+    logger.error(exc)
+    logger.error(stacktrace)
     return JSONResponse(
         status_code=500,
         content={
-            "api": str(request.url),
-            "method": request.method,
+            "api": str(req.url),
+            "method": req.method,
             "message": (f"{exc!r}"),
-            "stack_trace": stacktrace,
+            "stack_trace": stacktrace.splitlines(),
         },
     )
 
@@ -81,14 +88,17 @@ async def db_exception_handler(
     req: Request,
     exc: sqlalchemy.exc.SQLAlchemyError,
 ):
-    stacktrace = traceback.format_exc().splitlines()
     db_session.session.rollback()
-    print(stacktrace)
+    stacktrace = traceback.format_exc()
+    logger.error(exc)
+    logger.error(stacktrace)
     return JSONResponse(
         status_code=500,
         content={
+            "api": str(req.url),
+            "method": req.method,
             "message": (f"{exc!r}"),
-            "stack_trace": stacktrace,
+            "stack_trace": stacktrace.splitlines(),
         },
     )
 

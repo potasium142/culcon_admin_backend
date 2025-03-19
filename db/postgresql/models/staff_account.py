@@ -40,5 +40,5 @@ class StaffAccount(Base):
     password: orm.Mapped[str]
     type: orm.Mapped[AccountType]
     status: orm.Mapped[AccountStatus]
-    token: orm.Mapped[str]
+    token: orm.Mapped[str] = orm.mapped_column(unique=True)
     employee_info: orm.Mapped[EmployeeInfo] = orm.relationship()
