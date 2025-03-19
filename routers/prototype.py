@@ -71,15 +71,6 @@ async def progress_tracker_test_fetch(id: int):
     )
 
 
-@router.get("/vector/search")
-async def search_vec(
-    prompt: str,
-    req: Request,
-):
-    yolo_model = req.state.ai_models["clip"]
-    return public.vector_search_image_clip(prompt, yolo_model)
-
-
 @router.get("/httpexception")
 async def http_exc():
     raise HTTPException(status_code=400, detail="Password incorrect")

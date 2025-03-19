@@ -7,7 +7,7 @@ class Page(BaseModel):
 
 
 def paging(query, page: Page):
-    offset = page.page_index * page.page_size + 1
+    offset = page.page_index * page.page_size
     return query.limit(
         page.page_size,
     ).offset(

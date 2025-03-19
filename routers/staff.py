@@ -287,8 +287,9 @@ async def get_customer_comment(
 )
 async def get_list_customer(
     _: Permission,
+    pg: Paging,
 ):
-    return c_ss.get_all_customer()
+    return c_ss.get_all_customer(pg)
 
 
 @router.get(
@@ -339,16 +340,32 @@ async def change_customer_info(
 
 
 @router.get("/product/history/stock", tags=["Product"])
-async def fetch_product_stock_history(_: Permission, prod_id: str):
-    return product_.get_product_stock_history(prod_id)
+async def fetch_product_stock_history(
+    _: Permission,
+    prod_id: str,
+    pg: Paging,
+):
+    return product_.get_product_stock_history(prod_id, pg)
+
+
+@router.get("/product/history/price", tags=["Product"])
+async def fetch_product_price_history(
+    _: Permission,
+    prod_id: str,
+    pg: Paging,
+):
+    return product_.get_product_price_history(prod_id, pg)
 
 
 @router.get(
     "/order/fetch/all",
     tags=["Order"],
 )
-async def get_all_orders(_: Permission):
-    return ord_ss.get_all_orders()
+async def get_all_orders(
+    _: Permission,
+    pg: Paging,
+):
+    return ord_ss.get_all_orders(pg)
 
 
 @router.get(
@@ -358,8 +375,9 @@ async def get_all_orders(_: Permission):
 async def get_order_by_status(
     _: Permission,
     status: OrderStatus,
+    pg: Paging,
 ):
-    return ord_ss.get_orders_with_status(status)
+    return ord_ss.get_orders_with_status(status, pg)
 
 
 @router.get(

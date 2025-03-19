@@ -196,7 +196,7 @@ async def get_chat_queue(page: Paging):
 @router.get("/chat/list")
 async def get_all_chat_customer(pg: Paging):
     with db_session.session as ss:
-        chatlist = ss.execute(
+        chatlist = ss.scalars(
             paging(
                 sqla.select(
                     UserAccount.id,

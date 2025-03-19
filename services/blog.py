@@ -66,7 +66,7 @@ def get_comment(post_id: str, pg: Page):
                 ),
                 pg,
             )
-        )
+        ).all()
 
 
 def get_blog_list(page: Page) -> list[dict[str, str]]:
@@ -91,6 +91,9 @@ def get_comment_by_customer(user_id: str, page: Page):
     with db_session.session as ss:
         return ss.scalars(
             paging(
-                sqla.select(PostComment).filter(PostComment.account_id == user_id), page
+                sqla.select(PostComment).filter(
+                    PostComment.account_id == user_id,
+                ),
+                page,
             )
-        )
+        ).all()

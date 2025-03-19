@@ -1,3 +1,5 @@
+import sqlalchemy as sqla
+from db.postgresql.paging import Page, paging
 from db.postgresql.db_session import db_session
 from db.postgresql.models.order_history import (
     OrderHistory,
@@ -65,21 +67,27 @@ def order_list_item(o: OrderHistory):
     }
 
 
-def get_all_orders():
+def get_all_orders(pg: Page):
     with db_session.session as ss:
-        orders = ss.query(OrderHistory).all()
+        orders = ss.scalars(
+            paging(
+                sqla.select(OrderHistory),
+                pg,
+            )
+        )
 
         return [order_list_item(o) for o in orders]
 
 
-def get_orders_with_status(status: OrderStatus):
+def get_orders_with_status(status: OrderStatus, pg: Page):
     with db_session.session as ss:
-        orders = (
-            ss.query(OrderHistory)
-            .filter(
-                OrderHistory.order_status == status,
+        orders = ss.scalars(
+            paging(
+                sqla.select(OrderHistory).filter(
+                    OrderHistory.order_status == status,
+                ),
+                pg,
             )
-            .all()
         )
 
         return [order_list_item(o) for o in orders]
