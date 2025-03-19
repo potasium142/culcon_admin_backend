@@ -1,4 +1,4 @@
-from fastapi import APIRouter, BackgroundTasks, Request
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from dtos.request.account import AccountCreateDto
 
@@ -78,3 +78,8 @@ async def search_vec(
 ):
     yolo_model = req.state.ai_models["clip"]
     return public.vector_search_image_clip(prompt, yolo_model)
+
+
+@router.get("/httpexception")
+async def http_exc():
+    raise HTTPException(status_code=400, detail="Password incorrect")

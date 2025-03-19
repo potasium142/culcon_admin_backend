@@ -26,7 +26,7 @@ async def get_profile(token: Annotated[str, Depends(auth.oauth2_scheme)]):
             sqla.select(StaffAccount).filter(
                 StaffAccount.token == token,
             )
-        ).scalar_one()
+        ).scalar_one_or_none()
 
         if not acc:
             return {"error": "token is invalid"}
@@ -51,7 +51,7 @@ async def login(
             sqla.select(StaffAccount).filter(
                 StaffAccount.username == login_form.username
             )
-        ).scalar_one()
+        ).scalar_one_or_none()
 
         if not user:
             raise HTTPException(
@@ -80,7 +80,7 @@ async def logout(token: str) -> dict[str, str]:
             sqla.select(StaffAccount).filter(
                 StaffAccount.token == token,
             )
-        ).scalar_one()
+        ).scalar_one_or_none()
 
         if not acc:
             raise HTTPException(

@@ -12,7 +12,7 @@ from services import customer as c_ss
 from services import order as ord_ss
 from etc.progress_tracker import pp
 from db.postgresql.models import product
-
+from db.postgresql.paging import page_param, Page
 import auth
 
 Permission = Annotated[bool, Depends(auth.staff_permission)]
@@ -20,6 +20,9 @@ Permission = Annotated[bool, Depends(auth.staff_permission)]
 router = APIRouter(prefix="/api/staff", tags=["Staff function"])
 
 oauth2_scheme = auth.oauth2_scheme
+
+
+Paging = Annotated[Page, Depends(page_param)]
 
 
 @router.get("/permission_test")
@@ -239,8 +242,9 @@ async def edit_blog(
 async def get_blog_comment(
     _: Permission,
     id: str,
+    pg: Paging,
 ):
-    return blog.get_comment(id)
+    return blog.get_comment(id, pg)
 
 
 @router.get(
@@ -249,8 +253,9 @@ async def get_blog_comment(
 )
 async def get_blogs(
     _: Permission,
+    pg: Paging,
 ):
-    return blog.get_blog_list()
+    return blog.get_blog_list(pg)
 
 
 @router.get(
@@ -271,8 +276,9 @@ async def get_blog(
 async def get_customer_comment(
     _: Permission,
     id: str,
+    pg: Paging,
 ):
-    return blog.get_comment_by_customer(id)
+    return blog.get_comment_by_customer(id, pg)
 
 
 @router.get(

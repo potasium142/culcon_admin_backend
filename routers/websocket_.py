@@ -8,7 +8,6 @@ from fastapi import (
     WebSocketDisconnect,
 )
 import sqlalchemy as sqla
-from sqlalchemy.orm import Query
 from db.postgresql.db_session import db_session
 
 import auth
@@ -296,7 +295,9 @@ async def customer_chat(
     token: str = "",
 ):
     with db_session.session as ss:
-        user = ss.query(UserAccount).filter_by(token=token).first()
+        user = ss.execute(
+            sqla.select(UserAccount).filter(UserAccount.token == token)
+        ).scalar_one_or_none()
 
     id = ""
 

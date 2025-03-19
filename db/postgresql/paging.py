@@ -1,7 +1,4 @@
-from typing import Any
 from pydantic import BaseModel
-from sqlalchemy import Select
-from sqlalchemy.orm import Query
 
 
 class Page(BaseModel):
@@ -9,7 +6,7 @@ class Page(BaseModel):
     page_size: int = 7
 
 
-def paging(query: Select[Any], page: Page) -> Select[Any]:
+def paging(query, page: Page):
     offset = page.page_index * page.page_size + 1
     return query.limit(
         page.page_size,
