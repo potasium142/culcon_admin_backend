@@ -1,5 +1,5 @@
 import sqlalchemy as sqla
-from db.postgresql.paging import Page, paging
+from db.postgresql.paging import Page, display_page, paging, table_size
 from db.postgresql.db_session import db_session
 from db.postgresql.models.order_history import (
     OrderHistory,
@@ -76,7 +76,9 @@ def get_all_orders(pg: Page):
             )
         )
 
-        return [order_list_item(o) for o in orders]
+        content = [order_list_item(o) for o in orders]
+        count = table_size(OrderHistory.id)
+        return display_page(content, count, pg)
 
 
 def get_orders_with_status(status: OrderStatus, pg: Page):
@@ -90,7 +92,17 @@ def get_orders_with_status(status: OrderStatus, pg: Page):
             )
         )
 
-        return [order_list_item(o) for o in orders]
+        content = [order_list_item(o) for o in orders]
+        count = (
+            ss.scalar(
+                sqla.select(
+                    sqla.func.count(OrderHistory.order_status == status)
+                ).filter(OrderHistory.order_status == status)
+            )
+            or 0
+        )
+
+        return display_page(content, count, pg)
 
 
 def get_order_detail(id: str):

@@ -9,7 +9,7 @@ from etc.local_error import HandledError
 import sqlalchemy as sqla
 
 
-from db.postgresql.paging import Page, paging
+from db.postgresql.paging import Page, display_page, paging, table_size
 
 
 def create(
@@ -58,7 +58,7 @@ def get(id: str):
 
 def get_comment(post_id: str, pg: Page):
     with db_session.session as ss:
-        return ss.scalars(
+        content = ss.scalars(
             paging(
                 sqla.select(PostComment).filter(
                     PostComment.post_id == post_id,
@@ -68,8 +68,19 @@ def get_comment(post_id: str, pg: Page):
             )
         ).all()
 
+        count = (
+            ss.scalar(
+                sqla.select(sqla.func.count(PostComment.id)).filter(
+                    PostComment.post_id == post_id,
+                    PostComment.comment_type == CommentType.POST,
+                )
+            )
+            or 0
+        )
+        return display_page(content, count, pg)
 
-def get_blog_list(page: Page) -> list[dict[str, str]]:
+
+def get_blog_list(page: Page):
     with db_session.session as ss:
         blogs = ss.scalars(
             paging(
@@ -77,7 +88,7 @@ def get_blog_list(page: Page) -> list[dict[str, str]]:
                 page,
             )
         )
-        return [
+        content = [
             {
                 "id": b.id,
                 "title": b.title,
@@ -85,11 +96,13 @@ def get_blog_list(page: Page) -> list[dict[str, str]]:
             }
             for b in blogs
         ]
+        count = table_size(Blog.id)
+        return display_page(content, count, page)
 
 
 def get_comment_by_customer(user_id: str, page: Page):
     with db_session.session as ss:
-        return ss.scalars(
+        content = ss.scalars(
             paging(
                 sqla.select(PostComment).filter(
                     PostComment.account_id == user_id,
@@ -97,3 +110,13 @@ def get_comment_by_customer(user_id: str, page: Page):
                 page,
             )
         ).all()
+
+        count = (
+            ss.scalar(
+                sqla.select(sqla.func.count(PostComment.id)).filter(
+                    PostComment.account_id == user_id,
+                )
+            )
+            or 0
+        )
+        return display_page(content, count, page)

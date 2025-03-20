@@ -103,6 +103,13 @@ PRODUCT_STOCK_HISTORY_STATEMENT = sqla.text(
     "VALUES (:product_id, :date, :in_price, :in_stock)"
 )
 
+# Define the SQL statement for cart insertion
+CART_STATEMENT = sqla.text(
+    "INSERT INTO "
+    + "cart(account_id, product_id, amount) "
+    + "VALUES(:account_id, :product_id, :amount)"
+)
+
 PRODUCT_IMAGES = [
     "https://minecraft.wiki/images/Potato_JE2.png",
     "https://minecraft.wiki/images/Melon_Slice_JE2_BE2.png",
@@ -220,12 +227,12 @@ for _ in tqdm(range(USER_AMOUNT)):
         "email": fake.email(),
         "username": username,
         "password": pwd_context.hash(username),
+        "token": pwd_context.hash(username),
         "status": random.choice(USER_STATUS),
         "address": fake.address(),
         "profile_pic_uri": PROFILE_URI,
         "profile_description": fake.sentence(),
         "phone": fake.phone_number(),
-        "token": "",
         "bookmarked_posts": [],
     }
     conn.execute(
@@ -243,7 +250,7 @@ for _ in tqdm(range(STAFF_AMOUNT)):
         "password": pwd_context.hash(username),
         "type": random.choice(["MANAGER", "STAFF"]),
         "status": random.choice(["ACTIVE", "DISABLE"]),
-        "token": "",
+        "token": pwd_context.hash(username),
     }
 
     info_data = {
@@ -524,6 +531,50 @@ for i, u in enumerate(created_user_id):
             ORDER_HISTORY_ITEMS_STATEMENT,
             order_items_data,
         )
+
+
+# AI SLOP, TERRIBLE, butttt im too lazi to give a sht rn
+def generate_random_carts():
+    print("Generating random cart entries...")
+
+    # Get all user IDs
+    user_ids_query = sqla.text("SELECT id FROM user_account")
+    user_ids_result = conn.execute(user_ids_query).fetchall()
+    user_ids = [str(row[0]) for row in user_ids_result]
+
+    # Get all product IDs
+    product_ids_query = sqla.text("SELECT id FROM product")
+    product_ids_result = conn.execute(product_ids_query).fetchall()
+    product_ids = [str(row[0]) for row in product_ids_result]
+
+    if not product_ids:
+        print("No products found in the database. Cannot create cart entries.")
+        return
+
+    cart_entries = []
+    for user_id in tqdm(user_ids, desc="Creating cart entries"):
+        # Add 0-5 random products to each user's cart
+        num_products = random.randint(0, 5)
+        selected_products = random.sample(
+            product_ids, min(num_products, len(product_ids))
+        )
+
+        for product_id in selected_products:
+            # Random amount between 1 and 10
+            amount = random.randint(1, 10)
+            cart_entries.append({
+                "account_id": user_id,
+                "product_id": product_id,
+                "amount": amount,
+            })
+
+    # Insert cart entries in batches
+    if cart_entries:
+        print(f"Inserting {len(cart_entries)} cart entries...")
+        conn.executemany(CART_STATEMENT, cart_entries)
+        print("Cart entries created successfully.")
+    else:
+        print("No cart entries to insert.")
 
 
 conn.commit()
