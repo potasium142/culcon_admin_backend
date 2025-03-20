@@ -21,3 +21,4 @@ open_clip_torch==2.30.0
 psycopg[binary]==3.2.3
 pytest==7.4.3
 pytest-mock==3.14.0
+testcontainers==4.9.2
