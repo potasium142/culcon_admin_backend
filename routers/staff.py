@@ -434,6 +434,21 @@ async def ship_order(
 
 
 @router.post(
+    "/order/shipped/{id}",
+    tags=["Order"],
+)
+async def shipped_order(
+    _: Permission,
+    id: str,
+):
+    return ord_ss.change_order_status(
+        id,
+        OrderStatus.ON_SHIPPING,
+        OrderStatus.SHIPPED,
+    )
+
+
+@router.post(
     "/order/cancel/{id}",
     tags=["Order"],
 )

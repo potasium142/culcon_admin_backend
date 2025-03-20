@@ -11,7 +11,7 @@ from etc.local_error import HandledError
 
 
 def __order_detail_json(o: OrderHistory):
-    cp = o.coupon
+    cp = o.coupon_detail
     if cp:
         coupon_detail = {
             "id": cp.id,
@@ -168,6 +168,7 @@ def cancel_order(id: str):
         db_session.commit()
 
         # TODO:refund
+        # TODO: recalculate stock
 
         order_refetch = ss.get(OrderHistory, id)
 
