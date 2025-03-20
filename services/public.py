@@ -2,17 +2,17 @@ from io import BytesIO
 from typing import Any
 from PIL import Image, ImageFile
 from db.postgresql.db_session import db_session
-from db.postgresql.models.product import Product, ProductEmbedding, ProductType
+from db.postgresql.models.product import ProductEmbedding, ProductType
 from ai import clip, yolo
 import sqlalchemy as sqla
-from db.postgresql.paging import Page, paging
+from db.postgresql.paging import Page, display_page, paging
 
 
 def read_image(file: bytes) -> ImageFile.ImageFile:
     return Image.open(BytesIO(file))
 
 
-def __prod_dto(r: tuple[Product, float, float]) -> dict[str, Any]:
+def __prod_dto(r) -> dict[str, Any]:
     return {
         "id": r[0].product.id,
         "product_name": r[0].product.product_name,
@@ -36,20 +36,30 @@ def vector_search_prompt(
     with db_session.session as ss:
         dist_text = ProductEmbedding.description_embed.l2_distance(prompt_vec)
         dist_img = ProductEmbedding.images_embed_clip.l2_distance(prompt_vec)
-        results = ss.scalars(
+        results = ss.execute(
             paging(
                 sqla.select(
                     ProductEmbedding,
                     dist_text,
                     dist_img,
                 ).filter(
-                    (dist_img < 0.8) | (dist_text < 0.8),
+                    (dist_img < 0.8) | (dist_text < 0.5),
                 ),
                 pg,
             )
         )
 
-        return [__prod_dto(r) for r in results]
+        content = [__prod_dto(r) for r in results]
+        count = (
+            ss.scalar(
+                sqla.select(sqla.func.count(ProductEmbedding.id)).filter(
+                    (dist_img < 0.8) | (dist_text < 0.5),
+                )
+            )
+            or 0
+        )
+
+        return display_page(content, count, pg)
 
 
 def vector_search_image_yolo(
@@ -64,7 +74,7 @@ def vector_search_image_yolo(
     with db_session.session as ss:
         dist_img_yolo = ProductEmbedding.images_embed_yolo.l2_distance(prompt_vec)
         dist_img_clip = ProductEmbedding.images_embed_clip.l2_distance(clip_vec)
-        results = ss.scalars(
+        results = ss.execute(
             paging(
                 sqla.select(
                     ProductEmbedding,
@@ -75,11 +85,20 @@ def vector_search_image_yolo(
             )
         )
 
-        r_results: list[dict[str, str | float]] = []
+        content: list[dict[str, str | float]] = []
 
         for r in results:
             if r[0].product.product_types != ProductType.MEALKIT:
                 continue
-            r_results.append(__prod_dto(r))
+            content.append(__prod_dto(r))
 
-        return r_results
+        count = (
+            ss.scalar(
+                sqla.select(sqla.func.count(ProductEmbedding.id)).filter(
+                    dist_img_yolo < 1.4
+                )
+            )
+            or 0
+        )
+
+        return display_page(content, count, pg)

@@ -293,6 +293,18 @@ async def get_list_customer(
 
 
 @router.get(
+    "/customer/fetch/cart/{id}",
+    tags=["Customer"],
+)
+async def get_customer_cart(
+    _: Permission,
+    pg: Paging,
+    id: str,
+):
+    return c_ss.get_customer_cart(id, pg)
+
+
+@router.get(
     "/customer/fetch/id/{id}",
     tags=["Customer"],
 )

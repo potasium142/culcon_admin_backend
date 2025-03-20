@@ -52,7 +52,7 @@ class OpenCLIP:
         return text_features.numpy()
 
     def encode_image(self, images):
-        image = [self.preprocess(img).unsqueeze(0) for img in images]
+        image = [self.preprocess(img).unsqueeze(0) for img in images]  # type: ignore
         image = torch.cat(image)
         with torch.no_grad():
             image_features = self.model.encode_image(image).float()

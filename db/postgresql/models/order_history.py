@@ -42,6 +42,9 @@ class Coupon(Base):
     usage_amount: orm.Mapped[int] = orm.mapped_column(sqltypes.INTEGER)
     usage_left: orm.Mapped[int] = orm.mapped_column(sqltypes.INTEGER)
     minimum_price: orm.Mapped[float] = orm.mapped_column(sqltypes.REAL)
+    orders: orm.Mapped[list["OrderHistory"]] = orm.relationship(
+        back_populates="coupon_detail",
+    )
 
 
 OrderHistoryItems = Table(
@@ -71,7 +74,7 @@ class OrderHistory(Base):
     receiver: orm.Mapped[str] = orm.mapped_column(sqltypes.VARCHAR(255))
     phonenumber: orm.Mapped[str] = orm.mapped_column(sqltypes.VARCHAR(255))
     coupon: orm.Mapped[Coupon | None] = orm.mapped_column(
-        ForeignKey("coupon.id"),
+        ForeignKey(Coupon.id),
     )
     updated_coupon: orm.Mapped[bool]
     updated_payment: orm.Mapped[bool]
@@ -82,3 +85,5 @@ class OrderHistory(Base):
         secondary=OrderHistoryItems
     )
     user: orm.Mapped[UserAccount] = orm.relationship(back_populates="order_history")
+
+    coupon_detail: orm.Mapped[Coupon | None] = orm.relationship(back_populates="orders")
