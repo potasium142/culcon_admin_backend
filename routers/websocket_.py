@@ -14,7 +14,7 @@ import auth
 from db.postgresql.models.chat import ChatSession
 from db.postgresql.models.staff_account import StaffAccount
 from db.postgresql.models.user_account import UserAccount
-from db.postgresql.paging import Page, page_param, paging
+from db.postgresql.paging import Page, display_page, page_param, paging, table_size
 
 Permission = Annotated[bool, Depends(auth.staff_permission)]
 
@@ -182,7 +182,7 @@ async def get_chat_queue(page: Paging):
             )
         )
 
-        return [
+        content = [
             {
                 "id": ci.id,
                 "username": ci.user.username,
@@ -192,11 +192,14 @@ async def get_chat_queue(page: Paging):
             for ci in chatlist
         ]
 
+        count = table_size(ChatSession.id)
+        return display_page(content, count, page)
+
 
 @router.get("/chat/list")
 async def get_all_chat_customer(pg: Paging):
     with db_session.session as ss:
-        chatlist = ss.scalars(
+        chatlist = ss.execute(
             paging(
                 sqla.select(
                     UserAccount.id,
@@ -210,17 +213,22 @@ async def get_all_chat_customer(pg: Paging):
                 ),
                 pg,
             )
-        )
+        ).all()
 
-        return [
-            {
-                "id": ci[0],
-                "username": ci[1],
-                "user_pfp": ci[2],
-                "has_chat": ci[3],
-            }
-            for ci in chatlist
-        ]
+        count = table_size(UserAccount.id)
+        return display_page(
+            [
+                {
+                    "id": ci[0],
+                    "username": ci[1],
+                    "user_pfp": ci[2],
+                    "has_chat": ci[3],
+                }
+                for ci in chatlist
+            ],
+            count,
+            pg,
+        )
 
 
 @router.websocket("/chat/connect/{id}")

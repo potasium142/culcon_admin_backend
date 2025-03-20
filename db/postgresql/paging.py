@@ -1,4 +1,7 @@
+from math import ceil
 from pydantic import BaseModel
+import sqlalchemy as sqla
+from db.postgresql.db_session import db_session
 
 
 class Page(BaseModel):
@@ -15,6 +18,11 @@ def paging(query, page: Page):
     )
 
 
+def table_size(col):
+    with db_session.session as ss:
+        return ss.scalar(sqla.select(sqla.func.count(col))) or 0
+
+
 def page_param(
     index: int = 0,
     size: int = 7,
@@ -23,3 +31,12 @@ def page_param(
         page_index=index,
         page_size=size,
     )
+
+
+def display_page(content, size: int, pg: Page):
+    return {
+        "content": content,
+        "total_element": size,
+        "total_page": ceil(size / pg.page_size),
+        "page_index": pg.page_index,
+    }

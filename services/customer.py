@@ -11,7 +11,7 @@ from dtos.request.user_account import EditCustomerAccount, EditCustomerInfo
 
 from etc.local_error import HandledError
 from services.order import order_list_item
-from db.postgresql.paging import paging, Page
+from db.postgresql.paging import display_page, paging, Page, table_size
 import sqlalchemy as sqla
 
 
@@ -37,7 +37,7 @@ def delete_comment(id: str, comment_id: str):
     db_session.commit()
 
 
-def get_all_customer(pg: Page) -> list[dict[str, Any]]:
+def get_all_customer(pg: Page):
     with db_session.session as ss:
         customers = ss.scalars(
             paging(
@@ -45,7 +45,8 @@ def get_all_customer(pg: Page) -> list[dict[str, Any]]:
                 pg,
             )
         )
-        return [
+
+        content = [
             {
                 "id": str(c.id),
                 "username": c.username,
@@ -54,6 +55,10 @@ def get_all_customer(pg: Page) -> list[dict[str, Any]]:
             }
             for c in customers
         ]
+
+        count = table_size(UserAccount.id)
+
+        return display_page(content, count, pg)
 
 
 def get_customer(id: str):
@@ -112,7 +117,8 @@ def get_customer_cart(id, pg: Page):
                 pg,
             )
         )
-        return [
+
+        content = [
             {
                 "id": i.product_id.id,
                 "name": i.product_id.product_name,
@@ -125,3 +131,12 @@ def get_customer_cart(id, pg: Page):
             }
             for i in cart
         ]
+        count = (
+            ss.scalar(
+                sqla.select(sqla.func.count(Cart.product_id)).filter(
+                    Cart.account_id == id
+                )
+            )
+            or 0
+        )
+        return display_page(content, count, pg)

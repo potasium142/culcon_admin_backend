@@ -6,7 +6,7 @@ from db.postgresql.models.staff_account import (
     EmployeeInfo,
     StaffAccount,
 )
-from db.postgresql.paging import Page, paging
+from db.postgresql.paging import Page, display_page, paging
 from dtos.request.staff import EditEmployeeInfo, EditStaffAccount
 from etc.local_error import HandledError
 import sqlalchemy as sqla
@@ -39,7 +39,15 @@ def get_all_staff(pg: Page):
             )
         )
 
-        return data
+        count = (
+            ss.scalar(
+                sqla.select(sqla.func.count(StaffAccount.id)).filter(
+                    StaffAccount.type == AccountType.STAFF
+                )
+            )
+            or 0
+        )
+        return display_page(data, count, pg)
 
 
 def get_staff_profile(id: str):
