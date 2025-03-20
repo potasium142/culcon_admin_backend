@@ -6,7 +6,6 @@ import sqlalchemy as sqla
 from sqlalchemy import orm
 from sqlalchemy.dialects.postgresql import ARRAY, VARCHAR
 from sqlalchemy.sql import sqltypes
-from torchgen.model import BACKEND_COMPONENTS
 
 from db.postgresql.models import Base
 from db.postgresql.models.blog import Blog
@@ -33,8 +32,8 @@ class UserAccount(Base):
     phone: orm.Mapped[str] = orm.mapped_column(unique=True)
     profile_pic_uri: orm.Mapped[str]
     profile_description: orm.Mapped[str]
-    token: orm.Mapped[str]
-    cart: orm.Mapped[list["Cart"]] = orm.relationship()
+    token: orm.Mapped[str] = orm.mapped_column(unique=True)
+    cart: orm.Mapped[list["Cart"]] = orm.relationship(back_populates="user")
     bookmarked_posts: orm.Mapped[list[str]] = orm.mapped_column(
         ARRAY(
             VARCHAR(255),
@@ -55,6 +54,7 @@ class Cart(Base):
     product_id: orm.Mapped[Product] = orm.mapped_column(
         sqla.ForeignKey(Product.id), primary_key=True
     )
+    user: orm.Mapped[UserAccount] = orm.relationship(back_populates="cart")
 
 
 class CommentType(str, Enum):

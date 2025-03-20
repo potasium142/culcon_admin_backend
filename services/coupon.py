@@ -5,7 +5,7 @@ from db.postgresql.models.order_history import Coupon
 import uuid
 import sqlalchemy as sqla
 
-from db.postgresql.paging import Page, paging
+from db.postgresql.paging import Page, display_page, paging, table_size
 from dtos.request.coupon import CouponCreation
 from etc.local_error import HandledError
 
@@ -37,7 +37,7 @@ def create_coupon(c: CouponCreation):
     }
 
 
-def get_all_coupons(pg: Page) -> list[dict[str, Any]]:
+def get_all_coupons(pg: Page):
     with db_session.session as ss:
         coupons = ss.scalars(
             paging(
@@ -57,7 +57,13 @@ def get_all_coupons(pg: Page) -> list[dict[str, Any]]:
             for c in coupons
         ]
 
-        return coupon_dicts
+        count = table_size(Coupon.id)
+
+        return display_page(
+            coupon_dicts,
+            count,
+            pg,
+        )
 
 
 def get_coupon(id: str) -> dict[str, Any]:

@@ -43,6 +43,9 @@ class Product(Base):
     doc: orm.Mapped["ProductDoc"] = orm.relationship(
         back_populates="product",
     )
+    prices: orm.Mapped[list["ProductPriceHistory"]] = orm.relationship(
+        back_populates="product",
+    )
 
 
 class ProductPriceHistory(Base):
@@ -57,6 +60,7 @@ class ProductPriceHistory(Base):
         sqla.ForeignKey("product.id"),
         primary_key=True,
     )
+    product: orm.Mapped[Product] = orm.relationship(back_populates="prices")
     __table_args__ = (
         sqla.UniqueConstraint(
             "date",

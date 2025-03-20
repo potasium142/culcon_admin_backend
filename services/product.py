@@ -22,7 +22,7 @@ from etc.local_error import HandledError
 from etc.progress_tracker import ProgressTracker
 from etc import cloudinary
 from sqlalchemy import func
-from db.postgresql.paging import Page, paging
+from db.postgresql.paging import Page, display_page, paging, table_size
 
 
 def read_image(file: bytes) -> ImageFile.ImageFile:
@@ -315,7 +315,7 @@ def get_list_mealkit(pg: Page):
             )
         )
 
-        rtn_products: list[
+        content: list[
             dict[str, str | float | int | prod.ProductStatus | prod.ProductType]
         ] = list(
             map(
@@ -332,7 +332,15 @@ def get_list_mealkit(pg: Page):
             )
         )
 
-        return rtn_products
+        count = (
+            ss.scalar(
+                sqla.select(sqla.func.count(prod.Product.id)).filter(
+                    prod.Product.product_types == prod.ProductType.MEALKIT
+                )
+            )
+            or 0
+        )
+        return display_page(content, count, pg)
 
 
 def get_list_product(pg: Page):
@@ -361,7 +369,8 @@ def get_list_product(pg: Page):
             )
         )
 
-        return rtn_products
+        count = table_size(prod.Product.id)
+        return display_page(rtn_products, count, pg)
 
 
 def get_product(prod_id: str):
