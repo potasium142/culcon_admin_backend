@@ -14,9 +14,8 @@ class Environment(BaseSettings):
     CLOUDINARY_NAME: str = ""
     CLOUDINARY_API_KEY: str = ""
     CLOUDINARY_API_SECRET: str = ""
-    GROQ_API_KEY: str = ""
-    LANGCHAIN_TRACING_V2: str = "false"
-    LANGCHAIN_API_KEY: str = ""
+    LLM_ENDPOINT: str = ""
+    LLM_USER_LIMIT: int = 7
     model_config = SettingsConfigDict(env_file="dev.env")
 
 
