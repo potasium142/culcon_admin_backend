@@ -247,6 +247,17 @@ async def get_blog_comment(
     return blog.get_comment(id, pg)
 
 
+@router.delete(
+    "/comment/delete",
+    tags=["Blog", "Comment"],
+)
+async def delete_comment(
+    _: Permission,
+    id: str,
+):
+    return blog.delete_comment(id)
+
+
 @router.get(
     "/blog/fetch/all",
     tags=["Blog"],

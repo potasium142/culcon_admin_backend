@@ -6,6 +6,7 @@ class EditCustomerInfo(BaseModel):
     address: str
     phone: str
     profile_description: str
+    profile_name: str
 
 
 class EditCustomerAccount(BaseModel):
