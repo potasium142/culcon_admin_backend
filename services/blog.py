@@ -56,6 +56,22 @@ def get(id: str):
     return db_session.session.get(Blog, id)
 
 
+def delete_comment(
+    id: str,
+):
+    comment = db_session.session.get(PostComment, id)
+
+    if not comment:
+        raise HandledError("Comment not found")
+
+    comment.deleted = True
+    comment.account_id = None
+
+    db_session.commit()
+
+    return db_session.session.get(PostComment, id)
+
+
 def get_comment(post_id: str, pg: Page):
     with db_session.session as ss:
         content = ss.scalars(

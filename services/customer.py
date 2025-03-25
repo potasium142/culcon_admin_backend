@@ -26,17 +26,6 @@ def set_account_status(id: str, status: UserAccountStatus):
     db_session.commit()
 
 
-def delete_comment(id: str, comment_id: str):
-    comment = db_session.session.get(PostComment, {"account_id": id, "id": id})
-
-    if not comment:
-        raise HandledError("Comment not found")
-
-    comment.deleted = True
-
-    db_session.commit()
-
-
 def get_all_customer(pg: Page):
     with db_session.session as ss:
         customers = ss.scalars(
@@ -50,6 +39,7 @@ def get_all_customer(pg: Page):
             {
                 "id": str(c.id),
                 "username": c.username,
+                "profile_name": c.profile_name,
                 "status": c.status,
                 "profile_pic": c.profile_pic_uri,
             }
@@ -72,6 +62,7 @@ def get_customer(id: str):
             "id": str(c.id),
             "email": c.email,
             "username": c.username,
+            "profile_name": c.profile_name,
             "address": c.address,
             "phone": c.phone,
             "profile_pic": c.profile_pic_uri,
@@ -90,6 +81,7 @@ def edit_customer_info(id: str, info: EditCustomerInfo):
         c.address = info.address
         c.phone = info.phone
         c.profile_description = info.profile_description
+        c.profile_name = info.profile_name
 
         db_session.commit()
 
