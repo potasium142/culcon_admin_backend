@@ -26,6 +26,9 @@ class UserAccount(Base):
     )
     email: orm.Mapped[str] = orm.mapped_column(unique=True)
     username: orm.Mapped[str] = orm.mapped_column(unique=True)
+    profile_name: orm.Mapped[str] = orm.mapped_column(
+        VARCHAR(255),
+    )
     password: orm.Mapped[str]
     status: orm.Mapped[UserAccountStatus]
     address: orm.Mapped[str]
