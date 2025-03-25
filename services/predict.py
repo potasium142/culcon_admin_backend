@@ -28,43 +28,53 @@ def load_revenue_model(file_path_revenue: str):
 def prepare_data_for_prediction(db: Session, year: int, month: int):
     results = (
         db.query(
-            OrderHistoryItems.c.product_id_product_id.label("product_id"),
-            func.sum(OrderHistoryItems.c.quantity).label(
-                "total_quantity_sold_last_month"),
+            OrderHistoryItems.product_id.label("product_id"),
+            func.sum(OrderHistoryItems.quantity).label(
+                "total_quantity_sold_last_month"
+            ),
             func.sum(Cart.c.amount).label("cart_add_count"),
             Product.price.label("price"),
-            Product.sale_percent.label("sale_percent")
+            Product.sale_percent.label("sale_percent"),
         )
-        .join(OrderHistory, OrderHistory.id == OrderHistoryItems.c.order_history_id)
-        .join(Product, Product.id == OrderHistoryItems.c.product_id_product_id)
+        .join(OrderHistory, OrderHistory.id == OrderHistoryItems.order_history_id)
+        .join(Product, Product.id == OrderHistoryItems.product_id)
         .outerjoin(Cart, Cart.c.product_id == Product.id)
         .filter(func.extract("year", OrderHistory.order_date) == year)
         .filter(func.extract("month", OrderHistory.order_date) == month)
-        .group_by(
-            OrderHistoryItems.c.product_id_product_id,
-            Product.price,
-            Product.sale_percent
-        )
+        .group_by(OrderHistoryItems.product_id, Product.price, Product.sale_percent)
         .all()
     )
 
-    data = pd.DataFrame(results, columns=[
-        "product_id", "total_quantity_sold_last_month", "cart_add_count", "price", "sale_percent"
-    ])
+    data = pd.DataFrame(
+        results,
+        columns=[
+            "product_id",
+            "total_quantity_sold_last_month",
+            "cart_add_count",
+            "price",
+            "sale_percent",
+        ],
+    )
 
     data["cart_add_count"] = data["cart_add_count"].fillna(0)
 
     return data
 
 
-def predict_top_selling_products(db: Session, model, year: int, month: int, top_n: int = 10):
+def predict_top_selling_products(
+    db: Session, model, year: int, month: int, top_n: int = 10
+):
     data = prepare_data_for_prediction(db, year, month)
 
     if data.empty:
         return []
 
-    features = ["total_quantity_sold_last_month",
-                "price", "sale_percent", "cart_add_count"]
+    features = [
+        "total_quantity_sold_last_month",
+        "price",
+        "sale_percent",
+        "cart_add_count",
+    ]
     data["predicted_quantity"] = model.predict(data[features])
 
     data = data.sort_values(by="predicted_quantity", ascending=False)
@@ -79,7 +89,11 @@ def predict_top_selling_products(db: Session, model, year: int, month: int, top_
 
     data["product_name"] = data["product_id"].map(product_info)
 
-    return data[["product_id", "product_name", "predicted_quantity"]].head(top_n).to_dict(orient="records")
+    return (
+        data[["product_id", "product_name", "predicted_quantity"]]
+        .head(top_n)
+        .to_dict(orient="records")
+    )
 
 
 def prepare_data_for_revenue_prediction(db: Session, year: int, month: int):
@@ -91,8 +105,8 @@ def prepare_data_for_revenue_prediction(db: Session, year: int, month: int):
     )
 
     total_quantity_sold = (
-        db.query(func.sum(OrderHistoryItems.c.quantity))
-        .join(OrderHistory, OrderHistory.id == OrderHistoryItems.c.order_history_id)
+        db.query(func.sum(OrderHistoryItems.quantity))
+        .join(OrderHistory, OrderHistory.id == OrderHistoryItems.order_history_id)
         .filter(func.extract("year", OrderHistory.order_date) == year)
         .filter(func.extract("month", OrderHistory.order_date) == month)
         .scalar()
@@ -108,8 +122,8 @@ def prepare_data_for_revenue_prediction(db: Session, year: int, month: int):
 
     avg_discount_rate = (
         db.query(func.avg(Product.sale_percent))
-        .join(OrderHistoryItems, Product.id == OrderHistoryItems.c.product_id_product_id)
-        .join(OrderHistory, OrderHistory.id == OrderHistoryItems.c.order_history_id)
+        .join(OrderHistoryItems, Product.id == OrderHistoryItems.product_id)
+        .join(OrderHistory, OrderHistory.id == OrderHistoryItems.order_history_id)
         .filter(func.extract("year", OrderHistory.order_date) == year)
         .filter(func.extract("month", OrderHistory.order_date) == month)
         .scalar()

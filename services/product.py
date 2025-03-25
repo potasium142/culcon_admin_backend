@@ -433,17 +433,20 @@ def get_top_10_products_month(
     results = (
         db.query(
             prod.Product.product_name.label("product_name"),
-            func.sum(OrderHistoryItems.c.quantity).label("total_quantity"),
+            func.sum(OrderHistoryItems.quantity).label("total_quantity"),
         )
         .join(
             OrderHistoryItems,
-            prod.Product.id == OrderHistoryItems.c.product_id_product_id,
+            prod.Product.id == OrderHistoryItems.product_id,
         )
-        .join(OrderHistory, OrderHistory.id == OrderHistoryItems.c.order_history_id)
+        .join(
+            OrderHistory,
+            OrderHistory.id == OrderHistoryItems.order_history_id,
+        )
         .filter(func.extract("year", OrderHistory.order_date) == year)
         .filter(func.extract("month", OrderHistory.order_date) == month)
         .group_by(prod.Product.product_name)
-        .order_by(func.sum(OrderHistoryItems.c.quantity).desc())
+        .order_by(func.sum(OrderHistoryItems.quantity).desc())
         .limit(10)
         .all()
     )
@@ -457,15 +460,18 @@ def get_top_10_products_all_time(db: Session) -> list[dict[str, int]]:
     results = (
         db.query(
             prod.Product.product_name.label("product_name"),
-            func.sum(OrderHistoryItems.c.quantity).label("total_quantity"),
+            func.sum(OrderHistoryItems.quantity).label("total_quantity"),
         )
         .join(
             OrderHistoryItems,
-            prod.Product.id == OrderHistoryItems.c.product_id_product_id,
+            prod.Product.id == OrderHistoryItems.product_id,
         )
-        .join(OrderHistory, OrderHistory.id == OrderHistoryItems.c.order_history_id)
+        .join(
+            OrderHistory,
+            OrderHistory.id == OrderHistoryItems.order_history_id,
+        )
         .group_by(prod.Product.product_name)
-        .order_by(func.sum(OrderHistoryItems.c.quantity).desc())
+        .order_by(func.sum(OrderHistoryItems.quantity).desc())
         .limit(10)
         .all()
     )
