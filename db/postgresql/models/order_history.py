@@ -9,6 +9,8 @@ from db.postgresql.models import Base
 from db.postgresql.models.product import ProductPriceHistory
 from db.postgresql.models.user_account import UserAccount
 
+import sqlalchemy as sqla
+
 
 class OrderStatus(str, Enum):
     ON_CONFIRM = "ON_CONFIRM"
@@ -47,18 +49,41 @@ class Coupon(Base):
     )
 
 
-OrderHistoryItems = Table(
-    "order_history_items",
-    Base.metadata,
-    Column("order_history_id", ForeignKey("order_history.id")),
-    Column("product_id_product_id"),
-    Column("product_id_date"),
-    Column("quantity", sqltypes.INTEGER),
-    ForeignKeyConstraint(
-        ["product_id_date", "product_id_product_id"],
-        ["product_price_history.date", "product_price_history.product_id"],
-    ),
-)
+# OrderHistoryItems = Table(
+#     "order_history_items",
+#     Base.metadata,
+#     Column("order_history_id", ForeignKey("order_history.id")),
+#     Column("product_id_product_id"),
+#     Column("product_id_date"),
+#     Column("quantity", sqltypes.INTEGER),
+#     ForeignKeyConstraint(
+#         ["product_id_date", "product_id_product_id"],
+#         ["product_price_history.date", "product_price_history.product_id"],
+#     ),
+# )
+
+
+class OrderHistoryItems(Base):
+    __tablename__: str = "order_history_items"
+    order_history_id: orm.Mapped[str] = orm.mapped_column(
+        ForeignKey("order_history.id"),
+        primary_key=True,
+    )
+    product_id: orm.Mapped[str] = orm.mapped_column(
+        primary_key=True,
+    )
+    date: orm.Mapped[datetime] = orm.mapped_column(
+        primary_key=True,
+    )
+    quantity: orm.Mapped[int] = orm.mapped_column(sqltypes.INTEGER)
+    __table_args__ = (
+        sqla.ForeignKeyConstraint(
+            ["date", "product_id"],
+            ["product_price_history.date", "product_price_history.product_id"],
+        ),
+    )
+
+    item: orm.Mapped[ProductPriceHistory] = orm.relationship(back_populates="orders")
 
 
 class OrderHistory(Base):
@@ -76,14 +101,10 @@ class OrderHistory(Base):
     coupon: orm.Mapped[Coupon | None] = orm.mapped_column(
         ForeignKey(Coupon.id),
     )
-    updated_coupon: orm.Mapped[bool]
-    updated_payment: orm.Mapped[bool]
     payment_method: orm.Mapped[PaymentMethod]
     payment_status: orm.Mapped[PaymentStatus]
     order_status: orm.Mapped[OrderStatus]
-    order_history_items: orm.Mapped[list[ProductPriceHistory]] = orm.relationship(
-        secondary=OrderHistoryItems
-    )
+    order_history_items: orm.Mapped[list[OrderHistoryItems]] = orm.relationship()
     user: orm.Mapped[UserAccount] = orm.relationship(back_populates="order_history")
 
     coupon_detail: orm.Mapped[Coupon | None] = orm.relationship(back_populates="orders")
