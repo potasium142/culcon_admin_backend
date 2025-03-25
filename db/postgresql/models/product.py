@@ -68,6 +68,9 @@ class ProductPriceHistory(Base):
             name="product_price_history_pk",
         ),
     )
+    orders: orm.Mapped[list["OrderHistoryItems"]] = orm.relationship(
+        back_populates="item"
+    )
 
     def to_list_instance(self) -> dict[str, Any]:
         return {

@@ -75,12 +75,12 @@ PRODUCT_MEALKIT_STATEMENT = sqla.text(
 )
 
 ORDER_HISTORY_STATEMENT = sqla.text(
-    "INSERT INTO order_history (id, user_id, order_date, delivery_address, note, total_price, receiver, phonenumber, coupon, updated_coupon, updated_payment, payment_method, payment_status, order_status) "
-    + "VALUES (:id, :user_id, :order_date, :delivery_address, :note, :total_price, :receiver, :phonenumber, :coupon, :updated_coupon, :updated_payment, :payment_method, :payment_status, :order_status)"
+    "INSERT INTO order_history (id, user_id, order_date, delivery_address, note, total_price, receiver, phonenumber, coupon,  payment_method, payment_status, order_status) "
+    + "VALUES (:id, :user_id, :order_date, :delivery_address, :note, :total_price, :receiver, :phonenumber, :coupon,  :payment_method, :payment_status, :order_status)"
 )
 ORDER_HISTORY_ITEMS_STATEMENT = sqla.text(
     "INSERT INTO order_history_items "
-    + "(order_history_id, product_id_product_id, product_id_date, quantity) "
+    + "(order_history_id, product_id, date, quantity) "
     + "VALUES (:order_history_id, :product_id_product_id, :product_id_date, :quantity)"
 )
 BLOG_STATEMENT = sqla.text(
@@ -485,8 +485,6 @@ for i, u in enumerate(created_user_id):
         "receiver": fake.name(),
         "phonenumber": fake.phone_number(),
         "coupon": None,
-        "updated_coupon": False,
-        "updated_payment": False,
         "payment_method": random.choice([
             "PAYPAL",
             "VNPAY",
