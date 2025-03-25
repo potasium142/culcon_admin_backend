@@ -38,8 +38,8 @@ price_dict: dict[str, list[datetime]] = {}
 
 USER_STATEMENT = sqla.text(
     "INSERT INTO "
-    + "user_account(id,email,username,password,status,address,phone,profile_pic_uri,profile_description,token,bookmarked_posts) "
-    + "VALUES(:id,:email,:username,:password,:status,:address,:phone,:profile_pic_uri,:profile_description,:token,:bookmarked_posts)"
+    + "user_account(id,email,username,password,status,address,phone,profile_pic_uri,profile_description,token,bookmarked_posts,profile_name) "
+    + "VALUES(:id,:email,:username,:password,:status,:address,:phone,:profile_pic_uri,:profile_description,:token,:bookmarked_posts,:username)"
 )
 
 STAFF_STATMENT = sqla.text(
