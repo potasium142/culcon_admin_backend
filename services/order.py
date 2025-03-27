@@ -93,7 +93,7 @@ def get_orders_with_status(status: OrderStatus, pg: Page):
             paging(
                 sqla.select(OrderHistory)
                 .order_by(
-                    OrderHistory.order_status.asc(),
+                    OrderHistory.order_date.desc(),
                 )
                 .filter(
                     OrderHistory.order_status == status,

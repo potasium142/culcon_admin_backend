@@ -1,4 +1,4 @@
-from db.postgresql.models.staff_account import StaffAccount
+from db.postgresql.models.staff_account import AccountStatus, StaffAccount
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, APIRouter
@@ -57,6 +57,12 @@ async def login(
             raise HTTPException(
                 status_code=400,
                 detail="No such account with username",
+            )
+
+        if user.status != AccountStatus.ACTIVE:
+            raise HTTPException(
+                status_code=400,
+                detail="Account is locked",
             )
 
         is_password_match = encryption.verify(login_form.password, user.password)
