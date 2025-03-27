@@ -277,17 +277,27 @@ def restock_product(
         in_price=import_price,
         in_stock=amount,
     )
-    product.available_quantity = amount
+    product.available_quantity += amount
     product.product_status = prod.ProductStatus.IN_STOCK
 
     db_session.session.add(product_stock)
     db_session.commit()
 
-    return db_session.session.execute(
+    s = db_session.session.scalars(
         sqla.select(prod.ProductStockHistory)
         .filter(prod.ProductStockHistory.product_id == product.id)
         .order_by(prod.ProductStockHistory.date.desc())
-    ).scalar_one_or_none()
+        .limit(1)
+    ).first()
+
+    if not s:
+        raise HandledError("Failed to update price")
+
+    return {
+        "in_date": s.date,
+        "in_price": s.in_price,
+        "in_stock": s.in_stock,
+    }
 
 
 def update_status(
