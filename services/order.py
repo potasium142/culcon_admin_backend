@@ -37,12 +37,13 @@ def __order_detail_json(o: OrderHistory):
         "items": [
             {
                 "id": i.product_id,
-                "price": i.price,
-                "price_date": i.date,
-                "sale_percent": i.sale_percent,
-                "image": i.product.image_url,
-                "name": i.product.product_name,
-                "type": i.product.product_types,
+                "price": i.item.price,
+                "price_date": i.item.date,
+                "sale_percent": i.item.sale_percent,
+                "image": i.item.product.image_url,
+                "name": i.item.product.product_name,
+                "type": i.item.product.product_types,
+                "amount": i.quantity,
             }
             for i in o.order_history_items
         ],
@@ -73,7 +74,10 @@ def get_all_orders(pg: Page):
     with db_session.session as ss:
         orders = ss.scalars(
             paging(
-                sqla.select(OrderHistory),
+                sqla.select(OrderHistory).order_by(
+                    OrderHistory.order_date.desc(),
+                    OrderHistory.order_status.asc(),
+                ),
                 pg,
             )
         )
@@ -87,7 +91,11 @@ def get_orders_with_status(status: OrderStatus, pg: Page):
     with db_session.session as ss:
         orders = ss.scalars(
             paging(
-                sqla.select(OrderHistory).filter(
+                sqla.select(OrderHistory)
+                .order_by(
+                    OrderHistory.order_status.asc(),
+                )
+                .filter(
                     OrderHistory.order_status == status,
                 ),
                 pg,
@@ -165,10 +173,12 @@ def cancel_order(id: str):
 
         order.order_status = OrderStatus.CANCELLED
 
-        db_session.commit()
-
         # TODO:refund
-        # TODO: recalculate stock
+        for i in order.order_history_items:
+            amount = i.quantity
+            i.item.product.available_quantity += amount
+
+        db_session.commit()
 
         order_refetch = ss.get(OrderHistory, id)
 
