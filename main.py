@@ -10,7 +10,6 @@ from auth import api as auth_api
 from db.postgresql.db_session import db_session
 from etc.local_error import HandledError
 from routers import (
-    prototype,
     staff,
     manager,
     general,
@@ -59,7 +58,6 @@ app.include_router(general.router)
 app.include_router(manager.router)
 app.include_router(staff.router)
 app.include_router(auth_api.router)
-app.include_router(prototype.router)
 app.include_router(websocket_.router)
 app.include_router(public.router)
 app.include_router(ai_ws.router)
@@ -71,26 +69,6 @@ async def validation_exception_handler(
     exc: Exception,
 ):
     # Change here to Logger
-    stacktrace = traceback.format_exc()
-    logger.error(exc)
-    logger.error(stacktrace)
-    return JSONResponse(
-        status_code=500,
-        content={
-            "api": str(req.url),
-            "method": req.method,
-            "message": (f"{exc!r}"),
-            "stack_trace": stacktrace.splitlines(),
-        },
-    )
-
-
-@app.exception_handler(sqlalchemy.exc.SQLAlchemyError)
-async def db_exception_handler(
-    req: Request,
-    exc: sqlalchemy.exc.SQLAlchemyError,
-):
-    db_session.session.rollback()
     stacktrace = traceback.format_exc()
     logger.error(exc)
     logger.error(stacktrace)
