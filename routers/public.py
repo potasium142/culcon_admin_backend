@@ -1,12 +1,15 @@
 from typing import Annotated
 from fastapi import APIRouter, Depends, File, Request, UploadFile
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from db.postgresql.db_session import get_session
 from dtos.request.search import SearchPrompt
 from services import public
 
 from db.postgresql.paging import Page, page_param
 
 Paging = Annotated[Page, Depends(page_param)]
+Session = Annotated[AsyncSession, Depends(get_session)]
 
 router = APIRouter(prefix="/public", tags=["Public"])
 
@@ -16,12 +19,14 @@ async def search_vec_desc(
     prompt: SearchPrompt,
     req: Request,
     pg: Paging,
+    ss: Session,
 ):
     yolo_model = req.state.ai_models["clip"]
-    return public.vector_search_prompt(
+    return await public.vector_search_prompt(
         prompt.prompt,
         yolo_model,
         pg,
+        ss,
     )
 
 
@@ -30,15 +35,17 @@ async def search_vec_yolo(
     image: Annotated[UploadFile, File(media_type="image")],
     req: Request,
     pg: Paging,
+    ss: Session,
 ):
     yolo_model = req.state.ai_models["yolo"]
     clip_model = req.state.ai_models["clip"]
 
     image_preload = await image.read()
 
-    return public.vector_search_image_yolo(
+    return await public.vector_search_image_yolo(
         image_preload,
         yolo_model,
         clip_model,
         pg,
+        ss,
     )
