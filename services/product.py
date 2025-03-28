@@ -8,7 +8,6 @@ from datetime import datetime
 from db.postgresql.models import product as prod
 from db.postgresql.models.order_history import OrderHistoryItems
 from db.postgresql.db_session import db_session
-from sqlalchemy.orm import Session
 from io import BytesIO
 from db.postgresql.models.order_history import OrderHistory
 from dtos.request.product import (
@@ -443,55 +442,60 @@ async def get_product(
     return base_info
 
 
-def get_top_10_products_month(
-    db: Session, year: int, month: int
+async def get_top_10_products_month(
+    ss: AsyncSession, year: int, month: int
 ) -> list[dict[str, int]]:
-    results = (
-        db.query(
-            prod.Product.product_name.label("product_name"),
-            func.sum(OrderHistoryItems.quantity).label("total_quantity"),
+    async with ss.begin():
+        r = await ss.execute(
+            sqla.select(
+                prod.Product.product_name.label("product_name"),
+                func.sum(OrderHistoryItems.quantity).label("total_quantity"),
+            )
+            .join(
+                OrderHistoryItems,
+                prod.Product.id == OrderHistoryItems.product_id,
+            )
+            .join(
+                OrderHistory,
+                OrderHistory.id == OrderHistoryItems.order_history_id,
+            )
+            .filter(func.extract("year", OrderHistory.order_date) == year)
+            .filter(func.extract("month", OrderHistory.order_date) == month)
+            .group_by(prod.Product.product_name)
+            .order_by(func.sum(OrderHistoryItems.quantity).desc())
+            .limit(10)
         )
-        .join(
-            OrderHistoryItems,
-            prod.Product.id == OrderHistoryItems.product_id,
-        )
-        .join(
-            OrderHistory,
-            OrderHistory.id == OrderHistoryItems.order_history_id,
-        )
-        .filter(func.extract("year", OrderHistory.order_date) == year)
-        .filter(func.extract("month", OrderHistory.order_date) == month)
-        .group_by(prod.Product.product_name)
-        .order_by(func.sum(OrderHistoryItems.quantity).desc())
-        .limit(10)
-        .all()
-    )
-    return [
-        {"product_name": row.product_name, "total_quantity": row.total_quantity}
-        for row in results
-    ]
+
+        results = r.all()
+
+        return [
+            {"product_name": row.product_name, "total_quantity": row.total_quantity}
+            for row in results
+        ]
 
 
-def get_top_10_products_all_time(db: Session) -> list[dict[str, int]]:
-    results = (
-        db.query(
-            prod.Product.product_name.label("product_name"),
-            func.sum(OrderHistoryItems.quantity).label("total_quantity"),
+async def get_top_10_products_all_time(ss: AsyncSession):
+    async with ss.begin():
+        r = await ss.execute(
+            sqla.select(
+                prod.Product.product_name.label("product_name"),
+                func.sum(OrderHistoryItems.quantity).label("total_quantity"),
+            )
+            .join(
+                OrderHistoryItems,
+                prod.Product.id == OrderHistoryItems.product_id,
+            )
+            .join(
+                OrderHistory,
+                OrderHistory.id == OrderHistoryItems.order_history_id,
+            )
+            .group_by(prod.Product.product_name)
+            .order_by(func.sum(OrderHistoryItems.quantity).desc())
+            .limit(10)
         )
-        .join(
-            OrderHistoryItems,
-            prod.Product.id == OrderHistoryItems.product_id,
-        )
-        .join(
-            OrderHistory,
-            OrderHistory.id == OrderHistoryItems.order_history_id,
-        )
-        .group_by(prod.Product.product_name)
-        .order_by(func.sum(OrderHistoryItems.quantity).desc())
-        .limit(10)
-        .all()
-    )
-    return [
-        {"product_name": row.product_name, "total_quantity": row.total_quantity}
-        for row in results
-    ]
+        results = r.all()
+
+        return [
+            {"product_name": row.product_name, "total_quantity": row.total_quantity}
+            for row in results
+        ]
