@@ -1,17 +1,25 @@
-import sqlalchemy.orm
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from db.postgresql import DBSession
+from db.postgresql import DBSession, engine
 
 
 class Session:
-    session: sqlalchemy.orm.Session = DBSession()
+    session: AsyncSession = DBSession()
 
-    def commit(self):
+    async def commit(self):
         try:
-            self.session.commit()
+            await self.session.commit()
         except Exception as e:
-            self.session.rollback()
+            await self.session.rollback()
             raise e
+
+
+async def get_session():
+    session = async_sessionmaker(engine)
+    try:
+        yield session()
+    finally:
+        await session().close()
 
 
 db_session = Session()

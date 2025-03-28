@@ -18,9 +18,9 @@ def paging(query, page: Page):
     )
 
 
-def table_size(col):
-    with db_session.session as ss:
-        return ss.scalar(sqla.select(sqla.func.count(col))) or 0
+async def table_size(col):
+    async with db_session.session as ss:
+        return await ss.scalar(sqla.select(sqla.func.count(col))) or 0
 
 
 def page_param(
