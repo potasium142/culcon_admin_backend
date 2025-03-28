@@ -2,6 +2,7 @@ import re
 
 from numpy import ndarray
 import sqlalchemy as sqla
+from sqlalchemy.ext.asyncio import AsyncSession
 from db.postgresql.models.blog import ProductDoc
 from datetime import datetime
 from db.postgresql.models import product as prod
@@ -314,9 +315,10 @@ def update_status(
     db_session.commit()
 
 
-def get_list_mealkit(pg: Page):
-    with db_session.session as ss:
-        products = ss.scalars(
+async def get_list_mealkit(pg: Page, ss: AsyncSession):
+    # async with session as ss, ss.begin():
+    async with ss.begin():
+        products = await ss.scalars(
             paging(
                 sqla.select(prod.Product).filter(
                     prod.Product.product_types == prod.ProductType.MEALKIT
@@ -343,67 +345,71 @@ def get_list_mealkit(pg: Page):
         )
 
         count = (
-            ss.scalar(
+            await ss.scalar(
                 sqla.select(sqla.func.count(prod.Product.id)).filter(
                     prod.Product.product_types == prod.ProductType.MEALKIT
                 )
             )
             or 0
         )
-        return display_page(content, count, pg)
+
+    return display_page(content, count, pg)
 
 
-def get_list_product(pg: Page):
-    with db_session.session as ss:
-        products = ss.scalars(
+async def get_list_product(
+    pg: Page,
+    session: AsyncSession,
+):
+    async with session as ss, ss.begin():
+        products = await ss.scalars(
             paging(
                 sqla.select(prod.Product),
                 pg,
             )
         )
 
-        rtn_products: list[
-            dict[str, str | float | int | prod.ProductStatus | prod.ProductType]
-        ] = list(
-            map(
-                lambda prod: {
-                    "id": prod.id,
-                    "name": prod.product_name,
-                    "price": prod.price,
-                    "type": prod.product_types,
-                    "status": prod.product_status,
-                    "image_url": prod.image_url,
-                    "available_quantity": prod.available_quantity,
-                },
-                products,
-            )
-        )
+        rtn_products = [
+            {
+                "id": prod.id,
+                "name": prod.product_name,
+                "price": prod.price,
+                "type": prod.product_types,
+                "status": prod.product_status,
+                "image_url": prod.image_url,
+                "available_quantity": prod.available_quantity,
+            }
+            for prod in products
+        ]
 
-        count = table_size(prod.Product.id)
+        count = await table_size(prod.Product.id, session)
+        # count = 9
         return display_page(rtn_products, count, pg)
 
 
-def get_product(prod_id: str):
-    with db_session.session as ss:
-        product: prod.Product = ss.get(prod.Product, prod_id)
+async def get_product(
+    prod_id: str,
+    session: AsyncSession,
+):
+    async with session as ss, ss.begin():
+        product = await ss.get(prod.Product, prod_id)
 
-        product_price = ss.scalars(
+        if not product:
+            raise HandledError("Product not found")
+
+        product_price = await ss.scalars(
             sqla.select(prod.ProductPriceHistory)
             .filter(prod.ProductPriceHistory.product_id == prod_id)
             .order_by(prod.ProductPriceHistory.date.desc())
             .limit(7)
         )
-        product_stock = ss.scalars(
+        product_stock = await ss.scalars(
             sqla.select(prod.ProductStockHistory)
             .filter(prod.ProductStockHistory.product_id == prod_id)
             .order_by(prod.ProductStockHistory.date.desc())
             .limit(7)
         )
 
-        if not product:
-            raise HandledError("Product not found")
-
-        product_doc = product.doc
+        product_doc = await ss.get(ProductDoc, prod_id)
 
         if not product_doc:
             raise HandledError("Product doc not found")
@@ -434,7 +440,7 @@ def get_product(prod_id: str):
             base_info["instructions"] = product_doc.instructions
             base_info["ingredients"] = product_doc.ingredients
 
-        return base_info
+    return base_info
 
 
 def get_top_10_products_month(

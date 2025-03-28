@@ -1,6 +1,7 @@
 from math import ceil
 from pydantic import BaseModel
 import sqlalchemy as sqla
+from sqlalchemy.ext.asyncio import AsyncSession
 from db.postgresql.db_session import db_session
 
 
@@ -18,9 +19,8 @@ def paging(query, page: Page):
     )
 
 
-async def table_size(col):
-    async with db_session.session as ss:
-        return await ss.scalar(sqla.select(sqla.func.count(col))) or 0
+async def table_size(col, ss: AsyncSession):
+    return await ss.scalar(sqla.select(sqla.func.count(col))) or 0
 
 
 def page_param(

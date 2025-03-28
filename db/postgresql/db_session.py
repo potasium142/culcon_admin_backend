@@ -15,7 +15,10 @@ class Session:
 
 
 async def get_session():
-    session = async_sessionmaker(engine)
+    session = async_sessionmaker(
+        engine,
+        expire_on_commit=False,
+    )
     try:
         yield session()
     finally:

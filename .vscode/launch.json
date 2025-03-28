@@ -18,9 +18,10 @@
             "name": "Python: FastAPI NonAI",
             "type": "debugpy",
             "request": "launch",
-            "module": "uvicorn",
+            "module": "fastapi",
             "args": [
-                "main_non_ai:app",
+                "run",
+                "main_non_ai.py",
             ],
             "jinja": true
         },

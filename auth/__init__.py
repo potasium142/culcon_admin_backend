@@ -1,11 +1,10 @@
-from typing import Annotated
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jwt import InvalidTokenError
 from sqlalchemy.ext.asyncio import AsyncSession
 from auth import jwt_token
 from db.postgresql.models.staff_account import AccountType, StaffAccount
-from db.postgresql.db_session import db_session, get_session
+from db.postgresql.db_session import get_session
 
 import sqlalchemy as sqla
 
@@ -17,8 +16,6 @@ CREDENTIAL_EXCEPTION = HTTPException(
     detail="Could not validate credentials",
     headers={"WWW-Authenticate": "Bearer"},
 )
-
-Session = Annotated[AsyncSession, Depends(get_session)]
 
 
 async def permission(

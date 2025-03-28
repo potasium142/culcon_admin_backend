@@ -18,7 +18,7 @@ from dtos.request.coupon import CouponCreation
 #     get_top_10_products_all_time,
 # )
 from dtos.request.staff import EditEmployeeInfo, EditStaffAccount
-from services import account_service as acc_sv
+from services import account as acc_sv
 from services import coupon as coupon_sv
 from services import staff as staff_sv
 

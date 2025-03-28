@@ -1,4 +1,6 @@
 from typing import Any
+
+from sqlalchemy.ext.asyncio import AsyncSession
 from db.postgresql.db_session import db_session
 from db.postgresql.models.order_history import Coupon
 
@@ -37,9 +39,9 @@ def create_coupon(c: CouponCreation):
     }
 
 
-def get_all_coupons(pg: Page):
-    with db_session.session as ss:
-        coupons = ss.scalars(
+async def get_all_coupons(pg: Page, ss: AsyncSession):
+    async with ss.begin():
+        coupons = await ss.scalars(
             paging(
                 sqla.select(Coupon),
                 pg,
@@ -57,7 +59,7 @@ def get_all_coupons(pg: Page):
             for c in coupons
         ]
 
-        count = table_size(Coupon.id)
+        count = await table_size(Coupon.id, ss)
 
         return display_page(
             coupon_dicts,
@@ -66,9 +68,9 @@ def get_all_coupons(pg: Page):
         )
 
 
-def get_coupon(id: str) -> dict[str, Any]:
-    with db_session.session as ss:
-        coupon: Coupon = ss.get(Coupon, id)
+async def get_coupon(id: str, ss: AsyncSession) -> dict[str, Any]:
+    async with ss.begin():
+        coupon = await ss.get(Coupon, id)
         if not coupon:
             return {"error": "Coupon not found"}
 

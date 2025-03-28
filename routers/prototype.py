@@ -2,7 +2,7 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from dtos.request.account import AccountCreateDto
 
-from services import account_service as acc_sv, public
+from services import account as acc_sv, public
 from time import sleep
 from etc import progress_tracker
 
