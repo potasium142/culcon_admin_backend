@@ -1,3 +1,5 @@
+from uuid import UUID
+from sqlalchemy.ext.asyncio import AsyncSession
 from auth import encryption
 from db.postgresql.db_session import db_session
 from db.postgresql.models.staff_account import (
@@ -21,9 +23,9 @@ def map_staff_output(s: StaffAccount):
     }
 
 
-def get_all_staff(pg: Page):
-    with db_session.session as ss:
-        data = ss.scalars(
+async def get_all_staff(pg: Page, ss: AsyncSession):
+    async with ss.begin():
+        data = await ss.scalars(
             paging(
                 sqla.select(StaffAccount).filter(
                     StaffAccount.type == AccountType.STAFF,
@@ -40,7 +42,7 @@ def get_all_staff(pg: Page):
         )
 
         count = (
-            ss.scalar(
+            await ss.scalar(
                 sqla.select(sqla.func.count(StaffAccount.id)).filter(
                     StaffAccount.type == AccountType.STAFF
                 )
@@ -50,76 +52,107 @@ def get_all_staff(pg: Page):
         return display_page(data, count, pg)
 
 
-def get_staff_profile(id: str):
-    with db_session.session as session:
-        s: StaffAccount = session.get(StaffAccount, id)
+async def get_staff_profile(id: str, ss: AsyncSession):
+    async with ss.begin():
+        try:
+            uid = UUID(id.strip())
+        except ValueError as _:
+            raise HandledError("UUID invalid")
+
+        s = await ss.get(StaffAccount, uid)
 
         if not s:
             raise HandledError("Staff not found")
+
+        employee_info = await ss.get(EmployeeInfo, uid)
+
+        if not employee_info:
+            raise HandledError("Employee info not found")
 
         return {
             "id": s.id,
             "username": s.username,
             "type": "MANAGER" if s.type == AccountType.MANAGER else "STAFF",
             "status": s.status,
-            "ssn": s.employee_info.ssn,
-            "phonenumber": s.employee_info.phonenumber,
-            "realname": s.employee_info.realname,
-            "email": s.employee_info.email,
-            "dob": s.employee_info.dob,
+            "ssn": employee_info.ssn,
+            "phonenumber": employee_info.phonenumber,
+            "realname": employee_info.realname,
+            "email": employee_info.email,
+            "dob": employee_info.dob,
         }
 
 
-def edit_staff_account(
+async def edit_staff_account(
     staff_id: str,
     info: EditStaffAccount,
+    ss: AsyncSession,
 ):
-    staff: StaffAccount = db_session.session.get(StaffAccount, staff_id)
+    async with ss.begin():
+        try:
+            uid = UUID(staff_id.strip())
+        except ValueError as _:
+            raise HandledError("UUID invalid")
 
-    if not staff:
-        raise HandledError("Staff account not found")
+        staff = await ss.get(StaffAccount, uid)
 
-    new_password = encryption.hash(info.password)
+        if not staff:
+            raise HandledError("Staff account not found")
 
-    staff.password = new_password
-    staff.username = info.username
+        new_password = encryption.hash(info.password)
 
-    db_session.commit()
+        staff.password = new_password
+        staff.username = info.username
 
-    return get_staff_profile(staff_id)
+        await ss.commit()
+
+    return await get_staff_profile(staff_id, ss)
 
 
-def edit_employee_info(
+async def edit_employee_info(
     emp_info: EditEmployeeInfo,
     staff_id: str,
+    ss: AsyncSession,
 ):
-    staff: EmployeeInfo = db_session.session.get(EmployeeInfo, staff_id)
+    async with ss.begin():
+        try:
+            uid = UUID(staff_id.strip())
+        except ValueError as _:
+            raise HandledError("UUID invalid")
 
-    if not staff:
-        raise HandledError("Staff account not found")
+        staff = await ss.get(EmployeeInfo, uid)
 
-    staff.ssn = emp_info.ssn
-    staff.email = emp_info.email
-    staff.phonenumber = emp_info.phonenumber
-    staff.dob = emp_info.dob
-    staff.realname = emp_info.realname
+        if not staff:
+            raise HandledError("Staff account not found")
 
-    db_session.commit()
+        staff.ssn = emp_info.ssn
+        staff.email = emp_info.email
+        staff.phonenumber = emp_info.phonenumber
+        staff.dob = emp_info.dob
+        staff.realname = emp_info.realname
 
-    return get_staff_profile(staff_id)
+        await ss.commit()
+
+    return await get_staff_profile(staff_id, ss)
 
 
-def set_staff_status(
+async def set_staff_status(
     id: str,
     status: AccountStatus,
+    ss: AsyncSession,
 ):
-    staff: StaffAccount = db_session.session.get(StaffAccount, id)
+    async with ss.begin():
+        try:
+            uid = UUID(id.strip())
+        except ValueError as _:
+            raise HandledError("UUID invalid")
 
-    if not staff:
-        raise HandledError("Staff account not found")
+        staff = await ss.get(StaffAccount, uid)
 
-    staff.status = status
+        if not staff:
+            raise HandledError("Staff account not found")
 
-    db_session.commit()
+        staff.status = status
 
-    return get_staff_profile(id)
+        await ss.commit()
+
+    return await get_staff_profile(id, ss)

@@ -12,31 +12,32 @@ from dtos.request.coupon import CouponCreation
 from etc.local_error import HandledError
 
 
-def create_coupon(c: CouponCreation):
-    if not c.id:
-        id = str(uuid.uuid4()).replace("-", "")[:14]
-    else:
-        id = c.id
+async def create_coupon(c: CouponCreation, ss: AsyncSession):
+    async with ss.begin():
+        if not c.id:
+            id = str(uuid.uuid4()).replace("-", "")[:14]
+        else:
+            id = c.id
 
-    coupon = Coupon(
-        id=id,
-        expire_time=c.expire_date,
-        usage_amount=c.usage_amount,
-        usage_left=c.usage_amount,
-        sale_percent=c.sale_percent,
-        minimum_price=c.minimum_price,
-    )
+        coupon = Coupon(
+            id=id,
+            expire_time=c.expire_date,
+            usage_amount=c.usage_amount,
+            usage_left=c.usage_amount,
+            sale_percent=c.sale_percent,
+            minimum_price=c.minimum_price,
+        )
 
-    db_session.session.add(coupon)
-    db_session.commit()
+        ss.add(coupon)
+        await ss.commit()
 
-    return {
-        "id": id,
-        "expire_time": c.expire_date,
-        "usage_amount": c.usage_amount,
-        "sale_percent": c.sale_percent,
-        "minimum_price": c.minimum_price,
-    }
+        return {
+            "id": id,
+            "expire_time": c.expire_date,
+            "usage_amount": c.usage_amount,
+            "sale_percent": c.sale_percent,
+            "minimum_price": c.minimum_price,
+        }
 
 
 async def get_all_coupons(pg: Page, ss: AsyncSession):
@@ -83,13 +84,16 @@ async def get_coupon(id: str, ss: AsyncSession) -> dict[str, Any]:
         }
 
 
-def disable_coupon(
+async def disable_coupon(
     id: str,
+    ss: AsyncSession,
 ):
-    coupon: Coupon = db_session.session.get(Coupon, id)
+    async with ss.begin():
+        coupon = await ss.get(Coupon, id)
 
-    if not coupon:
-        raise HandledError("Coupon not found")
-    coupon.usage_left = -1
+        if not coupon:
+            raise HandledError("Coupon not found")
 
-    db_session.commit()
+        coupon.usage_left = -1
+
+        await ss.commit()

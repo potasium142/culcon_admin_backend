@@ -1,13 +1,11 @@
 from typing import Annotated, Any
 import uuid
-import sqlalchemy
-import sqlalchemy.exc
+from psycopg.errors import InvalidTextRepresentation
 import uvicorn
 import traceback
 from fastapi import Cookie, FastAPI, Request
 from fastapi.responses import JSONResponse
 from auth import api as auth_api
-from db.postgresql.db_session import db_session
 from etc.local_error import HandledError
 from routers import (
     staff,
@@ -84,7 +82,9 @@ async def validation_exception_handler(
 
 
 @app.exception_handler(HandledError)
-async def local_error_handler(_: Request, exc: HandledError):
+async def local_error_handler(
+    _: Request, exc: HandledError | InvalidTextRepresentation
+):
     return JSONResponse(
         status_code=500,
         content={

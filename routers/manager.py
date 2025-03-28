@@ -2,6 +2,7 @@ from datetime import date
 from typing import Annotated
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
 
 # from services.predict import (
 #     load_product_model,
@@ -9,6 +10,7 @@ from pydantic import BaseModel
 #     load_revenue_model,
 #     predict_next_month_revenue,
 # )
+from db.postgresql.db_session import get_session
 from db.postgresql.models.staff_account import AccountStatus
 from dtos.request.account import AccountCreateDto
 from dtos.request.coupon import CouponCreation
@@ -30,6 +32,7 @@ from db.postgresql.paging import page_param, Page
 
 Paging = Annotated[Page, Depends(page_param)]
 Permission = Annotated[bool, Depends(auth.manager_permission)]
+Session = Annotated[AsyncSession, Depends(get_session)]
 
 router = APIRouter(prefix="/api/manager", tags=["Manager function"])
 
@@ -83,7 +86,7 @@ class RevenuePredictionResponse(BaseModel):
 
 
 @router.get("/permission_test")
-async def test(_permission: Permission):
+async def test(_: Permission):
     return "ok"
 
 
@@ -92,10 +95,11 @@ async def test(_permission: Permission):
     response_model=None,
 )
 async def create(
-    _permission: Permission,
+    _: Permission,
     account: AccountCreateDto,
+    ss: Session,
 ) -> dict[str, str]:
-    token = acc_sv.create_account(account)
+    token = await acc_sv.create_account(account, ss)
     return {"access_token": token}
 
 
@@ -104,10 +108,11 @@ async def create(
     tags=["Coupon"],
 )
 async def create_coupon(
-    _permission: Permission,
+    _: Permission,
     coupon: CouponCreation,
-) -> dict[str, str | int | date | float]:
-    return coupon_sv.create_coupon(coupon)
+    ss: Session,
+):
+    return await coupon_sv.create_coupon(coupon, ss)
 
 
 @router.delete(
@@ -115,56 +120,76 @@ async def create_coupon(
     tags=["Coupon"],
 )
 async def disable_coupon(
-    _permission: Permission,
+    _: Permission,
     coupon_id: str,
+    ss: Session,
 ) -> None:
-    coupon_sv.disable_coupon(coupon_id)
+    await coupon_sv.disable_coupon(coupon_id, ss)
 
 
 @router.get(
     "/staff/fetch/all",
+    tags=["Staff Managment"],
 )
-def read_all_staff(_: Permission, pg: Paging):
-    staff = staff_sv.get_all_staff(pg)
+async def read_all_staff(
+    _: Permission,
+    pg: Paging,
+    ss: Session,
+):
+    staff = await staff_sv.get_all_staff(pg, ss)
     return staff
 
 
 @router.get(
     "/staff/fetch/{id}",
+    tags=["Staff Managment"],
 )
-def read_staff_profile(
+async def read_staff_profile(
     _: Permission,
     id: str,
+    ss: Session,
 ):
-    staff_profile = staff_sv.get_staff_profile(id)
+    staff_profile = await staff_sv.get_staff_profile(id, ss)
     return staff_profile
 
 
-@router.post("/staff/edit/account")
-def edit_staff_account(
+@router.post(
+    "/staff/edit/account",
+    tags=["Staff Managment"],
+)
+async def edit_staff_account(
     id: str,
     info: EditStaffAccount,
     _: Permission,
+    ss: Session,
 ):
-    return staff_sv.edit_staff_account(id, info)
+    return await staff_sv.edit_staff_account(id, info, ss)
 
 
-@router.post("/staff/edit/info")
-def edit_staff_info(
+@router.post(
+    "/staff/edit/info",
+    tags=["Staff Managment"],
+)
+async def edit_staff_info(
     id: str,
     info: EditEmployeeInfo,
     _: Permission,
+    ss: Session,
 ):
-    return staff_sv.edit_employee_info(info, id)
+    return await staff_sv.edit_employee_info(info, id, ss)
 
 
-@router.post("/staff/edit/status")
-def edit_staff_status(
+@router.post(
+    "/staff/edit/status",
+    tags=["Staff Managment"],
+)
+async def edit_staff_status(
     id: str,
     status: AccountStatus,
     _: Permission,
+    ss: Session,
 ):
-    return staff_sv.set_staff_status(id, status)
+    return await staff_sv.set_staff_status(id, status, ss)
 
 
 # @router.get("/revenue", response_model=CombinedRevenueAndProductsResponse)
