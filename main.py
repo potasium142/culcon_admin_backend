@@ -1,6 +1,7 @@
 from typing import Annotated, Any
 import uuid
 from psycopg.errors import InvalidTextRepresentation
+from sqlalchemy.exc import NoResultFound
 import uvicorn
 import traceback
 from fastapi import Cookie, FastAPI, Request
@@ -82,9 +83,8 @@ async def validation_exception_handler(
 
 
 @app.exception_handler(HandledError)
-async def local_error_handler(
-    _: Request, exc: HandledError | InvalidTextRepresentation
-):
+@app.exception_handler(NoResultFound)
+async def local_error_handler(_: Request, exc: HandledError | NoResultFound):
     return JSONResponse(
         status_code=500,
         content={

@@ -1,10 +1,10 @@
 from uuid import uuid4
 
+from sqlalchemy.ext.asyncio import AsyncSession
 from db.postgresql.models.blog import Blog
-from db.postgresql.models.user_account import CommentType, PostComment
+from db.postgresql.models.user_account import CommentStatus, CommentType, PostComment
 from dtos.request.blog import BlogCreation
 from etc import cloudinary
-from db.postgresql.db_session import db_session
 from etc.local_error import HandledError
 import sqlalchemy as sqla
 
@@ -12,83 +12,111 @@ import sqlalchemy as sqla
 from db.postgresql.paging import Page, display_page, paging, table_size
 
 
-def create(
+async def create(
     blog_dto: BlogCreation,
     thumbnail: bytes,
-) -> str:
-    id = str(uuid4())
+    ss: AsyncSession,
+):
+    async with ss.begin():
+        id = str(uuid4())
 
-    thumbnail_url = cloudinary.upload(thumbnail, "blog", id)
+        thumbnail_url = cloudinary.upload(thumbnail, "blog", id)
 
-    blog = Blog(
-        id=id,
-        title=blog_dto.title,
-        description=blog_dto.description,
-        article=blog_dto.markdown_text,
-        infos=blog_dto.infos,
-        thumbnail=thumbnail_url,
-    )
+        blog = Blog(
+            id=id,
+            title=blog_dto.title,
+            description=blog_dto.description,
+            article=blog_dto.markdown_text,
+            infos=blog_dto.infos,
+            thumbnail=thumbnail_url,
+        )
 
-    db_session.session.add(blog)
-    db_session.commit()
+        ss.add(blog)
+        await ss.flush()
 
-    return id
+        b_rfetch = await ss.get_one(Blog, id)
+
+        return {
+            "id": b_rfetch.id,
+            "title": b_rfetch.title,
+            "description": b_rfetch.description,
+            "article": b_rfetch.article,
+            "thumbnail": b_rfetch.thumbnail,
+            "infos": b_rfetch.infos,
+        }
 
 
-def edit(
+async def edit(
     id: str,
     blog_dto: BlogCreation,
+    ss: AsyncSession,
 ):
-    blog: Blog = db_session.session.get(Blog, id)
+    async with ss.begin():
+        blog: Blog = await ss.get_one(Blog, id)
 
-    if not blog:
-        raise HandledError("Blog not found")
+        blog.article = blog_dto.markdown_text
+        blog.title = blog_dto.title
+        blog.description = blog_dto.description
+        blog.infos = blog_dto.infos
 
-    blog.article = blog_dto.markdown_text
-    blog.title = blog_dto.title
-    blog.description = blog_dto.description
-    blog.infos = blog_dto.infos
+        await ss.flush()
 
-    db_session.commit()
+        b_rfetch = await ss.get_one(Blog, id)
+
+        return {
+            "id": b_rfetch.id,
+            "title": b_rfetch.title,
+            "description": b_rfetch.description,
+            "article": b_rfetch.article,
+            "thumbnail": b_rfetch.thumbnail,
+            "infos": b_rfetch.infos,
+        }
 
 
-def get(id: str):
-    return db_session.session.get(Blog, id)
+async def get(id: str, ss: AsyncSession):
+    async with ss.begin():
+        return await ss.get_one(Blog, id)
 
 
-def delete_comment(
+async def change_comment_status(
     id: str,
+    status: CommentStatus,
+    ss: AsyncSession,
 ):
-    comment = db_session.session.get(PostComment, id)
+    async with ss.begin():
+        comment = await ss.get_one(PostComment, id)
 
-    if not comment:
-        raise HandledError("Comment not found")
+        comment.status = status
 
-    comment.deleted = True
-    comment.account_id = None
+        await ss.flush()
 
-    db_session.commit()
-
-    return db_session.session.get(PostComment, id)
+        return await ss.get_one(PostComment, id)
 
 
-def get_comment(post_id: str, pg: Page):
-    with db_session.session as ss:
-        content = ss.scalars(
+async def get_reported_comment_of_blog(
+    post_id: str,
+    pg: Page,
+    ss: AsyncSession,
+):
+    async with ss.begin():
+        r = await ss.scalars(
             paging(
-                sqla.select(PostComment).filter(
+                sqla.select(PostComment)
+                .filter(
                     PostComment.post_id == post_id,
-                    PostComment.comment_type == CommentType.POST,
-                ),
+                    PostComment.status == CommentStatus.REPORTED,
+                )
+                .order_by(PostComment.timestamp.desc()),
                 pg,
             )
-        ).all()
+        )
+        content = r.all()
 
         count = (
-            ss.scalar(
+            await ss.scalar(
                 sqla.select(sqla.func.count(PostComment.id)).filter(
                     PostComment.post_id == post_id,
-                    PostComment.comment_type == CommentType.POST,
+                    PostComment.status == CommentStatus.REPORTED,
                 )
             )
             or 0
@@ -96,9 +124,67 @@ def get_comment(post_id: str, pg: Page):
         return display_page(content, count, pg)
 
 
-def get_blog_list(page: Page):
-    with db_session.session as ss:
-        blogs = ss.scalars(
+async def get_comment_by_status(
+    pg: Page,
+    ss: AsyncSession,
+    status: CommentStatus | None = None,
+    type: CommentType | None = None,
+):
+    async with ss.begin():
+        filters = []
+
+        if type:
+            filters.append(PostComment.comment_type == type)
+        if status:
+            filters.append(PostComment.status == status)
+
+        r = await ss.scalars(
+            paging(
+                sqla.select(PostComment)
+                .filter(*filters)
+                .order_by(PostComment.timestamp.desc()),
+                pg,
+            )
+        )
+        content = r.all()
+
+        count = (
+            await ss.scalar(
+                sqla.select(sqla.func.count(PostComment.id)).filter(*filters)
+            )
+            or 0
+        )
+        return display_page(content, count, pg)
+
+
+async def get_comment(post_id: str, pg: Page, ss: AsyncSession):
+    async with ss.begin():
+        r = await ss.scalars(
+            paging(
+                sqla.select(PostComment)
+                .filter(
+                    PostComment.post_id == post_id,
+                )
+                .order_by(PostComment.timestamp.desc()),
+                pg,
+            )
+        )
+        content = r.all()
+
+        count = (
+            await ss.scalar(
+                sqla.select(sqla.func.count(PostComment.id)).filter(
+                    PostComment.post_id == post_id,
+                )
+            )
+            or 0
+        )
+        return display_page(content, count, pg)
+
+
+async def get_blog_list(page: Page, ss: AsyncSession):
+    async with ss.begin():
+        blogs = await ss.scalars(
             paging(
                 sqla.select(Blog),
                 page,
@@ -112,7 +198,7 @@ def get_blog_list(page: Page):
             }
             for b in blogs
         ]
-        count = table_size(Blog.id)
+        count = await table_size(Blog.id, ss)
         return display_page(content, count, page)
 
 

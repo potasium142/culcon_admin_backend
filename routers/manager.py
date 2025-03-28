@@ -1,5 +1,5 @@
 from datetime import date
-from typing import Annotated
+from typing import Annotated, Any
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -205,17 +205,21 @@ async def get_revenue_and_top_products(
     monthly_revenues = await get_last_6_months_revenue(ss)
 
     today = date.today()
-    top_products_month = await get_top_10_products_month(ss, today.year, today.month)
+    top_products_month = await get_top_10_products_month(
+        ss,
+        today.year,
+        today.month,
+    )
     top_products_all_time = await get_top_10_products_all_time(ss)
 
     return CombinedRevenueAndProductsResponse(
         revenue=RevenueResponse(
-            last_7_days_revenue=daily_revenues,
-            last_6_months_revenue=monthly_revenues,
+            last_7_days_revenue=daily_revenues,  # type: ignore
+            last_6_months_revenue=monthly_revenues,  # type: ignore
         ),
         top_products=TopProductsResponse(
-            top_10_products_month=top_products_month,
-            top_10_products_all_time=top_products_all_time,
+            top_10_products_month=top_products_month,  # type: ignore
+            top_10_products_all_time=top_products_all_time,  # type: ignore
         ),
     )
 
@@ -236,7 +240,7 @@ async def get_predicted_top_products(
         ss, product_model, last_year, last_month
     )
 
-    return PredictedProductsResponse(top_predicted_products=predicted_products)
+    return PredictedProductsResponse(top_predicted_products=predicted_products) 
 
 
 @router.get(

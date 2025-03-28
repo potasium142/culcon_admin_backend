@@ -24,25 +24,19 @@ engine = create_async_engine(
 )
 
 
-@event.listens_for(engine.sync_engine, "connect")
-def connect(dbapi_connection, _):
-    dbapi_connection.run_async(register_vector_async)
-
-
 async def init_db():
     if not sqlau.database_exists(engine.url):
         sqlau.create_database(engine.url)
 
-    DBSession = async_sessionmaker(engine)
-
-    async with engine.connect() as conn:
+    async with engine.begin() as conn:
         await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+        await conn.run_sync(Base.metadata.create_all)
         await conn.commit()
 
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
 
-    return DBSession
+# @event.listens_for(engine.sync_engine, "connect")
+# def connect(dbapi_connection, _):
+#     dbapi_connection.run_async(register_vector_async)
 
 
 # async def session():
