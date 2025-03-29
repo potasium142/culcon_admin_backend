@@ -1,16 +1,22 @@
 from typing import Annotated
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from db.postgresql.db_session import get_session
 from db.postgresql.models.order_history import OrderStatus
-from db.postgresql.models.user_account import UserAccountStatus
+from db.postgresql.models.user_account import (
+    CommentStatus,
+    CommentType,
+    UserAccountStatus,
+)
 from dtos.request import product as prod
-from fastapi import APIRouter, Depends, File, Request, UploadFile, BackgroundTasks
+from fastapi import APIRouter, Depends, File, UploadFile
 from dtos.request.blog import BlogCreation
 from dtos.request.user_account import EditCustomerAccount, EditCustomerInfo
-from services import product as ps, product_
+from services import product as ps
 from services import blog
 from services import customer as c_ss
 from services import order as ord_ss
-from etc.progress_tracker import pp
 from db.postgresql.models import product
 from db.postgresql.paging import page_param, Page
 import auth
@@ -24,109 +30,111 @@ oauth2_scheme = auth.oauth2_scheme
 
 Paging = Annotated[Page, Depends(page_param)]
 
+Session = Annotated[AsyncSession, Depends(get_session)]
+
 
 @router.get("/permission_test")
 async def test(_permission: Permission):
     return "ok"
 
 
-@router.post(
-    "/product/create",
-    tags=["Product"],
-)
-async def create_product(
-    _permission: Permission,
-    bg_task: BackgroundTasks,
-    req: Request,
-    product_detail: prod.ProductCreation,
-    main_image: Annotated[UploadFile, File(media_type="image")],
-    additional_images: list[Annotated[UploadFile, File(media_type="image")]]
-    | None = None,
-):
-    bg_id = pp.new()
-    yolo_model = req.state.ai_models["yolo"]
-    clip_model = req.state.ai_models["clip"]
+# @router.post(
+#     "/product/create",
+#     tags=["Product"],
+# )
+# async def create_product(
+#     _permission: Permission,
+#     bg_task: BackgroundTasks,
+#     req: Request,
+#     product_detail: prod.ProductCreation,
+#     main_image: Annotated[UploadFile, File(media_type="image")],
+#     additional_images: list[Annotated[UploadFile, File(media_type="image")]]
+#     | None = None,
+# ):
+#     bg_id = pp.new()
+#     yolo_model = req.state.ai_models["yolo"]
+#     clip_model = req.state.ai_models["clip"]
 
-    mip = pp.new_subtask(bg_id, "Preloaded main")
+#     mip = pp.new_subtask(bg_id, "Preloaded main")
 
-    main_image_preload = await main_image.read()
+#     main_image_preload = await main_image.read()
 
-    additional_images_preload: list[bytes] = []
+#     additional_images_preload: list[bytes] = []
 
-    if additional_images:
-        for i, f in enumerate(additional_images):
-            img = await f.read()
-            additional_images_preload.append(img)
-            pp.update_subtask(bg_id, mip, progress=i + 1)
+#     if additional_images:
+#         for i, f in enumerate(additional_images):
+#             img = await f.read()
+#             additional_images_preload.append(img)
+#             pp.update_subtask(bg_id, mip, progress=i + 1)
 
-    pp.close_subtask(
-        bg_id,
-        mip,
-    )
-    bg_task.add_task(
-        ps.product_creation,
-        product_detail,
-        additional_images_preload,
-        main_image_preload,
-        yolo_model,
-        clip_model,
-        pp,
-        bg_id,
-    )
+#     pp.close_subtask(
+#         bg_id,
+#         mip,
+#     )
+#     bg_task.add_task(
+#         ps.product_creation,
+#         product_detail,
+#         additional_images_preload,
+#         main_image_preload,
+#         yolo_model,
+#         clip_model,
+#         pp,
+#         bg_id,
+#     )
 
-    return {
-        "progress_id": bg_id,
-    }
+#     return {
+#         "progress_id": bg_id,
+#     }
 
 
-@router.post(
-    "/mealkit/create",
-    tags=["Product"],
-)
-async def create_mealkit(
-    _permission: Permission,
-    bg_task: BackgroundTasks,
-    req: Request,
-    product_detail: prod.MealKitCreation,
-    main_image: Annotated[UploadFile, File(media_type="image")],
-    additional_images: list[Annotated[UploadFile, File(media_type="image")]]
-    | None = None,
-):
-    bg_id = pp.new()
-    yolo_model = req.state.ai_models["yolo"]
-    clip_model = req.state.ai_models["clip"]
+# @router.post(
+#     "/mealkit/create",
+#     tags=["Product"],
+# )
+# async def create_mealkit(
+#     _permission: Permission,
+#     bg_task: BackgroundTasks,
+#     req: Request,
+#     product_detail: prod.MealKitCreation,
+#     main_image: Annotated[UploadFile, File(media_type="image")],
+#     additional_images: list[Annotated[UploadFile, File(media_type="image")]]
+#     | None = None,
+# ):
+#     bg_id = pp.new()
+#     yolo_model = req.state.ai_models["yolo"]
+#     clip_model = req.state.ai_models["clip"]
 
-    mip = pp.new_subtask(bg_id, "Preloaded main")
+#     mip = pp.new_subtask(bg_id, "Preloaded main")
 
-    main_image_preload = await main_image.read()
+#     main_image_preload = await main_image.read()
 
-    additional_images_preload: list[bytes] = []
+#     additional_images_preload: list[bytes] = []
 
-    if additional_images:
-        for i, f in enumerate(additional_images):
-            img = await f.read()
-            additional_images_preload.append(img)
-            pp.update_subtask(bg_id, mip, progress=i + 1)
+#     if additional_images:
+#         for i, f in enumerate(additional_images):
+#             img = await f.read()
+#             additional_images_preload.append(img)
+#             pp.update_subtask(bg_id, mip, progress=i + 1)
 
-    pp.close_subtask(
-        bg_id,
-        mip,
-    )
+#     pp.close_subtask(
+#         bg_id,
+#         mip,
+#     )
 
-    bg_task.add_task(
-        ps.product_creation,
-        product_detail,
-        additional_images_preload,
-        main_image_preload,
-        yolo_model,
-        clip_model,
-        pp,
-        bg_id,
-    )
+#     bg_task.add_task(
+#         ps.product_creation,
+#         product_detail,
+#         additional_images_preload,
+#         main_image_preload,
+#         yolo_model,
+#         clip_model,
+#         pp,
+#         bg_id,
+#     )
 
-    return {
-        "progress_id": bg_id,
-    }
+#     return {
+#         "progress_id": bg_id,
+#     }
 
 
 @router.post(
@@ -137,10 +145,12 @@ async def update_info_prod(
     _: Permission,
     prod_id: str,
     info: prod.ProductUpdate,
+    ss: Session,
 ):
-    ps.update_info(
+    return await ps.update_info(
         prod_id,
         info,
+        ss,
     )
 
 
@@ -152,11 +162,9 @@ async def update_info_mk(
     _: Permission,
     prod_id: str,
     info: prod.MealKitUpdate,
+    ss: Session,
 ):
-    ps.update_info(
-        prod_id,
-        info,
-    )
+    return await ps.update_info(prod_id, info, ss)
 
 
 @router.patch(
@@ -167,8 +175,9 @@ async def update_status(
     _: Permission,
     prod_id: str,
     status: product.ProductStatus,
+    ss: Session,
 ):
-    ps.update_status(prod_id, status)
+    return await ps.update_status(prod_id, status, ss)
 
 
 @router.patch(
@@ -180,12 +189,9 @@ async def update_quantity(
     prod_id: str,
     quantity: int,
     in_price: float,
+    ss: Session,
 ):
-    return ps.restock_product(
-        prod_id,
-        quantity,
-        in_price,
-    )
+    return await ps.restock_product(prod_id, quantity, in_price, ss)
 
 
 @router.put(
@@ -193,17 +199,13 @@ async def update_quantity(
     tags=["Product"],
 )
 async def update_price(
-    _permission: Permission,
+    _: Permission,
     product_id: str,
     price: float,
     sale_percent: float,
+    ss: Session,
 ):
-    ps.update_price(
-        product_id,
-        price,
-        sale_percent,
-    )
-    return {"message": "Price updated"}
+    return await ps.update_price(product_id, price, sale_percent, ss)
 
 
 @router.post(
@@ -214,12 +216,14 @@ async def create_blog(
     _: Permission,
     blog_info: BlogCreation,
     main_image: Annotated[UploadFile, File(media_type="image")],
+    ss: Session,
 ):
     main_image_preload = await main_image.read()
 
-    return blog.create(
+    return await blog.create(
         blog_info,
         main_image_preload,
+        ss,
     )
 
 
@@ -231,8 +235,23 @@ async def edit_blog(
     _: Permission,
     id: str,
     blog_info: BlogCreation,
+    ss: Session,
 ):
-    blog.edit(id, blog_info)
+    return await blog.edit(id, blog_info, ss)
+
+
+@router.get(
+    "/comment/fetch/all",
+    tags=["Blog", "Comment"],
+)
+async def get_all_comment(
+    _: Permission,
+    pg: Paging,
+    ss: Session,
+    status: CommentStatus | None = None,
+    type: CommentType | None = None,
+):
+    return await blog.get_comment_by_status(pg, ss, status, type)
 
 
 @router.get(
@@ -243,8 +262,9 @@ async def get_blog_comment(
     _: Permission,
     id: str,
     pg: Paging,
+    ss: Session,
 ):
-    return blog.get_comment(id, pg)
+    return await blog.get_comment(id, pg, ss)
 
 
 @router.delete(
@@ -254,8 +274,34 @@ async def get_blog_comment(
 async def delete_comment(
     _: Permission,
     id: str,
+    ss: Session,
 ):
-    return blog.delete_comment(id)
+    return await blog.change_comment_status(id, CommentStatus.DELETED, ss)
+
+
+@router.patch(
+    "/comment/report/unflag",
+    tags=["Blog", "Comment"],
+)
+async def unflag_comment(
+    _: Permission,
+    id: str,
+    ss: Session,
+):
+    return await blog.change_comment_status(id, CommentStatus.NORMAL, ss)
+
+
+@router.get(
+    "/comment/report/fetch/{id}",
+    tags=["Blog", "Comment"],
+)
+async def get_blog_report_cmt(
+    _: Permission,
+    id: str,
+    pg: Paging,
+    ss: Session,
+):
+    return await blog.get_reported_comment_of_blog(id, pg, ss)
 
 
 @router.get(
@@ -265,8 +311,9 @@ async def delete_comment(
 async def get_blogs(
     _: Permission,
     pg: Paging,
+    ss: Session,
 ):
-    return blog.get_blog_list(pg)
+    return await blog.get_blog_list(pg, ss)
 
 
 @router.get(
@@ -276,8 +323,9 @@ async def get_blogs(
 async def get_blog(
     _: Permission,
     id: str,
+    ss: Session,
 ):
-    return blog.get(id)
+    return await blog.get(id, ss)
 
 
 @router.get(
@@ -288,8 +336,9 @@ async def get_customer_comment(
     _: Permission,
     id: str,
     pg: Paging,
+    ss: Session,
 ):
-    return blog.get_comment_by_customer(id, pg)
+    return await blog.get_comment_by_customer(id, pg, ss)
 
 
 @router.get(
@@ -299,8 +348,9 @@ async def get_customer_comment(
 async def get_list_customer(
     _: Permission,
     pg: Paging,
+    ss: Session,
 ):
-    return c_ss.get_all_customer(pg)
+    return await c_ss.get_all_customer(pg, ss)
 
 
 @router.get(
@@ -311,8 +361,9 @@ async def get_customer_cart(
     _: Permission,
     pg: Paging,
     id: str,
+    ss: Session,
 ):
-    return c_ss.get_customer_cart(id, pg)
+    return await c_ss.get_customer_cart(id, pg, ss)
 
 
 @router.get(
@@ -322,8 +373,22 @@ async def get_customer_cart(
 async def get_customer(
     _: Permission,
     id: str,
+    ss: Session,
 ):
-    return c_ss.get_customer(id)
+    return await c_ss.get_customer(id, ss)
+
+
+@router.get(
+    "/customer/fetch/order/{id}",
+    tags=["Customer"],
+)
+async def get_customer_order(
+    _: Permission,
+    id: str,
+    ss: Session,
+    pg: Paging,
+):
+    return await c_ss.get_customer_order_history(id, ss, pg)
 
 
 @router.patch(
@@ -334,8 +399,9 @@ async def change_customer_status(
     _: Permission,
     id: str,
     status: UserAccountStatus,
+    ss: Session,
 ):
-    c_ss.set_account_status(id, status)
+    return await c_ss.set_account_status(id, status, ss)
 
 
 @router.patch(
@@ -346,8 +412,9 @@ async def change_customer_account(
     _: Permission,
     id: str,
     info: EditCustomerAccount,
+    ss: Session,
 ):
-    c_ss.edit_customer_account(id, info)
+    return await c_ss.edit_customer_account(id, info, ss)
 
 
 @router.patch(
@@ -358,8 +425,9 @@ async def change_customer_info(
     _: Permission,
     id: str,
     info: EditCustomerInfo,
+    ss: Session,
 ):
-    c_ss.edit_customer_info(id, info)
+    return await c_ss.edit_customer_info(id, info, ss)
 
 
 @router.get("/product/history/stock", tags=["Product"])
@@ -367,8 +435,9 @@ async def fetch_product_stock_history(
     _: Permission,
     prod_id: str,
     pg: Paging,
+    ss: Session,
 ):
-    return product_.get_product_stock_history(prod_id, pg)
+    return await ps.get_product_stock_history(prod_id, pg, ss)
 
 
 @router.get("/product/history/price", tags=["Product"])
@@ -376,8 +445,9 @@ async def fetch_product_price_history(
     _: Permission,
     prod_id: str,
     pg: Paging,
+    ss: Session,
 ):
-    return product_.get_product_price_history(prod_id, pg)
+    return await ps.get_product_price_history(prod_id, pg, ss)
 
 
 @router.get(
@@ -387,8 +457,9 @@ async def fetch_product_price_history(
 async def get_all_orders(
     _: Permission,
     pg: Paging,
+    ss: Session,
 ):
-    return ord_ss.get_all_orders(pg)
+    return await ord_ss.get_all_orders(pg, ss)
 
 
 @router.get(
@@ -399,8 +470,9 @@ async def get_order_by_status(
     _: Permission,
     status: OrderStatus,
     pg: Paging,
+    ss: Session,
 ):
-    return ord_ss.get_orders_with_status(status, pg)
+    return await ord_ss.get_orders_with_status(status, pg, ss)
 
 
 @router.get(
@@ -410,8 +482,22 @@ async def get_order_by_status(
 async def get_order(
     _: Permission,
     id: str,
+    ss: Session,
 ):
-    return ord_ss.get_order_detail(id)
+    return await ord_ss.get_order_detail(id, ss)
+
+
+# @router.get(
+#     "/order/fetch/{id}/items",
+#     tags=["Order"],
+# )
+# async def get_order_items(
+#     _: Permission,
+#     id: str,
+#     pg: Paging,
+#     ss: Session,
+# ):
+#     return await ord_ss.get_order_items(id, pg, ss)
 
 
 @router.post(
@@ -421,9 +507,11 @@ async def get_order(
 async def accept_order(
     _: Permission,
     id: str,
+    ss: Session,
 ):
-    return ord_ss.change_order_status(
+    return await ord_ss.change_order_status(
         id,
+        ss,
         OrderStatus.ON_CONFIRM,
         OrderStatus.ON_PROCESSING,
     )
@@ -436,9 +524,11 @@ async def accept_order(
 async def ship_order(
     _: Permission,
     id: str,
+    ss: Session,
 ):
-    return ord_ss.change_order_status(
+    return await ord_ss.change_order_status(
         id,
+        ss,
         OrderStatus.ON_PROCESSING,
         OrderStatus.ON_SHIPPING,
     )
@@ -451,9 +541,11 @@ async def ship_order(
 async def shipped_order(
     _: Permission,
     id: str,
+    ss: Session,
 ):
-    return ord_ss.change_order_status(
+    return await ord_ss.change_order_status(
         id,
+        ss,
         OrderStatus.ON_SHIPPING,
         OrderStatus.SHIPPED,
     )
@@ -466,5 +558,6 @@ async def shipped_order(
 async def cancel_order(
     _: Permission,
     id: str,
+    ss: Session,
 ):
-    return ord_ss.cancel_order(id)
+    return await ord_ss.cancel_order(id, ss)

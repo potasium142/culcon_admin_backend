@@ -8,7 +8,8 @@ from fastapi import (
     WebSocketDisconnect,
 )
 import sqlalchemy as sqla
-from db.postgresql.db_session import db_session
+from sqlalchemy.ext.asyncio import AsyncSession
+from db.postgresql.db_session import db_session, get_session
 
 import auth
 from db.postgresql.models.chat import ChatSession
@@ -17,6 +18,8 @@ from db.postgresql.models.user_account import UserAccount
 from db.postgresql.paging import Page, display_page, page_param, paging, table_size
 
 Permission = Annotated[bool, Depends(auth.staff_permission)]
+
+Session = Annotated[AsyncSession, Depends(get_session)]
 
 router = APIRouter(prefix="/ws", tags=["WebSocket"])
 

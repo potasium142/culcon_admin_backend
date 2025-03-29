@@ -1,6 +1,8 @@
+import asyncio
 import sqlalchemy as sqla
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 import sqlalchemy_utils as sqlau
-from pgvector.psycopg import register_vector
+from pgvector.psycopg import register_vector_async
 from sqlalchemy import event, text
 from config import env
 from db.postgresql.models import Base
@@ -9,7 +11,7 @@ from db.postgresql.models import Base
 from db.postgresql.models import *  # noqa: F403
 
 
-engine = sqla.create_engine(
+engine = create_async_engine(
     sqla.URL.create(
         host=env.DB_URL,
         drivername=env.DB_DRIVER,
@@ -21,19 +23,26 @@ engine = sqla.create_engine(
     pool_pre_ping=True,
 )
 
-if not sqlau.database_exists(engine.url):
-    sqlau.create_database(engine.url)
 
-with engine.connect() as connection:
-    connection.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
-    connection.commit()
+async def init_db():
+    if not sqlau.database_exists(engine.url):
+        sqlau.create_database(engine.url)
 
-DBSession: sqla.orm.Session = sqla.orm.sessionmaker(engine)
-
-
-@event.listens_for(engine, "connect")
-def connect(dbapi_connection, _):
-    register_vector(dbapi_connection)
+    async with engine.begin() as conn:
+        await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+        await conn.run_sync(Base.metadata.create_all)
+        await conn.commit()
 
 
-Base.metadata.create_all(engine)
+# @event.listens_for(engine.sync_engine, "connect")
+# def connect(dbapi_connection, _):
+#     dbapi_connection.run_async(register_vector_async)
+
+
+# async def session():
+#     with async_sessionmaker(engine) as ss:
+#         yield ss
+
+asyncio.run(init_db())
+
+DBSession = async_sessionmaker(engine)

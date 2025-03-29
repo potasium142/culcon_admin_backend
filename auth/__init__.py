@@ -1,9 +1,10 @@
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jwt import InvalidTokenError
+from sqlalchemy.ext.asyncio import AsyncSession
 from auth import jwt_token
 from db.postgresql.models.staff_account import AccountType, StaffAccount
-from db.postgresql.db_session import db_session
+from db.postgresql.db_session import get_session
 
 import sqlalchemy as sqla
 
@@ -17,19 +18,25 @@ CREDENTIAL_EXCEPTION = HTTPException(
 )
 
 
-def permission(token: str, type: AccountType) -> bool:
-    with db_session.session as ss:
+async def permission(
+    token: str,
+    type: AccountType,
+    session: AsyncSession,
+) -> bool:
+    async with session as ss, ss.begin():
         try:
             payload = jwt_token.decode(token)
 
             if payload.get("id") is None:
                 raise CREDENTIAL_EXCEPTION
 
-            account = ss.execute(
+            r = await ss.execute(
                 sqla.select(StaffAccount).filter(
                     StaffAccount.token == token,
                 )
-            ).scalar_one_or_none()
+            )
+
+            account = r.scalar_one_or_none()
 
             if account is None:
                 raise CREDENTIAL_EXCEPTION
@@ -47,9 +54,15 @@ def permission(token: str, type: AccountType) -> bool:
         return True
 
 
-def manager_permission(token: str = Depends(oauth2_scheme)) -> bool:
-    return permission(token, AccountType.MANAGER)
+async def manager_permission(
+    token: str = Depends(oauth2_scheme),
+    session=Depends(get_session),
+) -> bool:
+    return await permission(token, AccountType.MANAGER, session)
 
 
-def staff_permission(token: str = Depends(oauth2_scheme)) -> bool:
-    return permission(token, AccountType.MANAGER | AccountType.STAFF)
+async def staff_permission(
+    token: str = Depends(oauth2_scheme),
+    session=Depends(get_session),
+) -> bool:
+    return await permission(token, AccountType.MANAGER | AccountType.STAFF, session)

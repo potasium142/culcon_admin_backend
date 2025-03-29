@@ -6,7 +6,7 @@ from sqlalchemy import Column, ForeignKey, Table, orm, ForeignKeyConstraint
 from sqlalchemy.sql import sqltypes
 
 from db.postgresql.models import Base
-from db.postgresql.models.product import ProductPriceHistory
+from db.postgresql.models.product import Product, ProductPriceHistory
 from db.postgresql.models.user_account import UserAccount
 
 import sqlalchemy as sqla

@@ -5,7 +5,7 @@ from dtos.request.account import AccountCreateDto
 from auth import encryption, jwt_token
 from etc.local_error import HandledError
 from db.postgresql.db_session import db_session
-from services.account_service import create_account  # Adjust import path
+from services.account import create_account  # Adjust import path
 
 from datetime import timedelta
 

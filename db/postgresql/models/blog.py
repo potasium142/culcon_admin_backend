@@ -21,9 +21,6 @@ class ProductDoc(Base):
     infos: orm.Mapped[dict[str, str]] = orm.mapped_column(
         psql.JSONB(),
     )
-    ingredients: orm.Mapped[list[str] | None] = orm.mapped_column(
-        psql.ARRAY(psql.VARCHAR(255)),
-    )
     instructions: orm.Mapped[list[str] | None] = orm.mapped_column(
         psql.ARRAY(psql.VARCHAR(255)),
     )

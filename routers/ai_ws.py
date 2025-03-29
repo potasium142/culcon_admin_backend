@@ -1,5 +1,3 @@
-from queue import Queue
-import time
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from ollama import AsyncClient
 

@@ -1,8 +1,10 @@
 import sqlalchemy as sqla
+from sqlalchemy.ext.asyncio import AsyncSession
+from db.postgresql.models.product import ProductPriceHistory
 from db.postgresql.paging import Page, display_page, paging, table_size
-from db.postgresql.db_session import db_session
 from db.postgresql.models.order_history import (
     OrderHistory,
+    OrderHistoryItems,
     OrderStatus,
     PaymentMethod,
     PaymentStatus,
@@ -10,20 +12,14 @@ from db.postgresql.models.order_history import (
 from etc.local_error import HandledError
 
 
-def __order_detail_json(o: OrderHistory):
-    cp = o.coupon_detail
-    if cp:
-        coupon_detail = {
-            "id": cp.id,
-            "sale_percent": cp.sale_percent,
-        }
-    else:
-        coupon_detail = {}
-
+async def __order_detail_json(
+    o: OrderHistory,
+):
+    user = await o.awaitable_attrs.user
     return {
         "id": o.id,
-        "user_id": o.user.id,
-        "user_pfp": o.user.profile_pic_uri,
+        "user_id": user.id,
+        "user_pfp": user.profile_pic_uri,
         "order_date": o.order_date,
         "delivery_address": o.delivery_address,
         "receiver": o.receiver,
@@ -33,20 +29,6 @@ def __order_detail_json(o: OrderHistory):
         "payment_method": o.payment_method,
         "total_price": o.total_price,
         "note": o.note,
-        "coupon": coupon_detail,
-        "items": [
-            {
-                "id": i.product_id,
-                "price": i.item.price,
-                "price_date": i.item.date,
-                "sale_percent": i.item.sale_percent,
-                "image": i.item.product.image_url,
-                "name": i.item.product.product_name,
-                "type": i.item.product.product_types,
-                "amount": i.quantity,
-            }
-            for i in o.order_history_items
-        ],
     }
 
 
@@ -70,9 +52,9 @@ def order_list_item(o: OrderHistory):
     }
 
 
-def get_all_orders(pg: Page):
-    with db_session.session as ss:
-        orders = ss.scalars(
+async def get_all_orders(pg: Page, ss: AsyncSession):
+    async with ss.begin():
+        orders = await ss.scalars(
             paging(
                 sqla.select(OrderHistory).order_by(
                     OrderHistory.order_date.desc(),
@@ -83,13 +65,17 @@ def get_all_orders(pg: Page):
         )
 
         content = [order_list_item(o) for o in orders]
-        count = table_size(OrderHistory.id)
-        return display_page(content, count, pg)
+        count = await table_size(OrderHistory.id, ss)
+    return display_page(content, count, pg)
 
 
-def get_orders_with_status(status: OrderStatus, pg: Page):
-    with db_session.session as ss:
-        orders = ss.scalars(
+async def get_orders_with_status(
+    status: OrderStatus,
+    pg: Page,
+    ss: AsyncSession,
+):
+    async with ss.begin():
+        orders = await ss.scalars(
             paging(
                 sqla.select(OrderHistory)
                 .order_by(
@@ -104,7 +90,7 @@ def get_orders_with_status(status: OrderStatus, pg: Page):
 
         content = [order_list_item(o) for o in orders]
         count = (
-            ss.scalar(
+            await ss.scalar(
                 sqla.select(
                     sqla.func.count(OrderHistory.order_status == status)
                 ).filter(OrderHistory.order_status == status)
@@ -115,27 +101,33 @@ def get_orders_with_status(status: OrderStatus, pg: Page):
         return display_page(content, count, pg)
 
 
-def get_order_detail(id: str):
-    with db_session.session as ss:
-        order = ss.get(OrderHistory, id)
+async def get_order_detail(id: str, ss: AsyncSession):
+    async with ss.begin():
+        order = await ss.get_one(OrderHistory, id)
 
-        if not order:
-            raise HandledError("Order does not exist")
-
-        return __order_detail_json(order)
+        return await __order_detail_json(order)
 
 
-def change_order_status(
+# async def get_order_items(id: str, pg: Page, ss: AsyncSession):
+#     async with ss.begin():
+#         items = await ss.execute(
+#             sqla.select(Product, ProductPriceHistory).filter(
+#                 OrderHistoryItems.order_history_id == id,
+#             )
+#         )
+
+#         print(items)
+
+
+async def change_order_status(
     id: str,
+    ss: AsyncSession,
     prev_status: OrderStatus,
     status: OrderStatus,
     check_payment: bool = True,
 ):
-    with db_session.session as ss:
-        order = ss.get(OrderHistory, id)
-
-        if not order:
-            raise HandledError("Order does not exist")
+    async with ss.begin():
+        order = await ss.get_one(OrderHistory, id)
 
         if order.order_status != prev_status:
             raise HandledError(f"Status of order must be {prev_status}")
@@ -143,27 +135,28 @@ def change_order_status(
         if check_payment:
             payment_received = order.payment_status == PaymentStatus.RECEIVED
             cod = order.payment_method == PaymentMethod.COD
-            if not (payment_received or cod):
+
+            if cod:
+                if order.payment_status != PaymentStatus.PENDING:
+                    raise HandledError(
+                        "Illegal payment status (Payment should be PENDING on COD)"
+                    )
+
+            if not payment_received:
                 raise HandledError("Order has not paid")
 
         order.order_status = status
 
-        db_session.commit()
+        await ss.flush()
 
-        order_refetch = ss.get(OrderHistory, id)
-
-        if not order_refetch:
-            raise HandledError("Failed to refetch order")
+        order_refetch = await ss.get_one(OrderHistory, id)
 
         return order.order_status == order_refetch.order_status
 
 
-def cancel_order(id: str):
-    with db_session.session as ss:
-        order = ss.get(OrderHistory, id)
-
-        if not order:
-            raise HandledError("Order does not exist")
+async def cancel_order(id: str, ss: AsyncSession):
+    async with ss.begin():
+        order = await ss.get_one(OrderHistory, id)
 
         if order.order_status in (OrderStatus.ON_SHIPPING, OrderStatus.SHIPPED):
             raise HandledError("Order already in delivering or delivered")
@@ -173,16 +166,21 @@ def cancel_order(id: str):
 
         order.order_status = OrderStatus.CANCELLED
 
+        items = await ss.scalars(
+            sqla.select(OrderHistoryItems).filter(
+                OrderHistoryItems.order_history_id == id
+            )
+        )
+
         # TODO:refund
-        for i in order.order_history_items:
+        for i in items:
             amount = i.quantity
-            i.item.product.available_quantity += amount
+            prod_price: ProductPriceHistory = await i.awaitable_attrs.item
+            prod = await prod_price.awaitable_attrs.product
+            prod.available_quantity += amount
 
-        db_session.commit()
+        await ss.flush()
 
-        order_refetch = ss.get(OrderHistory, id)
-
-        if not order_refetch:
-            raise HandledError("Failed to refetch order")
+        order_refetch = await ss.get_one(OrderHistory, id)
 
         return order.order_status == order_refetch.order_status

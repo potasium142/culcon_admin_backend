@@ -8,9 +8,9 @@
             "name": "Python: FastAPI",
             "type": "debugpy",
             "request": "launch",
-            "module": "uvicorn",
+            "module": "fastapi",
             "args": [
-                "main:app",
+                "run",
             ],
             "jinja": true
         },
@@ -18,21 +18,12 @@
             "name": "Python: FastAPI NonAI",
             "type": "debugpy",
             "request": "launch",
-            "module": "uvicorn",
+            "module": "fastapi",
             "args": [
-                "main_non_ai:app",
+                "run",
+                "main_non_ai.py",
             ],
             "jinja": true
         },
-        {
-            "name": "Python Debugger: FastAPI",
-            "type": "debugpy",
-            "request": "launch",
-            "module": "uvicorn",
-            "args": [
-                "main:app",
-            ],
-            "jinja": true
-        }
     ]
 }
