@@ -337,8 +337,9 @@ async def get_customer_comment(
     _: Permission,
     id: str,
     pg: Paging,
+    ss: Session,
 ):
-    return blog.get_comment_by_customer(id, pg)
+    return await blog.get_comment_by_customer(id, pg, ss)
 
 
 @router.get(
@@ -348,8 +349,9 @@ async def get_customer_comment(
 async def get_list_customer(
     _: Permission,
     pg: Paging,
+    ss: Session,
 ):
-    return c_ss.get_all_customer(pg)
+    return await c_ss.get_all_customer(pg, ss)
 
 
 @router.get(
@@ -360,8 +362,9 @@ async def get_customer_cart(
     _: Permission,
     pg: Paging,
     id: str,
+    ss: Session,
 ):
-    return c_ss.get_customer_cart(id, pg)
+    return await c_ss.get_customer_cart(id, pg, ss)
 
 
 @router.get(
@@ -371,8 +374,22 @@ async def get_customer_cart(
 async def get_customer(
     _: Permission,
     id: str,
+    ss: Session,
 ):
-    return c_ss.get_customer(id)
+    return await c_ss.get_customer(id, ss)
+
+
+@router.get(
+    "/customer/fetch/order/{id}",
+    tags=["Customer"],
+)
+async def get_customer_order(
+    _: Permission,
+    id: str,
+    ss: Session,
+    pg: Paging,
+):
+    return await c_ss.get_customer_order_history(id, ss, pg)
 
 
 @router.patch(
@@ -383,8 +400,9 @@ async def change_customer_status(
     _: Permission,
     id: str,
     status: UserAccountStatus,
+    ss: Session,
 ):
-    c_ss.set_account_status(id, status)
+    return await c_ss.set_account_status(id, status, ss)
 
 
 @router.patch(
@@ -395,8 +413,9 @@ async def change_customer_account(
     _: Permission,
     id: str,
     info: EditCustomerAccount,
+    ss: Session,
 ):
-    c_ss.edit_customer_account(id, info)
+    return await c_ss.edit_customer_account(id, info, ss)
 
 
 @router.patch(
@@ -407,26 +426,28 @@ async def change_customer_info(
     _: Permission,
     id: str,
     info: EditCustomerInfo,
+    ss: Session,
 ):
-    c_ss.edit_customer_info(id, info)
+    return await c_ss.edit_customer_info(id, info, ss)
 
 
-# @router.get("/product/history/stock", tags=["Product"])
-# async def fetch_product_stock_history(
-#     _: Permission,
-#     prod_id: str,
-#     pg: Paging,
-# ):
-#     return product_.get_product_stock_history(prod_id, pg)
+@router.get("/product/history/stock", tags=["Product"])
+async def fetch_product_stock_history(
+    _: Permission,
+    prod_id: str,
+    pg: Paging,
+    ss: Session,
+):
+    return c_ss.get_product_stock_history(prod_id, pg)
 
 
-# @router.get("/product/history/price", tags=["Product"])
-# async def fetch_product_price_history(
-#     _: Permission,
-#     prod_id: str,
-#     pg: Paging,
-# ):
-#     return product_.get_product_price_history(prod_id, pg)
+@router.get("/product/history/price", tags=["Product"])
+async def fetch_product_price_history(
+    _: Permission,
+    prod_id: str,
+    pg: Paging,
+):
+    return product.get_product_price_history(prod_id, pg)
 
 
 @router.get(

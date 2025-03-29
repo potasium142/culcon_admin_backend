@@ -2,7 +2,12 @@ from uuid import uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from db.postgresql.models.blog import Blog
-from db.postgresql.models.user_account import CommentStatus, CommentType, PostComment
+from db.postgresql.models.user_account import (
+    CommentStatus,
+    CommentType,
+    PostComment,
+    UserAccount,
+)
 from dtos.request.blog import BlogCreation
 from etc import cloudinary
 from etc.local_error import HandledError
@@ -202,19 +207,32 @@ async def get_blog_list(page: Page, ss: AsyncSession):
         return display_page(content, count, page)
 
 
-def get_comment_by_customer(user_id: str, page: Page):
-    with db_session.session as ss:
-        content = ss.scalars(
-            paging(
-                sqla.select(PostComment).filter(
-                    PostComment.account_id == user_id,
-                ),
-                page,
+async def get_comment_by_customer(
+    user_id: str,
+    page: Page,
+    ss: AsyncSession,
+):
+    async with ss.begin():
+        usr_chk = await ss.scalar(
+            sqla.select(sqla.exists().where(UserAccount.id == user_id))
+        )
+
+        if not usr_chk:
+            raise HandledError("User not exist")
+
+        content = (
+            await ss.scalars(
+                paging(
+                    sqla.select(PostComment).filter(
+                        PostComment.account_id == user_id,
+                    ),
+                    page,
+                )
             )
         ).all()
 
         count = (
-            ss.scalar(
+            await ss.scalar(
                 sqla.select(sqla.func.count(PostComment.id)).filter(
                     PostComment.account_id == user_id,
                 )
