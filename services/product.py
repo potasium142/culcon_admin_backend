@@ -6,7 +6,6 @@ from db.postgresql.models.blog import ProductDoc
 from datetime import datetime
 from db.postgresql.models import product as prod
 from db.postgresql.models.order_history import OrderHistoryItems
-from db.postgresql.db_session import db_session
 from db.postgresql.models.order_history import OrderHistory
 from dtos.request.product import (
     ProductUpdate,

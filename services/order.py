@@ -1,8 +1,9 @@
 import sqlalchemy as sqla
 from sqlalchemy.ext.asyncio import AsyncSession
-from db.postgresql.models.product import ProductPriceHistory
+from db.postgresql.models.product import Product, ProductPriceHistory
 from db.postgresql.paging import Page, display_page, paging, table_size
 from db.postgresql.models.order_history import (
+    Coupon,
     OrderHistory,
     OrderHistoryItems,
     OrderStatus,
@@ -16,6 +17,11 @@ async def __order_detail_json(
     o: OrderHistory,
 ):
     user = await o.awaitable_attrs.user
+    coupon: Coupon = await o.awaitable_attrs.coupon_detail
+    if o.coupon_detail:
+        coupon_sale = coupon.sale_percent
+    else:
+        coupon_sale = ""
     return {
         "id": o.id,
         "user_id": user.id,
@@ -29,15 +35,11 @@ async def __order_detail_json(
         "payment_method": o.payment_method,
         "total_price": o.total_price,
         "note": o.note,
+        "coupon_sale": coupon_sale,
     }
 
 
 def order_list_item(o: OrderHistory):
-    if o.coupon_detail:
-        coupon_sale = o.coupon_detail.sale_percent
-    else:
-        coupon_sale = ""
-
     return {
         "id": o.id,
         "order_date": o.order_date,
@@ -48,7 +50,6 @@ def order_list_item(o: OrderHistory):
         "payment_status": o.payment_status,
         "payment_method": o.payment_method,
         "total_price": o.total_price,
-        "coupon_sale": coupon_sale,
     }
 
 
@@ -108,15 +109,40 @@ async def get_order_detail(id: str, ss: AsyncSession):
         return await __order_detail_json(order)
 
 
-# async def get_order_items(id: str, pg: Page, ss: AsyncSession):
-#     async with ss.begin():
-#         items = await ss.execute(
-#             sqla.select(Product, ProductPriceHistory).filter(
-#                 OrderHistoryItems.order_history_id == id,
-#             )
-#         )
+async def get_order_items(id: str, pg: Page, ss: AsyncSession):
+    async with ss.begin():
+        items = await ss.scalars(
+            paging(
+                sqla.select(OrderHistoryItems).filter(
+                    OrderHistoryItems.order_history_id == id,
+                ),
+                pg,
+            )
+        )
+        count = (
+            await ss.scalar(
+                sqla.select(sqla.func.count(OrderHistoryItems.product_id)).filter(
+                    OrderHistoryItems.order_history_id == id
+                )
+            )
+            or 0
+        )
 
-#         print(items)
+        content = []
+        for i in items:
+            p = await ss.get_one(Product, i.product_id)
+            price: ProductPriceHistory = await i.awaitable_attrs.item
+            content.append({
+                "id": p.id,
+                "image_url": p.image_url,
+                "name": p.product_name,
+                "type": p.product_types,
+                "price": price.price,
+                "price_date": price.date,
+                "sale_percent": price.sale_percent,
+            })
+
+        return display_page(content, count, pg)
 
 
 async def change_order_status(

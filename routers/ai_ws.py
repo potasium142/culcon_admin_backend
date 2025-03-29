@@ -5,7 +5,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.postgresql.db_session import get_session
 from db.postgresql.models.user_account import UserAccount
-from db.postgresql.paging import db_session
 
 import sqlalchemy as sqla
 from config import env

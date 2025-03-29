@@ -3,10 +3,11 @@ from typing import Annotated
 from sqlalchemy.ext.asyncio import AsyncSession
 from db.postgresql.db_session import get_session
 from db.postgresql.models.product import ProductType
+from etc.local_error import HandledError
+from etc.prog_tracker import ProgressTrackerManager, get_prog_tracker
 from services import product as ps
 from services import coupon as coupon_service
 from fastapi.responses import StreamingResponse
-from etc.progress_tracker import pp
 import auth
 
 
@@ -15,7 +16,7 @@ from db.postgresql.paging import page_param, Page
 
 Paging = Annotated[Page, Depends(page_param)]
 Session = Annotated[AsyncSession, Depends(get_session)]
-
+ProgTracker = Annotated[dict[str, ProgressTrackerManager], Depends(get_prog_tracker)]
 router = APIRouter(prefix="/api/general", tags=["General"])
 
 oauth2_scheme = auth.oauth2_scheme
@@ -42,9 +43,11 @@ async def get_all_product(
 
 
 @router.get("/progress/get")
-async def get_progress(prog_id: int):
+async def get_progress(prog_id: str, ptm: ProgTracker):
+    if prog_id not in ptm:
+        raise HandledError("Progress is already complete or not exist")
     return StreamingResponse(
-        pp.get(prog_id),
+        ptm[prog_id].stream(),
         media_type="text/event-stream",
     )
 
