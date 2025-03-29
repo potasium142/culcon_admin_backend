@@ -10,14 +10,13 @@ from db.postgresql.models.user_account import (
     UserAccountStatus,
 )
 from dtos.request import product as prod
-from fastapi import APIRouter, Depends, File, Request, UploadFile, BackgroundTasks
+from fastapi import APIRouter, Depends, File, UploadFile
 from dtos.request.blog import BlogCreation
 from dtos.request.user_account import EditCustomerAccount, EditCustomerInfo
-from services import product as ps, product_
+from services import product as ps
 from services import blog
 from services import customer as c_ss
 from services import order as ord_ss
-from etc.progress_tracker import pp
 from db.postgresql.models import product
 from db.postgresql.paging import page_param, Page
 import auth
@@ -438,7 +437,7 @@ async def fetch_product_stock_history(
     pg: Paging,
     ss: Session,
 ):
-    return c_ss.get_product_stock_history(prod_id, pg)
+    return await ps.get_product_stock_history(prod_id, pg, ss)
 
 
 @router.get("/product/history/price", tags=["Product"])
@@ -446,8 +445,9 @@ async def fetch_product_price_history(
     _: Permission,
     prod_id: str,
     pg: Paging,
+    ss: Session,
 ):
-    return product.get_product_price_history(prod_id, pg)
+    return await ps.get_product_price_history(prod_id, pg, ss)
 
 
 @router.get(
@@ -457,8 +457,9 @@ async def fetch_product_price_history(
 async def get_all_orders(
     _: Permission,
     pg: Paging,
+    ss: Session,
 ):
-    return ord_ss.get_all_orders(pg)
+    return await ord_ss.get_all_orders(pg, ss)
 
 
 @router.get(
@@ -469,8 +470,9 @@ async def get_order_by_status(
     _: Permission,
     status: OrderStatus,
     pg: Paging,
+    ss: Session,
 ):
-    return ord_ss.get_orders_with_status(status, pg)
+    return await ord_ss.get_orders_with_status(status, pg, ss)
 
 
 @router.get(
@@ -480,8 +482,22 @@ async def get_order_by_status(
 async def get_order(
     _: Permission,
     id: str,
+    ss: Session,
 ):
-    return ord_ss.get_order_detail(id)
+    return await ord_ss.get_order_detail(id, ss)
+
+
+# @router.get(
+#     "/order/fetch/{id}/items",
+#     tags=["Order"],
+# )
+# async def get_order_items(
+#     _: Permission,
+#     id: str,
+#     pg: Paging,
+#     ss: Session,
+# ):
+#     return await ord_ss.get_order_items(id, pg, ss)
 
 
 @router.post(
@@ -491,9 +507,11 @@ async def get_order(
 async def accept_order(
     _: Permission,
     id: str,
+    ss: Session,
 ):
-    return ord_ss.change_order_status(
+    return await ord_ss.change_order_status(
         id,
+        ss,
         OrderStatus.ON_CONFIRM,
         OrderStatus.ON_PROCESSING,
     )
@@ -506,9 +524,11 @@ async def accept_order(
 async def ship_order(
     _: Permission,
     id: str,
+    ss: Session,
 ):
-    return ord_ss.change_order_status(
+    return await ord_ss.change_order_status(
         id,
+        ss,
         OrderStatus.ON_PROCESSING,
         OrderStatus.ON_SHIPPING,
     )
@@ -521,9 +541,11 @@ async def ship_order(
 async def shipped_order(
     _: Permission,
     id: str,
+    ss: Session,
 ):
-    return ord_ss.change_order_status(
+    return await ord_ss.change_order_status(
         id,
+        ss,
         OrderStatus.ON_SHIPPING,
         OrderStatus.SHIPPED,
     )
@@ -536,5 +558,6 @@ async def shipped_order(
 async def cancel_order(
     _: Permission,
     id: str,
+    ss: Session,
 ):
-    return ord_ss.cancel_order(id)
+    return await ord_ss.cancel_order(id, ss)

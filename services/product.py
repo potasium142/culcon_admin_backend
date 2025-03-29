@@ -179,55 +179,20 @@ async def update_status(
         }
 
 
-async def get_list_mealkit(pg: Page, ss: AsyncSession):
-    # async with session as ss, ss.begin():
-    async with ss.begin():
-        products = await ss.scalars(
-            paging(
-                sqla.select(prod.Product).filter(
-                    prod.Product.product_types == prod.ProductType.MEALKIT
-                ),
-                pg,
-            )
-        )
-
-        content: list[
-            dict[str, str | float | int | prod.ProductStatus | prod.ProductType]
-        ] = list(
-            map(
-                lambda prod: {
-                    "id": prod.id,
-                    "name": prod.product_name,
-                    "price": prod.price,
-                    "type": prod.product_types,
-                    "status": prod.product_status,
-                    "image_url": prod.image_url,
-                    "available_quantity": prod.available_quantity,
-                },
-                products,
-            )
-        )
-
-        count = (
-            await ss.scalar(
-                sqla.select(sqla.func.count(prod.Product.id)).filter(
-                    prod.Product.product_types == prod.ProductType.MEALKIT
-                )
-            )
-            or 0
-        )
-
-    return display_page(content, count, pg)
-
-
 async def get_list_product(
     pg: Page,
     session: AsyncSession,
+    type: prod.ProductType | None = None,
 ):
     async with session as ss, ss.begin():
+        if type:
+            filters = [prod.Product.product_types == type]
+        else:
+            filters = []
+
         products = await ss.scalars(
             paging(
-                sqla.select(prod.Product),
+                sqla.select(prod.Product).filter(*filters),
                 pg,
             )
         )
@@ -245,8 +210,12 @@ async def get_list_product(
             for prod in products
         ]
 
-        count = await table_size(prod.Product.id, session)
-        # count = 9
+        count = (
+            await ss.scalar(
+                sqla.select(sqla.func.count(prod.Product.id)).filter(*filters)
+            )
+            or 0
+        )
         return display_page(rtn_products, count, pg)
 
 
@@ -260,19 +229,6 @@ async def get_product(
         if not product:
             raise HandledError("Product not found")
 
-        product_price = await ss.scalars(
-            sqla.select(prod.ProductPriceHistory)
-            .filter(prod.ProductPriceHistory.product_id == prod_id)
-            .order_by(prod.ProductPriceHistory.date.desc())
-            .limit(7)
-        )
-        product_stock = await ss.scalars(
-            sqla.select(prod.ProductStockHistory)
-            .filter(prod.ProductStockHistory.product_id == prod_id)
-            .order_by(prod.ProductStockHistory.date.desc())
-            .limit(7)
-        )
-
         product_doc = await ss.get(ProductDoc, prod_id)
 
         if not product_doc:
@@ -285,15 +241,6 @@ async def get_product(
             "available_quantity": product.available_quantity,
             "product_type": product.product_types,
             "product_status": product.product_status,
-            "price_list": [price.to_list_instance() for price in product_price],
-            "stock_list": [
-                {
-                    "date": s.date,
-                    "import_price": s.in_price,
-                    "import_amount": s.in_stock,
-                }
-                for s in product_stock
-            ],
             "info": product_doc.infos,
             "images_url": product_doc.images_url,
             "article": product_doc.article_md,
@@ -371,13 +318,13 @@ async def get_top_10_products_all_time(ss: AsyncSession):
         ]
 
 
-def get_product_stock_history(id: str, pg: Page):
-    with db_session.session as ss:
-        stock_history = ss.scalars(
+async def get_product_stock_history(id: str, pg: Page, ss: AsyncSession):
+    async with ss.begin():
+        stock_history = await ss.scalars(
             paging(
-                sqla.select(ProductStockHistory).filter(
-                    ProductStockHistory.product_id == id
-                ),
+                sqla.select(prod.ProductStockHistory)
+                .filter(prod.ProductStockHistory.product_id == id)
+                .order_by(prod.ProductStockHistory.date.desc()),
                 pg,
             )
         )
@@ -392,23 +339,23 @@ def get_product_stock_history(id: str, pg: Page):
         ]
 
         count = (
-            ss.scalar(
-                sqla.select(sqla.func.count(ProductStockHistory.product_id)).filter(
-                    ProductStockHistory.product_id == id
-                )
+            await ss.scalar(
+                sqla.select(
+                    sqla.func.count(prod.ProductStockHistory.product_id)
+                ).filter(prod.ProductStockHistory.product_id == id)
             )
             or 0
         )
-        return display_page(content, count, pg)
+    return display_page(content, count, pg)
 
 
-def get_product_price_history(id: str, pg: Page):
-    with db_session.session as ss:
-        stock_history = ss.scalars(
+async def get_product_price_history(id: str, pg: Page, ss: AsyncSession):
+    async with ss.begin():
+        stock_history = await ss.scalars(
             paging(
-                sqla.select(ProductPriceHistory).filter(
-                    ProductPriceHistory.product_id == id
-                ),
+                sqla.select(prod.ProductPriceHistory)
+                .filter(prod.ProductPriceHistory.product_id == id)
+                .order_by(prod.ProductPriceHistory.date.desc()),
                 pg,
             )
         )
@@ -416,10 +363,10 @@ def get_product_price_history(id: str, pg: Page):
         content = [s.to_list_instance() for s in stock_history]
 
         count = (
-            ss.scalar(
-                sqla.select(sqla.func.count(ProductPriceHistory.product_id)).filter(
-                    ProductPriceHistory.product_id == id
-                )
+            await ss.scalar(
+                sqla.select(
+                    sqla.func.count(prod.ProductPriceHistory.product_id)
+                ).filter(prod.ProductPriceHistory.product_id == id)
             )
             or 0
         )
