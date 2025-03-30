@@ -1,104 +1,175 @@
 from io import BytesIO
 from typing import Any
 from PIL import Image, ImageFile
-from db.postgresql.db_session import db_session
-from db.postgresql.models.product import ProductEmbedding, ProductType
+from sqlalchemy.ext.asyncio import AsyncSession
+from db.postgresql.models.blog import BlogEmbedding
+from db.postgresql.models.product import Product, ProductEmbedding, ProductType
 from ai import clip, yolo
 import sqlalchemy as sqla
 from db.postgresql.paging import Page, display_page, paging
+from etc.local_error import HandledError
 
 
 def read_image(file: bytes) -> ImageFile.ImageFile:
     return Image.open(BytesIO(file))
 
 
-def __prod_dto(r) -> dict[str, Any]:
+async def __prod_dto(r) -> dict[str, Any]:
+    product: Product = await r[0].awaitable_attrs.product
     return {
-        "id": r[0].product.id,
-        "product_name": r[0].product.product_name,
-        "available_quantity": r[0].product.available_quantity,
-        "product_types": r[0].product.product_types,
-        "product_status": r[0].product.product_status,
-        "image_url": r[0].product.image_url,
-        "price": r[0].product.price,
-        "sale_percent": r[0].product.sale_percent,
+        "id": product.id,
+        "product_name": product.product_name,
+        "available_quantity": product.available_quantity,
+        "product_types": product.product_types,
+        "product_status": product.product_status,
+        "image_url": product.image_url,
+        "price": product.price,
+        "sale_percent": product.sale_percent,
         "dist_1": r[1],
         "dist_2": r[2],
     }
 
 
-def vector_search_prompt(
+async def vector_search_prompt(
     prompt: str,
     clip_model: clip.OpenCLIP,
+    type: ProductType | None,
     pg: Page,
+    ss: AsyncSession,
 ):
-    prompt_vec = clip_model.encode_text(prompt)[0]
-    with db_session.session as ss:
+    if type:
+        filters = [ProductEmbedding.id.like(f"{type}%")]
+    else:
+        filters = []
+    async with ss.begin():
+        prompt_vec = clip_model.encode_text(prompt)[0]
         dist_text = ProductEmbedding.description_embed.l2_distance(prompt_vec)
         dist_img = ProductEmbedding.images_embed_clip.l2_distance(prompt_vec)
-        results = ss.execute(
+        results = await ss.execute(
             paging(
                 sqla.select(
                     ProductEmbedding,
                     dist_text,
                     dist_img,
-                ).filter(
-                    (dist_img < 0.8) | (dist_text < 0.5),
-                ),
+                )
+                .filter((dist_img < 0.8) | (dist_text < 0.5), *filters)
+                .order_by(dist_text, dist_img)
+                .limit(70),
                 pg,
             )
         )
 
-        content = [__prod_dto(r) for r in results]
         count = (
-            ss.scalar(
-                sqla.select(sqla.func.count(ProductEmbedding.id)).filter(
-                    (dist_img < 0.8) | (dist_text < 0.5),
-                )
+            await ss.scalar(
+                sqla.select(sqla.func.count(ProductEmbedding.id))
+                .filter((dist_img < 0.8) | (dist_text < 0.5), *filters)
+                .limit(70),
             )
             or 0
         )
 
-        return display_page(content, count, pg)
+        content = []
+
+        for r in results.all():
+            content.append(await __prod_dto(r))
+
+    return display_page(content, count, pg)
 
 
-def vector_search_image_yolo(
+async def vector_search_image_yolo(
     image_bytes: bytes,
     yolo_: yolo.YOLOEmbed,
     clip_model: clip.OpenCLIP,
+    type: ProductType | None,
     pg: Page,
+    ss: AsyncSession,
 ):
     image = [read_image(image_bytes)]
+    yp = yolo_.predict(image)[0].summary()[0]
     prompt_vec = yolo_.embed(image)[0]
     clip_vec = clip_model.encode_image(image)[0]
-    with db_session.session as ss:
+
+    if type:
+        filters = [ProductEmbedding.id.like(f"{type}%")]
+    else:
+        filters = []
+
+    predict_result = {
+        "name": yp["name"],
+        "confidence": f"{yp['confidence'] * 100:2.2f}",
+    }
+
+    async with ss.begin():
         dist_img_yolo = ProductEmbedding.images_embed_yolo.l2_distance(prompt_vec)
         dist_img_clip = ProductEmbedding.images_embed_clip.l2_distance(clip_vec)
-        results = ss.execute(
+        results = await ss.execute(
             paging(
                 sqla.select(
                     ProductEmbedding,
                     dist_img_yolo,
                     dist_img_clip,
-                ).filter(dist_img_yolo < 1.4),
+                )
+                .filter(dist_img_yolo < 1.4, *filters)
+                .order_by(dist_img_clip, dist_img_yolo)
+                .limit(70),
                 pg,
             )
         )
 
         content: list[dict[str, str | float]] = []
 
-        for r in results:
-            if r[0].product.product_types != ProductType.MEALKIT:
-                continue
-            content.append(__prod_dto(r))
+        for r in results.all():
+            content.append(await __prod_dto(r))
 
         count = (
-            ss.scalar(
-                sqla.select(sqla.func.count(ProductEmbedding.id)).filter(
-                    dist_img_yolo < 1.4
+            await ss.scalar(
+                sqla.select(sqla.func.count(ProductEmbedding.id))
+                .filter(dist_img_yolo < 1.4, *filters)
+                .limit(70),
+            )
+            or 0
+        )
+
+    page_content = display_page(content, count, pg)
+
+    return {"predict": predict_result, "page": page_content}
+
+
+async def vector_search_blog(
+    prompt: str,
+    clip_model: clip.OpenCLIP,
+    pg: Page,
+    ss: AsyncSession,
+):
+    async with ss.begin():
+        prompt_vec = clip_model.encode_text(prompt)[0]
+        dist_text = BlogEmbedding.description_embed.l2_distance(prompt_vec)
+        results = await ss.execute(
+            paging(
+                sqla.select(
+                    BlogEmbedding,
+                    dist_text,
+                )
+                .filter(
+                    (dist_text < 0.5),
+                )
+                .order_by(dist_text),
+                pg,
+            )
+        )
+
+        count = (
+            await ss.scalar(
+                sqla.select(sqla.func.count(BlogEmbedding.id)).filter(
+                    (dist_text < 0.5),
                 )
             )
             or 0
         )
 
-        return display_page(content, count, pg)
+        content = []
+
+        for r in results.all():
+            content.append(await __prod_dto(r))
+
+    return display_page(content, count, pg)

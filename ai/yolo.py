@@ -12,10 +12,13 @@ class YOLOEmbed:
         self.model = self.__load_yolo(model_path)
 
     def __load_yolo(self, model_path: str) -> YOLO:
-        return YOLO(model=model_path)
+        return YOLO(model=model_path, verbose=False)
 
     def embed(self, image: list[ImageFile.ImageFile]):
         return self.model.embed(image, stream=False)
+
+    def predict(self, image: list[ImageFile.ImageFile]):
+        return self.model.predict(image, stream=False, verbose=False)
 
 
 class YOLOEmbedStub:

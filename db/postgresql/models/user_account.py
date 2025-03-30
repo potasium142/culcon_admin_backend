@@ -65,6 +65,12 @@ class CommentType(str, Enum):
     REPLY = "REPLY"
 
 
+class CommentStatus(str, Enum):
+    NORMAL = "NORMAL"
+    REPORTED = "REPORTED"
+    DELETED = "DELETED"
+
+
 class PostComment(Base):
     __tablename__: str = "post_comment"
     id: orm.Mapped[str] = orm.mapped_column(
@@ -86,9 +92,8 @@ class PostComment(Base):
     comment: orm.Mapped[str] = orm.mapped_column(
         sqltypes.VARCHAR(255),
     )
-    deleted: orm.Mapped[bool] = orm.mapped_column(
-        sqltypes.BOOLEAN(),
-        default=False,
+    status: orm.Mapped[CommentStatus] = orm.mapped_column(
+        default=CommentStatus.NORMAL,
     )
     comment_type: orm.Mapped[CommentType]
 

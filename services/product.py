@@ -1,491 +1,375 @@
-import re
+from typing import Any
 
-from numpy import ndarray
 import sqlalchemy as sqla
+from sqlalchemy.ext.asyncio import AsyncSession
 from db.postgresql.models.blog import ProductDoc
 from datetime import datetime
 from db.postgresql.models import product as prod
 from db.postgresql.models.order_history import OrderHistoryItems
-from db.postgresql.db_session import db_session
-from sqlalchemy.orm import Session
-from io import BytesIO
 from db.postgresql.models.order_history import OrderHistory
 from dtos.request.product import (
-    ProductCreation,
-    MealKitCreation,
     ProductUpdate,
     MealKitUpdate,
 )
-from ai import clip, yolo
-from PIL import Image, ImageFile
 from etc.local_error import HandledError
-from etc.progress_tracker import ProgressTracker
-from etc import cloudinary
 from sqlalchemy import func
 from db.postgresql.paging import Page, display_page, paging, table_size
 
 
-def read_image(file: bytes) -> ImageFile.ImageFile:
-    return Image.open(BytesIO(file))
-
-
-IMG_DIR = "prod_dir"
-
-
-def __embed_data(
-    yolo_model: yolo.YOLOEmbed,
-    clip_model: clip.OpenCLIP,
-    description: str,
-    main_image: bytes,
-) -> tuple[ndarray, ndarray, ndarray]:
-    images_bytes = [read_image(main_image)]
-
-    description_embed = clip_model.encode_text(description)[0]
-
-    images_embed_clip = clip_model.encode_image(images_bytes)[0]
-
-    images_embed_yolo = yolo_model.embed(images_bytes)[0]
-
-    return description_embed, images_embed_clip, images_embed_yolo
-
-
-def __upload_images(
-    img_dir: str,
-    main_image: bytes,
-    additional_images: list[bytes],
-    pp: ProgressTracker,
-    prog_id: int,
-) -> tuple[str, list[str]]:
-    upload_img_task = pp.new_subtask(prog_id, "Upload image")
-    main_image_url = cloudinary.upload(
-        main_image,
-        img_dir,
-        "main",
-    )
-
-    images_url = [main_image_url]
-
-    for i, img in enumerate(additional_images):
-        img_url = cloudinary.upload(
-            img,
-            img_dir,
-            f"{i + 1}",
-        )
-        images_url.append(img_url)
-        pp.update_subtask(
-            prog_id,
-            upload_img_task,
-            progress=i,
-        )
-
-    pp.close_subtask(prog_id, upload_img_task)
-    return main_image_url, images_url
-
-
-def __create_general_product(
-    prod_id: str,
-    prod_info: ProductCreation,
-    additional_images: list[bytes] | None,
-    main_image: bytes,
-    main_image_url: str,
-    yolo_model: yolo.YOLOEmbed,
-    clip_model: clip.OpenCLIP,
-    pp: ProgressTracker,
-    prog_id: int,
-):
-    embed_task_id = pp.new_subtask(prog_id, "Embedding")
-    description_embed, images_embed_clip, images_embed_yolo = __embed_data(
-        yolo_model,
-        clip_model,
-        prod_info.description,
-        main_image,
-    )
-    pp.close_subtask(
-        prog_id,
-        embed_task_id,
-    )
-
-    save_db_task = pp.new_subtask(prog_id, "Save to db")
-    product = prod.Product(
-        id=prod_id,
-        product_name=prod_info.product_name,
-        available_quantity=0,
-        product_types=prod_info.product_type,
-        product_status=prod.ProductStatus.IN_STOCK,
-        price=prod_info.price,
-        sale_percent=prod_info.sale_percent,
-        image_url=main_image_url,
-    )
-
-    product_price = prod.ProductPriceHistory(
-        price=prod_info.price,
-        sale_percent=prod_info.sale_percent,
-        date=datetime.now(),
-        product_id=prod_id,
-    )
-
-    product_embedded = prod.ProductEmbedding(
-        id=prod_id,
-        images_embed_clip=images_embed_clip,
-        images_embed_yolo=images_embed_yolo,
-        description_embed=description_embed,
-    )
-
-    pp.close_subtask(prog_id, save_db_task)
-
-    return product, product_price, product_embedded
-
-
-def product_creation(
-    prod_info: MealKitCreation | ProductCreation,
-    additional_images: list[bytes],
-    main_image: bytes,
-    yolo_model: yolo.YOLOEmbed,
-    clip_model: clip.OpenCLIP,
-    pp: ProgressTracker,
-    prog_id: int,
-) -> None:
-    try:
-        name = re.sub(r"\s+", "", prod_info.product_name)
-        prod_id = f"{prod_info.product_type}_{name}"
-        image_dir = f"{IMG_DIR}/{prod_id}"
-
-        if db_session.session.get(prod.Product, prod_id) is not None:
-            raise HandledError("Product exist")
-
-        main_image_url, images_url = __upload_images(
-            image_dir,
-            main_image,
-            additional_images,
-            pp,
-            prog_id,
-        )
-
-        product, product_price, product_embedded = __create_general_product(
-            prod_id=prod_id,
-            prod_info=prod_info,
-            additional_images=additional_images,
-            main_image=main_image,
-            main_image_url=main_image_url,
-            yolo_model=yolo_model,
-            clip_model=clip_model,
-            pp=pp,
-            prog_id=prog_id,
-        )
-
-        product_doc = ProductDoc(
-            id=prod_id,
-            description=prod_info.description,
-            infos=prod_info.infos,
-            images_url=images_url,
-            article_md=prod_info.article_md,
-            day_before_expiry=prod_info.day_before_expiry,
-        )
-
-        with db_session.session as ss:
-            if type(prod_info) is MealKitCreation:
-                product_doc.instructions = prod_info.instructions
-
-                for ing in prod_info.ingredients:
-                    ingredient = prod.MealkitIngredients(
-                        mealkit_id=prod_id,
-                        ingredient=ing,
-                    )
-                    ss.add(ingredient)
-
-            product.doc = product_doc
-
-            ss.add(product)
-            ss.add(product_price)
-            ss.add(product_embedded)
-
-            ss.commit()
-
-        pp.complete(
-            prog_id,
-            {"product_id": prod_id},
-        )
-    except Exception as e:
-        pp.halt(prog_id, str(e))
-
-
-def update_info(
+async def update_info(
     prod_id: str,
     prod_info: ProductUpdate | MealKitUpdate,
-) -> None:
-    prod_doc = db_session.session.get(ProductDoc, prod_id)
+    ss: AsyncSession,
+):
+    async with ss.begin():
+        prod_doc = await ss.get_one(ProductDoc, prod_id)
 
-    if not prod_doc:
-        raise HandledError("Product doc not found")
+        prod_doc.day_before_expiry = prod_info.day_before_expiry
+        prod_doc.description = prod_info.description
+        prod_doc.article_md = prod_info.article_md
+        prod_doc.infos = prod_info.infos
 
-    prod_doc.day_before_expiry = prod_info.day_before_expiry
-    prod_doc.description = prod_info.description
-    prod_doc.article_md = prod_info.article_md
-    prod_doc.infos = prod_info.infos
+        if type(prod_info) is MealKitUpdate:
+            prod_doc.instructions = prod_info.instructions
 
-    if type(prod_info) is MealKitUpdate:
-        prod_doc.instructions = prod_info.instructions
-
-        for ing in prod_info.ingredients:
-            ingredient = prod.MealkitIngredients(
-                mealkit_id=prod_id,
-                ingredient=ing,
+            await ss.execute(
+                sqla.delete(prod.MealkitIngredients).where(
+                    prod.MealkitIngredients.mealkit_id == prod_id
+                )
             )
-            db_session.session.add(ingredient)
 
-    db_session.commit()
+            for ing in prod_info.ingredients:
+                ing_exist = (
+                    await ss.scalar(
+                        sqla.select(sqla.exists().where(prod.Product.id == ing))
+                    )
+                    or False
+                )
+
+                if not ing_exist:
+                    raise HandledError(f"Product id {ing} is not exist")
+
+                ingredient = prod.MealkitIngredients(
+                    mealkit_id=prod_id,
+                    ingredient=ing,
+                )
+                ss.add(ingredient)
+
+        await ss.flush()
+
+        doc_refetch = await ss.get_one(ProductDoc, prod_id)
+
+        content: dict[str, Any] = {
+            "id": doc_refetch.id,
+            "description": doc_refetch.description,
+            "infos": doc_refetch.infos,
+            "article_md": doc_refetch.article_md,
+        }
+
+        if type(prod_info) is MealKitUpdate:
+            ingredients = await ss.scalars(
+                sqla.select(prod.MealkitIngredients.ingredient).filter(
+                    prod.MealkitIngredients.mealkit_id == prod_id
+                )
+            )
+            content["instructions"] = doc_refetch.instructions
+            content["ingredients"] = ingredients.all()
+
+    return content
 
 
-def update_price(
+async def update_price(
     prod_id: str,
     price: float,
     sale_percent: float,
+    ss: AsyncSession,
 ):
-    product_price = prod.ProductPriceHistory(
-        price=price,
-        sale_percent=sale_percent,
-        date=datetime.now(),
-        product_id=prod_id,
-    )
+    async with ss.begin():
+        product_price = prod.ProductPriceHistory(
+            price=price,
+            sale_percent=sale_percent,
+            date=datetime.now(),
+            product_id=prod_id,
+        )
 
-    db_session.session.add(product_price)
+        ss.add(product_price)
 
-    product: prod.Product = db_session.session.get(prod.Product, prod_id)
+        product = await ss.get_one(prod.Product, prod_id)
 
-    if not product:
-        raise HandledError("Product not found")
+        product.price = price
+        product.sale_percent = sale_percent
 
-    product.price = price
-    product.sale_percent = sale_percent
+        await ss.flush()
 
-    db_session.commit()
+        price_refetch = await ss.scalar(
+            sqla.select(prod.ProductPriceHistory)
+            .order_by(prod.ProductPriceHistory.date.desc())
+            .limit(1)
+        )
+
+        if not price_refetch:
+            raise HandledError("Price failed to update")
+
+        return {
+            "id": price_refetch.product_id,
+            "price": price_refetch.price,
+            "sale_percent": price_refetch.sale_percent,
+            "date": price_refetch.date,
+        }
 
 
-def restock_product(
+async def restock_product(
     prod_id: str,
     amount: int,
     import_price: float,
+    ss: AsyncSession,
 ):
-    product: prod.Product = db_session.session.get(prod.Product, prod_id)
+    async with ss.begin():
+        product = await ss.get_one(prod.Product, prod_id)
 
-    if not product:
-        raise HandledError("Product not found")
+        product_stock = prod.ProductStockHistory(
+            product_id=product.id,
+            date=datetime.now(),
+            in_price=import_price,
+            in_stock=amount,
+        )
+        product.available_quantity += amount
+        product.product_status = prod.ProductStatus.IN_STOCK
 
-    product_stock = prod.ProductStockHistory(
-        product_id=product.id,
-        date=datetime.now(),
-        in_price=import_price,
-        in_stock=amount,
-    )
-    product.available_quantity += amount
-    product.product_status = prod.ProductStatus.IN_STOCK
+        ss.add(product_stock)
+        await ss.flush()
 
-    db_session.session.add(product_stock)
-    db_session.commit()
+        r = await ss.scalars(
+            sqla.select(prod.ProductStockHistory)
+            .filter(prod.ProductStockHistory.product_id == product.id)
+            .order_by(prod.ProductStockHistory.date.desc())
+            .limit(1)
+        )
 
-    s = db_session.session.scalars(
-        sqla.select(prod.ProductStockHistory)
-        .filter(prod.ProductStockHistory.product_id == product.id)
-        .order_by(prod.ProductStockHistory.date.desc())
-        .limit(1)
-    ).first()
+        s = r.first()
 
-    if not s:
-        raise HandledError("Failed to update price")
+        if not s:
+            raise HandledError("Failed to update price")
 
-    return {
-        "in_date": s.date,
-        "in_price": s.in_price,
-        "in_stock": s.in_stock,
-    }
+        return {
+            "in_date": s.date,
+            "in_price": s.in_price,
+            "in_stock": s.in_stock,
+        }
 
 
-def update_status(
+async def update_status(
     prod_id: str,
     status: prod.ProductStatus,
+    ss: AsyncSession,
 ):
-    product: prod.Product = db_session.session.get(prod.Product, prod_id)
+    async with ss.begin():
+        product = await ss.get_one(prod.Product, prod_id)
 
-    if not product:
-        raise HandledError("Product not found")
+        product.product_status = status
 
-    product.product_status = status
+        await ss.flush()
 
-    db_session.commit()
+        refetch_prod = await ss.get_one(prod.Product, prod_id)
+
+        return {
+            "id": refetch_prod.id,
+            "status": refetch_prod.product_status,
+        }
 
 
-def get_list_mealkit(pg: Page):
-    with db_session.session as ss:
-        products = ss.scalars(
+async def get_list_product(
+    pg: Page,
+    session: AsyncSession,
+    type: prod.ProductType | None = None,
+):
+    async with session as ss, ss.begin():
+        if type:
+            filters = [prod.Product.product_types == type]
+        else:
+            filters = []
+
+        products = await ss.scalars(
             paging(
-                sqla.select(prod.Product).filter(
-                    prod.Product.product_types == prod.ProductType.MEALKIT
-                ),
+                sqla.select(prod.Product).filter(*filters),
                 pg,
             )
         )
 
-        content: list[
-            dict[str, str | float | int | prod.ProductStatus | prod.ProductType]
-        ] = list(
-            map(
-                lambda prod: {
-                    "id": prod.id,
-                    "name": prod.product_name,
-                    "price": prod.price,
-                    "type": prod.product_types,
-                    "status": prod.product_status,
-                    "image_url": prod.image_url,
-                    "available_quantity": prod.available_quantity,
-                },
-                products,
-            )
-        )
+        rtn_products = [
+            {
+                "id": prod.id,
+                "name": prod.product_name,
+                "price": prod.price,
+                "type": prod.product_types,
+                "status": prod.product_status,
+                "image_url": prod.image_url,
+                "available_quantity": prod.available_quantity,
+            }
+            for prod in products
+        ]
 
         count = (
-            ss.scalar(
-                sqla.select(sqla.func.count(prod.Product.id)).filter(
-                    prod.Product.product_types == prod.ProductType.MEALKIT
-                )
+            await ss.scalar(
+                sqla.select(sqla.func.count(prod.Product.id)).filter(*filters)
             )
             or 0
         )
-        return display_page(content, count, pg)
-
-
-def get_list_product(pg: Page):
-    with db_session.session as ss:
-        products = ss.scalars(
-            paging(
-                sqla.select(prod.Product),
-                pg,
-            )
-        )
-
-        rtn_products: list[
-            dict[str, str | float | int | prod.ProductStatus | prod.ProductType]
-        ] = list(
-            map(
-                lambda prod: {
-                    "id": prod.id,
-                    "name": prod.product_name,
-                    "price": prod.price,
-                    "type": prod.product_types,
-                    "status": prod.product_status,
-                    "image_url": prod.image_url,
-                    "available_quantity": prod.available_quantity,
-                },
-                products,
-            )
-        )
-
-        count = table_size(prod.Product.id)
         return display_page(rtn_products, count, pg)
 
 
-def get_product(prod_id: str):
-    with db_session.session as ss:
-        product: prod.Product = ss.get(prod.Product, prod_id)
-
-        product_price = ss.scalars(
-            sqla.select(prod.ProductPriceHistory)
-            .filter(prod.ProductPriceHistory.product_id == prod_id)
-            .order_by(prod.ProductPriceHistory.date.desc())
-            .limit(7)
-        )
-        product_stock = ss.scalars(
-            sqla.select(prod.ProductStockHistory)
-            .filter(prod.ProductStockHistory.product_id == prod_id)
-            .order_by(prod.ProductStockHistory.date.desc())
-            .limit(7)
-        )
+async def get_product(
+    prod_id: str,
+    session: AsyncSession,
+):
+    async with session as ss, ss.begin():
+        product = await ss.get(prod.Product, prod_id)
 
         if not product:
             raise HandledError("Product not found")
 
-        product_doc = product.doc
+        product_doc = await ss.get(ProductDoc, prod_id)
 
         if not product_doc:
             raise HandledError("Product doc not found")
 
-        base_info = {
+        base_info: dict[str, Any] = {
             "id": product.id,
             "product_name": product.product_name,
             "description": product_doc.description,
             "available_quantity": product.available_quantity,
             "product_type": product.product_types,
             "product_status": product.product_status,
-            "price_list": [price.to_list_instance() for price in product_price],
-            "stock_list": [
-                {
-                    "date": s.date,
-                    "import_price": s.in_price,
-                    "import_amount": s.in_stock,
-                }
-                for s in product_stock
-            ],
             "info": product_doc.infos,
             "images_url": product_doc.images_url,
             "article": product_doc.article_md,
             "day_before_expiry": product_doc.day_before_expiry,
         }
 
-        if product_doc.ingredients and product_doc.instructions:
+        if product.product_types == prod.ProductType.MEALKIT:
+            ingredients = await ss.execute(
+                sqla.select(
+                    prod.MealkitIngredients.ingredient,
+                    prod.MealkitIngredients.amount,
+                ).filter(prod.MealkitIngredients.mealkit_id == prod_id)
+            )
+            base_info["ingredients"] = [
+                {"name": i[0], "amount": i[1]} for i in ingredients.all()
+            ]
             base_info["instructions"] = product_doc.instructions
-            base_info["ingredients"] = product_doc.ingredients
 
-        return base_info
+    return base_info
 
 
-def get_top_10_products_month(
-    db: Session, year: int, month: int
+async def get_top_10_products_month(
+    ss: AsyncSession, year: int, month: int
 ) -> list[dict[str, int]]:
-    results = (
-        db.query(
-            prod.Product.product_name.label("product_name"),
-            func.sum(OrderHistoryItems.quantity).label("total_quantity"),
+    async with ss.begin():
+        r = await ss.execute(
+            sqla.select(
+                prod.Product.product_name.label("product_name"),
+                func.sum(OrderHistoryItems.quantity).label("total_quantity"),
+            )
+            .join(
+                OrderHistoryItems,
+                prod.Product.id == OrderHistoryItems.product_id,
+            )
+            .join(
+                OrderHistory,
+                OrderHistory.id == OrderHistoryItems.order_history_id,
+            )
+            .filter(func.extract("year", OrderHistory.order_date) == year)
+            .filter(func.extract("month", OrderHistory.order_date) == month)
+            .group_by(prod.Product.product_name)
+            .order_by(func.sum(OrderHistoryItems.quantity).desc())
+            .limit(10)
         )
-        .join(
-            OrderHistoryItems,
-            prod.Product.id == OrderHistoryItems.product_id,
-        )
-        .join(
-            OrderHistory,
-            OrderHistory.id == OrderHistoryItems.order_history_id,
-        )
-        .filter(func.extract("year", OrderHistory.order_date) == year)
-        .filter(func.extract("month", OrderHistory.order_date) == month)
-        .group_by(prod.Product.product_name)
-        .order_by(func.sum(OrderHistoryItems.quantity).desc())
-        .limit(10)
-        .all()
-    )
-    return [
-        {"product_name": row.product_name, "total_quantity": row.total_quantity}
-        for row in results
-    ]
+
+        results = r.all()
+
+        return [
+            {"product_name": row.product_name, "total_quantity": row.total_quantity}
+            for row in results
+        ]
 
 
-def get_top_10_products_all_time(db: Session) -> list[dict[str, int]]:
-    results = (
-        db.query(
-            prod.Product.product_name.label("product_name"),
-            func.sum(OrderHistoryItems.quantity).label("total_quantity"),
+async def get_top_10_products_all_time(ss: AsyncSession):
+    async with ss.begin():
+        r = await ss.execute(
+            sqla.select(
+                prod.Product.product_name.label("product_name"),
+                func.sum(OrderHistoryItems.quantity).label("total_quantity"),
+            )
+            .join(
+                OrderHistoryItems,
+                prod.Product.id == OrderHistoryItems.product_id,
+            )
+            .join(
+                OrderHistory,
+                OrderHistory.id == OrderHistoryItems.order_history_id,
+            )
+            .group_by(prod.Product.product_name)
+            .order_by(func.sum(OrderHistoryItems.quantity).desc())
+            .limit(10)
         )
-        .join(
-            OrderHistoryItems,
-            prod.Product.id == OrderHistoryItems.product_id,
+        results = r.all()
+
+        return [
+            {"product_name": row.product_name, "total_quantity": row.total_quantity}
+            for row in results
+        ]
+
+
+async def get_product_stock_history(id: str, pg: Page, ss: AsyncSession):
+    async with ss.begin():
+        stock_history = await ss.scalars(
+            paging(
+                sqla.select(prod.ProductStockHistory)
+                .filter(prod.ProductStockHistory.product_id == id)
+                .order_by(prod.ProductStockHistory.date.desc()),
+                pg,
+            )
         )
-        .join(
-            OrderHistory,
-            OrderHistory.id == OrderHistoryItems.order_history_id,
+
+        content = [
+            {
+                "in_date": s.date,
+                "in_price": s.in_price,
+                "in_stock": s.in_stock,
+            }
+            for s in stock_history
+        ]
+
+        count = (
+            await ss.scalar(
+                sqla.select(
+                    sqla.func.count(prod.ProductStockHistory.product_id)
+                ).filter(prod.ProductStockHistory.product_id == id)
+            )
+            or 0
         )
-        .group_by(prod.Product.product_name)
-        .order_by(func.sum(OrderHistoryItems.quantity).desc())
-        .limit(10)
-        .all()
-    )
-    return [
-        {"product_name": row.product_name, "total_quantity": row.total_quantity}
-        for row in results
-    ]
+    return display_page(content, count, pg)
+
+
+async def get_product_price_history(id: str, pg: Page, ss: AsyncSession):
+    async with ss.begin():
+        stock_history = await ss.scalars(
+            paging(
+                sqla.select(prod.ProductPriceHistory)
+                .filter(prod.ProductPriceHistory.product_id == id)
+                .order_by(prod.ProductPriceHistory.date.desc()),
+                pg,
+            )
+        )
+
+        content = [s.to_list_instance() for s in stock_history]
+
+        count = (
+            await ss.scalar(
+                sqla.select(
+                    sqla.func.count(prod.ProductPriceHistory.product_id)
+                ).filter(prod.ProductPriceHistory.product_id == id)
+            )
+            or 0
+        )
+        return display_page(content, count, pg)

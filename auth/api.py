@@ -1,9 +1,10 @@
+from sqlalchemy.ext.asyncio import AsyncSession
 from db.postgresql.models.staff_account import AccountStatus, StaffAccount
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, APIRouter
 from fastapi.security import OAuth2PasswordRequestForm
-from db.postgresql.db_session import db_session
+from db.postgresql.db_session import db_session, get_session
 
 import auth
 import sqlalchemy as sqla
@@ -13,20 +14,28 @@ from auth.token import Token
 
 router = APIRouter(prefix="/api/auth", tags=["Auth"])
 
+Session = Annotated[AsyncSession, Depends(get_session)]
+JWTToken = Annotated[str, Depends(auth.oauth2_scheme)]
+
 
 @router.get("/permission_test")
-async def test(token: Annotated[str, Depends(auth.oauth2_scheme)]):
+async def test(token: JWTToken):
     return token
 
 
 @router.get("/profile")
-async def get_profile(token: Annotated[str, Depends(auth.oauth2_scheme)]):
-    with db_session.session as ss:
-        acc = ss.execute(
+async def get_profile(
+    token: JWTToken,
+    session: Session,
+):
+    async with session as ss, ss.begin():
+        r = await ss.execute(
             sqla.select(StaffAccount).filter(
                 StaffAccount.token == token,
             )
-        ).scalar_one_or_none()
+        )
+
+        acc = r.scalar_one_or_none()
 
         if not acc:
             return {"error": "token is invalid"}
@@ -45,13 +54,16 @@ async def login(
         OAuth2PasswordRequestForm,
         Depends(),
     ],
+    session: Session,
 ) -> Token:
-    with db_session.session as ss:
-        user = ss.execute(
+    async with session as ss, ss.begin():
+        r = await ss.execute(
             sqla.select(StaffAccount).filter(
                 StaffAccount.username == login_form.username
             )
-        ).scalar_one_or_none()
+        )
+
+        user = r.scalar_one_or_none()
 
         if not user:
             raise HTTPException(
@@ -74,19 +86,24 @@ async def login(
 
         user.token = token
 
-        db_session.commit()
+        await db_session.commit()
 
         return Token(access_token=token)
 
 
 @router.post("/logout")
-async def logout(token: str) -> dict[str, str]:
-    with db_session.session as ss:
-        acc = ss.execute(
+async def logout(
+    token: JWTToken,
+    session: Session,
+) -> dict[str, str]:
+    async with session as ss, ss.begin():
+        r = await ss.execute(
             sqla.select(StaffAccount).filter(
                 StaffAccount.token == token,
             )
-        ).scalar_one_or_none()
+        )
+
+        acc = r.scalar_one_or_none()
 
         if not acc:
             raise HTTPException(
@@ -96,7 +113,7 @@ async def logout(token: str) -> dict[str, str]:
 
         acc.token = ""
 
-        db_session.commit()
+        await db_session.commit()
 
         return {
             "message": "Logout successfully",
