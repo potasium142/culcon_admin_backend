@@ -6,7 +6,6 @@ from db.postgresql.models.blog import ProductDoc
 from datetime import datetime
 from db.postgresql.models import product as prod
 from db.postgresql.models.order_history import OrderHistoryItems
-from db.postgresql.db_session import db_session
 from db.postgresql.models.order_history import OrderHistory
 from dtos.request.product import (
     ProductUpdate,
@@ -248,12 +247,15 @@ async def get_product(
         }
 
         if product.product_types == prod.ProductType.MEALKIT:
-            ingredients = await ss.scalars(
-                sqla.select(prod.MealkitIngredients.ingredient).filter(
-                    prod.MealkitIngredients.mealkit_id == prod_id
-                )
+            ingredients = await ss.execute(
+                sqla.select(
+                    prod.MealkitIngredients.ingredient,
+                    prod.MealkitIngredients.amount,
+                ).filter(prod.MealkitIngredients.mealkit_id == prod_id)
             )
-            base_info["ingredients"] = ingredients.all()
+            base_info["ingredients"] = [
+                {"name": i[0], "amount": i[1]} for i in ingredients.all()
+            ]
             base_info["instructions"] = product_doc.instructions
 
     return base_info

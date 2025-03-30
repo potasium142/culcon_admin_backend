@@ -1,3 +1,4 @@
+import re
 from typing import Annotated
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,10 +11,14 @@ from db.postgresql.models.user_account import (
     UserAccountStatus,
 )
 from dtos.request import product as prod
-from fastapi import APIRouter, Depends, File, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Request, UploadFile
 from dtos.request.blog import BlogCreation
 from dtos.request.user_account import EditCustomerAccount, EditCustomerInfo
-from services import product as ps
+from etc.prog_tracker import (
+    ProgressTrackerManager,
+    get_prog_tracker,
+)
+from services import product as ps, product_
 from services import blog
 from services import customer as c_ss
 from services import order as ord_ss
@@ -27,6 +32,7 @@ router = APIRouter(prefix="/api/staff", tags=["Staff function"])
 
 oauth2_scheme = auth.oauth2_scheme
 
+ProgTracker = Annotated[dict[str, ProgressTrackerManager], Depends(get_prog_tracker)]
 
 Paging = Annotated[Page, Depends(page_param)]
 
@@ -38,103 +44,108 @@ async def test(_permission: Permission):
     return "ok"
 
 
-# @router.post(
-#     "/product/create",
-#     tags=["Product"],
-# )
-# async def create_product(
-#     _permission: Permission,
-#     bg_task: BackgroundTasks,
-#     req: Request,
-#     product_detail: prod.ProductCreation,
-#     main_image: Annotated[UploadFile, File(media_type="image")],
-#     additional_images: list[Annotated[UploadFile, File(media_type="image")]]
-#     | None = None,
-# ):
-#     bg_id = pp.new()
-#     yolo_model = req.state.ai_models["yolo"]
-#     clip_model = req.state.ai_models["clip"]
+@router.post(
+    "/product/create",
+    tags=["Product"],
+    response_model=None,
+)
+async def create_product(
+    _: Permission,
+    req: Request,
+    bg_task: BackgroundTasks,
+    product_detail: prod.ProductCreation,
+    main_image: Annotated[UploadFile, File(media_type="image")],
+    ss: Session,
+    ptg: ProgTracker,
+    additional_images: list[Annotated[UploadFile, File(media_type="image")]]
+    | None = None,
+):
+    yolo_model = req.state.ai_models["yolo"]
+    clip_model = req.state.ai_models["clip"]
 
-#     mip = pp.new_subtask(bg_id, "Preloaded main")
+    main_image_preload = await main_image.read()
 
-#     main_image_preload = await main_image.read()
+    additional_images_preload: list[bytes] = []
 
-#     additional_images_preload: list[bytes] = []
+    if additional_images:
+        for f in additional_images:
+            img = await f.read()
+            additional_images_preload.append(img)
 
-#     if additional_images:
-#         for i, f in enumerate(additional_images):
-#             img = await f.read()
-#             additional_images_preload.append(img)
-#             pp.update_subtask(bg_id, mip, progress=i + 1)
+    name = re.sub(r"\s+", "", product_detail.product_name)
+    prog_id = f"{product_detail.product_type}_{name}"
 
-#     pp.close_subtask(
-#         bg_id,
-#         mip,
-#     )
-#     bg_task.add_task(
-#         ps.product_creation,
-#         product_detail,
-#         additional_images_preload,
-#         main_image_preload,
-#         yolo_model,
-#         clip_model,
-#         pp,
-#         bg_id,
-#     )
+    bg_task.add_task(
+        product_.product_creation,
+        product_detail,
+        additional_images_preload,
+        main_image_preload,
+        yolo_model,
+        clip_model,
+        ss,
+        prog_id,
+        ptg,
+    )
 
-#     return {
-#         "progress_id": bg_id,
-#     }
+    return {
+        "progress_id": prog_id,
+    }
 
 
-# @router.post(
-#     "/mealkit/create",
-#     tags=["Product"],
-# )
-# async def create_mealkit(
-#     _permission: Permission,
-#     bg_task: BackgroundTasks,
-#     req: Request,
-#     product_detail: prod.MealKitCreation,
-#     main_image: Annotated[UploadFile, File(media_type="image")],
-#     additional_images: list[Annotated[UploadFile, File(media_type="image")]]
-#     | None = None,
-# ):
-#     bg_id = pp.new()
-#     yolo_model = req.state.ai_models["yolo"]
-#     clip_model = req.state.ai_models["clip"]
+@router.post(
+    "/mealkit/create",
+    tags=["Product"],
+)
+async def create_mealkit(
+    _: Permission,
+    req: Request,
+    bg_task: BackgroundTasks,
+    product_detail: prod.MealKitCreation,
+    main_image: Annotated[UploadFile, File(media_type="image")],
+    ss: Session,
+    ptg: ProgTracker,
+    additional_images: list[Annotated[UploadFile, File(media_type="image")]]
+    | None = None,
+):
+    yolo_model = req.state.ai_models["yolo"]
+    clip_model = req.state.ai_models["clip"]
 
-#     mip = pp.new_subtask(bg_id, "Preloaded main")
+    main_image_preload = await main_image.read()
 
-#     main_image_preload = await main_image.read()
+    additional_images_preload: list[bytes] = []
 
-#     additional_images_preload: list[bytes] = []
+    if additional_images:
+        for f in additional_images:
+            img = await f.read()
+            additional_images_preload.append(img)
 
-#     if additional_images:
-#         for i, f in enumerate(additional_images):
-#             img = await f.read()
-#             additional_images_preload.append(img)
-#             pp.update_subtask(bg_id, mip, progress=i + 1)
+    name = re.sub(r"\s+", "", product_detail.product_name)
+    prog_id = f"{product_detail.product_type}_{name}"
 
-#     pp.close_subtask(
-#         bg_id,
-#         mip,
-#     )
+    bg_task.add_task(
+        product_.product_creation,
+        product_detail,
+        additional_images_preload,
+        main_image_preload,
+        yolo_model,
+        clip_model,
+        ss,
+        prog_id,
+        ptg,
+    )
 
-#     bg_task.add_task(
-#         ps.product_creation,
-#         product_detail,
-#         additional_images_preload,
-#         main_image_preload,
-#         yolo_model,
-#         clip_model,
-#         pp,
-#         bg_id,
-#     )
+    return {
+        "progress_id": prog_id,
+    }
 
-#     return {
-#         "progress_id": bg_id,
-#     }
+
+@router.get("/mealkit/create/fetch/ingredients", tags=["Product"])
+async def fetch_ingredients(
+    _: Permission,
+    ss: Session,
+    pg: Paging,
+):
+    return await product_.get_ingredients_list(pg, ss)
 
 
 @router.post(
@@ -487,17 +498,17 @@ async def get_order(
     return await ord_ss.get_order_detail(id, ss)
 
 
-# @router.get(
-#     "/order/fetch/{id}/items",
-#     tags=["Order"],
-# )
-# async def get_order_items(
-#     _: Permission,
-#     id: str,
-#     pg: Paging,
-#     ss: Session,
-# ):
-#     return await ord_ss.get_order_items(id, pg, ss)
+@router.get(
+    "/order/fetch/{id}/items",
+    tags=["Order"],
+)
+async def get_order_items(
+    _: Permission,
+    id: str,
+    pg: Paging,
+    ss: Session,
+):
+    return await ord_ss.get_order_items(id, pg, ss)
 
 
 @router.post(
@@ -509,11 +520,9 @@ async def accept_order(
     id: str,
     ss: Session,
 ):
-    return await ord_ss.change_order_status(
+    return await ord_ss.accept_order(
         id,
         ss,
-        OrderStatus.ON_CONFIRM,
-        OrderStatus.ON_PROCESSING,
     )
 
 

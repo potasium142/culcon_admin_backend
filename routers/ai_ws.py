@@ -1,8 +1,10 @@
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from typing import Annotated
+from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
 from ollama import AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from db.postgresql.db_session import get_session
 from db.postgresql.models.user_account import UserAccount
-from db.postgresql.paging import db_session
 
 import sqlalchemy as sqla
 from config import env
@@ -12,6 +14,7 @@ router = APIRouter(prefix="/ws", tags=["WebSocket"])
 
 chef_client = AsyncClient(host=env.LLM_ENDPOINT)
 
+Session = Annotated[AsyncSession, Depends(get_session)]
 # cur_usr_amnt = 0
 
 # user_queue: Queue[WebSocket] = Queue()
@@ -21,10 +24,13 @@ chef_client = AsyncClient(host=env.LLM_ENDPOINT)
 async def customer_chat(
     ws: WebSocket,
     token: str,
+    ss: Session,
 ):
-    with db_session.session as ss:
-        user = ss.execute(
-            sqla.select(UserAccount).filter(UserAccount.token == token)
+    async with ss.begin():
+        user = (
+            await ss.execute(
+                sqla.select(UserAccount).filter(UserAccount.token == token)
+            )
         ).scalar_one_or_none()
 
     try:
