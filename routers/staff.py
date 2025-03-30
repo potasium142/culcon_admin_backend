@@ -139,6 +139,15 @@ async def create_mealkit(
     }
 
 
+@router.get("/mealkit/create/fetch/ingredients", tags=["Product"])
+async def fetch_ingredients(
+    _: Permission,
+    ss: Session,
+    pg: Paging,
+):
+    return await product_.get_ingredients_list(pg, ss)
+
+
 @router.post(
     "/product/update/info/prod",
     tags=["Product"],
@@ -511,11 +520,9 @@ async def accept_order(
     id: str,
     ss: Session,
 ):
-    return await ord_ss.change_order_status(
+    return await ord_ss.accept_order(
         id,
         ss,
-        OrderStatus.ON_CONFIRM,
-        OrderStatus.ON_PROCESSING,
     )
 
 

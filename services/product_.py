@@ -6,6 +6,7 @@ from db.postgresql.models.blog import ProductDoc
 import db.postgresql.models.product as prod
 import sqlalchemy as sqla
 
+from db.postgresql.paging import Page, display_page, paging
 from dtos.request.product import MealKitCreation, ProductCreation
 from etc import cloudinary
 from etc.local_error import HandledError
@@ -201,3 +202,37 @@ async def product_creation(
 
     if ptm[prod_id].removable():
         del ptm[prod_id]
+
+
+async def get_ingredients_list(pg: Page, ss: AsyncSession):
+    async with ss.begin():
+        r = await ss.scalars(
+            paging(
+                sqla.select(prod.Product).filter(
+                    prod.Product.product_types != prod.ProductType.MEALKIT
+                ),
+                pg,
+            )
+        )
+        count = (
+            await ss.scalar(
+                sqla.select(
+                    sqla.func.count(prod.Product.id).filter(
+                        prod.Product.product_types != prod.ProductType.MEALKIT
+                    )
+                )
+            )
+            or 0
+        )
+        content = [
+            {
+                "id": p.id,
+                "name": p.product_name,
+                "price": p.price,
+                "sale_percent": p.sale_percent,
+                "stock": p.available_quantity,
+                "type": p.product_types,
+            }
+            for p in r
+        ]
+    return display_page(content, count, pg)

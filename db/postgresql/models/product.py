@@ -35,8 +35,14 @@ class Product(Base):
     product_types: orm.Mapped[ProductType]
     product_status: orm.Mapped[ProductStatus]
     image_url: orm.Mapped[str]
-    price: orm.Mapped[float] = orm.mapped_column(sqltypes.REAL)
-    sale_percent: orm.Mapped[float] = orm.mapped_column(sqltypes.REAL)
+    price: orm.Mapped[float] = orm.mapped_column(
+        sqltypes.REAL,
+        default=0.0,
+    )
+    sale_percent: orm.Mapped[float | None] = orm.mapped_column(
+        sqltypes.REAL,
+        default=0.0,
+    )
     embed: orm.Mapped["ProductEmbedding"] = orm.relationship(
         back_populates="product",
     )
@@ -86,10 +92,11 @@ class MealkitIngredients(Base):
         sqla.ForeignKey(Product.id),
         primary_key=True,
     )
-    ingredient: orm.Mapped[str] = orm.mapped_column(
+    ingredient: orm.Mapped[Product] = orm.mapped_column(
         sqla.ForeignKey(Product.id),
         primary_key=True,
     )
+    amount: orm.Mapped[int] = orm.mapped_column(sqltypes.INTEGER)
 
 
 class ProductEmbedding(Base):

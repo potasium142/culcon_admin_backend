@@ -71,7 +71,7 @@ PRODUCT_DOC_STATEMENT = sqla.text(
 )
 
 PRODUCT_MEALKIT_STATEMENT = sqla.text(
-    "INSERT INTO mealkit_ingredients(mealkit_id, ingredient) VALUES (:mealkit_id, :ingredient)"
+    "INSERT INTO mealkit_ingredients(mealkit_id, ingredient,amount) VALUES (:mealkit_id, :ingredient,1)"
 )
 
 ORDER_HISTORY_STATEMENT = sqla.text(

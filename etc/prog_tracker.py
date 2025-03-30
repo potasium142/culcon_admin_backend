@@ -45,6 +45,7 @@ class ProgressTracker(BaseModel):
     progress: float = 0.0
 
     status: Status = Status.PROCESS
+    current_stage: ProdCrtStg = ProdCrtStg.PREPARE
     error_msg: str = ""
     stage_progress: dict[ProdCrtStg, StageProgress]
 
@@ -97,6 +98,7 @@ class ProgressTrackerManager:
     def update(self, stage_name: ProdCrtStg, stage_prog: int):
         self.updated = True
         self.tracker.stage_progress[stage_name].update_state(stage_prog)
+        self.tracker.current_stage = stage_name
 
         if self.tracker.stage_progress[stage_name].total_stage == stage_prog:
             self.tracker.complete_stage += 1

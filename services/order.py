@@ -1,6 +1,11 @@
 import sqlalchemy as sqla
 from sqlalchemy.ext.asyncio import AsyncSession
-from db.postgresql.models.product import Product, ProductPriceHistory
+from db.postgresql.models.product import (
+    MealkitIngredients,
+    Product,
+    ProductPriceHistory,
+    ProductType,
+)
 from db.postgresql.paging import Page, display_page, paging, table_size
 from db.postgresql.models.order_history import (
     Coupon,
@@ -150,7 +155,6 @@ async def change_order_status(
     ss: AsyncSession,
     prev_status: OrderStatus,
     status: OrderStatus,
-    check_payment: bool = True,
 ):
     async with ss.begin():
         order = await ss.get_one(OrderHistory, id)
@@ -158,20 +162,78 @@ async def change_order_status(
         if order.order_status != prev_status:
             raise HandledError(f"Status of order must be {prev_status}")
 
-        if check_payment:
-            payment_received = order.payment_status == PaymentStatus.RECEIVED
-            cod = order.payment_method == PaymentMethod.COD
+        order.order_status = status
 
-            if cod:
-                if order.payment_status != PaymentStatus.PENDING:
+        await ss.flush()
+
+        order_refetch = await ss.get_one(OrderHistory, id)
+
+        return order.order_status == order_refetch.order_status
+
+
+async def check_mealkit_availability(id: str, ss: AsyncSession):
+    ings = await ss.scalars(
+        sqla.select(MealkitIngredients).filter(MealkitIngredients.mealkit_id == id)
+    )
+
+    oft_prod = []
+
+    for i in ings:
+        p: Product = await i.awaitable_attrs.ingredient
+        if p.available_quantity < i.amount:
+            continue
+
+        oft_prod.append({
+            "id": p.id,
+            "name": p.product_name,
+        })
+
+    return oft_prod
+
+
+async def accept_order(id: str, ss: AsyncSession):
+    async with ss.begin():
+        order = await ss.get_one(OrderHistory, id)
+
+        items = await ss.scalars(
+            sqla.select(OrderHistoryItems).filter(
+                OrderHistoryItems.order_history_id == id
+            )
+        )
+
+        for i in items:
+            p_price: ProductPriceHistory = await i.awaitable_attrs.item
+            prod: Product = await p_price.awaitable_attrs.product
+
+            if prod.product_types == ProductType.MEALKIT:
+                empty_prods = await check_mealkit_availability(prod.id, ss)
+
+                if len(empty_prods) != 0:
                     raise HandledError(
-                        "Illegal payment status (Payment should be PENDING on COD)"
+                        f"Ingredients do not have enough stock : {empty_prods}"
+                    )
+            else:
+                if prod.available_quantity < i.quantity:
+                    raise HandledError(
+                        f"{prod.product_name} does not have enough stock"
                     )
 
+        if order.order_status != OrderStatus.ON_CONFIRM:
+            raise HandledError("Status of order must be ON_CONFIRM")
+
+        payment_received = order.payment_status == PaymentStatus.RECEIVED
+        cod = order.payment_method == PaymentMethod.COD
+
+        if cod:
+            if order.payment_status != PaymentStatus.PENDING:
+                raise HandledError(
+                    "Illegal payment status (Payment should be PENDING on COD)"
+                )
+        else:
             if not payment_received:
                 raise HandledError("Order has not paid")
 
-        order.order_status = status
+        order.order_status = OrderStatus.ON_PROCESSING
 
         await ss.flush()
 

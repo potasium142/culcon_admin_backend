@@ -1,3 +1,4 @@
+from pgvector.sqlalchemy import Vector
 from db.postgresql.models import Base
 from sqlalchemy.dialects import postgresql as psql
 from sqlalchemy import orm
@@ -51,3 +52,14 @@ class Blog(Base):
     infos: orm.Mapped[dict[str, str]] = orm.mapped_column(
         psql.JSONB(),
     )
+    embed: orm.Mapped["BlogEmbedding"] = orm.relationship(back_populates="doc")
+
+
+class BlogEmbedding(Base):
+    __tablename__: str = "blog_embedding"
+    id: orm.Mapped[str] = orm.mapped_column(
+        sqla.ForeignKey(Blog.id),
+        primary_key=True,
+    )
+    description_embed: orm.Mapped[Vector] = orm.mapped_column(Vector(768))
+    doc: orm.Mapped[Blog] = orm.relationship(back_populates="embed")
