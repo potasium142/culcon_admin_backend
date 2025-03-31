@@ -1,7 +1,8 @@
 from uuid import uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from db.postgresql.models.blog import Blog
+from ai.clip import OpenCLIP
+from db.postgresql.models.blog import Blog, BlogEmbedding
 from db.postgresql.models.user_account import (
     CommentStatus,
     CommentType,
@@ -19,6 +20,7 @@ from db.postgresql.paging import Page, display_page, paging, table_size
 
 async def create(
     blog_dto: BlogCreation,
+    clip_model: OpenCLIP,
     thumbnail: bytes,
     ss: AsyncSession,
 ):
@@ -36,7 +38,15 @@ async def create(
             thumbnail=thumbnail_url,
         )
 
+        embed = clip_model.encode_text(blog_dto.description)
+
+        blog_embed = BlogEmbedding(
+            id=id,
+            description_embed=embed,
+        )
+
         ss.add(blog)
+        ss.add(blog_embed)
         await ss.flush()
 
         b_rfetch = await ss.get_one(Blog, id)

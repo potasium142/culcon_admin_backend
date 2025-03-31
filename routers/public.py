@@ -22,6 +22,8 @@ async def search_vec_desc(
     pg: Paging,
     ss: Session,
     type: ProductType | None = None,
+    text_dist: float = 0.5,
+    img_dist: float = 0.8,
 ):
     yolo_model = req.state.ai_models["clip"]
     return await public.vector_search_prompt(
@@ -30,6 +32,8 @@ async def search_vec_desc(
         type,
         pg,
         ss,
+        text_dist,
+        img_dist,
     )
 
 
@@ -40,6 +44,8 @@ async def search_vec_yolo(
     pg: Paging,
     ss: Session,
     type: ProductType | None = None,
+    yolo_dist: float = 1.4,
+    clip_dist: float = 0,
 ):
     yolo_model = req.state.ai_models["yolo"]
     clip_model = req.state.ai_models["clip"]
@@ -53,6 +59,8 @@ async def search_vec_yolo(
         type,
         pg,
         ss,
+        yolo_dist,
+        clip_dist,
     )
 
 
@@ -62,6 +70,7 @@ async def search_vec_blog(
     pg: Paging,
     ss: Session,
     prompt: str,
+    text_dist: float = 0.5,
 ):
     clip_model = req.state.ai_models["clip"]
 
@@ -70,4 +79,5 @@ async def search_vec_blog(
         clip_model,
         pg,
         ss,
+        text_dist,
     )
