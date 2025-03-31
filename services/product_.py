@@ -130,8 +130,11 @@ async def product_creation(
 
     prod_id = prog_id
 
+    is_mealkit = type(prod_info) is MealKitCreation
+
     ptm[prod_id] = ProgressTrackerManager(
         image_amount,
+        len(prod_info.ingredients) if is_mealkit else 0,
     )
 
     async with ss.begin():
@@ -167,22 +170,27 @@ async def product_creation(
             )
             ptm[prod_id].update(ProdCrtStg.CREATE_DOC, 1)
 
-            if type(prod_info) is MealKitCreation:
-                product_doc.instructions = prod_info.instructions
+            if is_mealkit:
+                product_doc.instructions = prod_info.instructions or [""]
+            else:
+                product_doc.instructions = [""]
 
-                for i, ing in enumerate(prod_info.ingredients):
+            ss.add(product)
+            ss.add(product_doc)
+            ss.add(product_embedded)
+
+            await ss.flush()
+
+            if is_mealkit:
+                for i, (ing, amt) in enumerate(prod_info.ingredients.items()):
                     ingredient = prod.MealkitIngredients(
                         mealkit_id=prod_id,
                         ingredient=ing,
+                        amount=amt,
                     )
                     ss.add(ingredient)
 
                     ptm[prod_id].update(ProdCrtStg.SAVING_INGREDIENT, i)
-
-            product.doc = product_doc
-
-            ss.add(product)
-            ss.add(product_embedded)
 
             await ss.flush()
 
