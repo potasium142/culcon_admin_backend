@@ -56,7 +56,6 @@ async def create_product(
     product_detail: prod.ProductCreation,
     main_image: Annotated[UploadFile, File(media_type="image")],
     ss: Session,
-    ptg: ProgTracker,
     additional_images: list[Annotated[UploadFile, File(media_type="image")]]
     | None = None,
 ):
@@ -75,8 +74,7 @@ async def create_product(
     name = re.sub(r"\s+", "", product_detail.product_name)
     prog_id = f"{product_detail.product_type}_{name}"
 
-    bg_task.add_task(
-        product_.product_creation,
+    return await product_.product_creation(
         product_detail,
         additional_images_preload,
         main_image_preload,
@@ -84,12 +82,8 @@ async def create_product(
         clip_model,
         ss,
         prog_id,
-        ptg,
+        bg_task,
     )
-
-    return {
-        "progress_id": prog_id,
-    }
 
 
 @router.post(
@@ -103,7 +97,6 @@ async def create_mealkit(
     product_detail: prod.MealKitCreation,
     main_image: Annotated[UploadFile, File(media_type="image")],
     ss: Session,
-    ptg: ProgTracker,
     additional_images: list[Annotated[UploadFile, File(media_type="image")]]
     | None = None,
 ):
@@ -122,8 +115,7 @@ async def create_mealkit(
     name = re.sub(r"\s+", "", product_detail.product_name)
     prog_id = f"{product_detail.product_type}_{name}"
 
-    bg_task.add_task(
-        product_.product_creation,
+    return await product_.product_creation(
         product_detail,
         additional_images_preload,
         main_image_preload,
@@ -131,12 +123,8 @@ async def create_mealkit(
         clip_model,
         ss,
         prog_id,
-        ptg,
+        bg_task,
     )
-
-    return {
-        "progress_id": prog_id,
-    }
 
 
 @router.get("/mealkit/create/fetch/ingredients", tags=["Product"])
@@ -144,8 +132,9 @@ async def fetch_ingredients(
     _: Permission,
     ss: Session,
     pg: Paging,
+    search: str = "",
 ):
-    return await product_.get_ingredients_list(pg, ss)
+    return await product_.get_ingredients_list(search, pg, ss)
 
 
 @router.post(
@@ -225,14 +214,17 @@ async def update_price(
 )
 async def create_blog(
     _: Permission,
+    req: Request,
     blog_info: BlogCreation,
     main_image: Annotated[UploadFile, File(media_type="image")],
     ss: Session,
 ):
+    clip_model = req.state.ai_models["clip"]
     main_image_preload = await main_image.read()
 
     return await blog.create(
         blog_info,
+        clip_model,
         main_image_preload,
         ss,
     )

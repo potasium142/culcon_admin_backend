@@ -36,6 +36,8 @@ async def vector_search_prompt(
     type: ProductType | None,
     pg: Page,
     ss: AsyncSession,
+    text_dist: float = 0.5,
+    img_dist: float = 0.8,
 ):
     if type:
         filters = [ProductEmbedding.id.like(f"{type}%")]
@@ -52,7 +54,10 @@ async def vector_search_prompt(
                     dist_text,
                     dist_img,
                 )
-                .filter((dist_img < 0.8) | (dist_text < 0.5), *filters)
+                .filter(
+                    (dist_img < img_dist) | (dist_text < text_dist),
+                    *filters,
+                )
                 .order_by(dist_text, dist_img)
                 .limit(70),
                 pg,
@@ -62,7 +67,10 @@ async def vector_search_prompt(
         count = (
             await ss.scalar(
                 sqla.select(sqla.func.count(ProductEmbedding.id))
-                .filter((dist_img < 0.8) | (dist_text < 0.5), *filters)
+                .filter(
+                    (dist_img < img_dist) | (dist_text < text_dist),
+                    *filters,
+                )
                 .limit(70),
             )
             or 0
@@ -83,6 +91,8 @@ async def vector_search_image_yolo(
     type: ProductType | None,
     pg: Page,
     ss: AsyncSession,
+    yolo_dist: float = 1.4,
+    clip_dist: float = 0,
 ):
     image = [read_image(image_bytes)]
     yp = yolo_.predict(image)[0].summary()[0]
@@ -109,7 +119,10 @@ async def vector_search_image_yolo(
                     dist_img_yolo,
                     dist_img_clip,
                 )
-                .filter(dist_img_yolo < 1.4, *filters)
+                .filter(
+                    (dist_img_yolo < yolo_dist) | (dist_img_clip < clip_dist),
+                    *filters,
+                )
                 .order_by(dist_img_clip, dist_img_yolo)
                 .limit(70),
                 pg,
@@ -124,7 +137,10 @@ async def vector_search_image_yolo(
         count = (
             await ss.scalar(
                 sqla.select(sqla.func.count(ProductEmbedding.id))
-                .filter(dist_img_yolo < 1.4, *filters)
+                .filter(
+                    (dist_img_yolo < yolo_dist) | (dist_img_clip < clip_dist),
+                    *filters,
+                )
                 .limit(70),
             )
             or 0
@@ -140,6 +156,7 @@ async def vector_search_blog(
     clip_model: clip.OpenCLIP,
     pg: Page,
     ss: AsyncSession,
+    text_dist: float = 0.5,
 ):
     async with ss.begin():
         prompt_vec = clip_model.encode_text(prompt)[0]
@@ -151,7 +168,7 @@ async def vector_search_blog(
                     dist_text,
                 )
                 .filter(
-                    (dist_text < 0.5),
+                    (dist_text < text_dist),
                 )
                 .order_by(dist_text),
                 pg,
@@ -161,7 +178,7 @@ async def vector_search_blog(
         count = (
             await ss.scalar(
                 sqla.select(sqla.func.count(BlogEmbedding.id)).filter(
-                    (dist_text < 0.5),
+                    (dist_text < text_dist),
                 )
             )
             or 0
