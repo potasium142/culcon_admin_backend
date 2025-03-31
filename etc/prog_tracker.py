@@ -27,7 +27,7 @@ class StageProgress(BaseModel):
         default=0,
         exclude=True,
     )
-    progress: float = 0.0
+    progress: float = 0.0001
 
     def update_state(self, stage: int):
         self.complete_stage = stage
@@ -42,7 +42,7 @@ class ProgressTracker(BaseModel):
         default=0,
         exclude=True,
     )
-    progress: float = 0.0
+    progress: float = 0.0001
 
     status: Status = Status.PROCESS
     current_stage: ProdCrtStg = ProdCrtStg.PREPARE
@@ -91,6 +91,7 @@ class ProgressTrackerManager:
         self.updated = True
         self.complete = True
         self.tracker.status = Status.DONE
+        self.tracker.progress = 1.0
 
     def removable(self):
         return self.tracker.status == Status.DONE

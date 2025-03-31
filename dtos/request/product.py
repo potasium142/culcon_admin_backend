@@ -1,4 +1,4 @@
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, Field, model_validator
 from pydantic_core import from_json
 from db.postgresql.models import product as p
 
@@ -6,8 +6,6 @@ from db.postgresql.models import product as p
 class ProductCreation(BaseModel):
     product_name: str
     product_type: p.ProductType
-    price: float
-    sale_percent: float
     day_before_expiry: int
     description: str
     article_md: str
@@ -23,7 +21,11 @@ class ProductCreation(BaseModel):
 
 class MealKitCreation(ProductCreation):
     instructions: list[str]
-    ingredients: list[str]
+    ingredients: dict[str, int]
+    product_type: p.ProductType = Field(
+        exclude=True,
+        default=p.ProductType.MEALKIT,
+    )
 
     @model_validator(mode="before")
     @classmethod
