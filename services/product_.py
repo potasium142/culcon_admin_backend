@@ -53,7 +53,6 @@ async def __embed_data(
         await ss.flush()
 
 
-
 async def __upload_images(
     prod_id: str,
     main_image: bytes,
@@ -95,32 +94,15 @@ async def __upload_images(
 def __create_general_product(
     prod_id: str,
     prod_info: ProductCreation,
-    # prod_tcker: ProgressTrackerManager,
 ):
-    # description_embed, images_embed_clip, images_embed_yolo = __embed_data(
-    #     yolo_model,
-    #     clip_model,
-    #     prod_info.description,
-    #     main_image,
-    #     prod_tcker,
-    # )
-
     product = prod.Product(
         id=prod_id,
         product_name=prod_info.product_name,
         available_quantity=0,
         product_types=prod_info.product_type,
-        product_status=prod.ProductStatus.IN_STOCK,
+        product_status=prod.ProductStatus.OUT_OF_STOCK,
         image_url="",
     )
-    # prod_tcker.update(ProdCrtStg.CREATE_PRODUCT, 1)
-
-    # product_embedded = prod.ProductEmbedding(
-    #     id=prod_id,
-    #     images_embed_clip=images_embed_clip,
-    #     images_embed_yolo=images_embed_yolo,
-    #     description_embed=description_embed,
-    # )
 
     return product
 
@@ -134,39 +116,22 @@ async def product_creation(
     ss: AsyncSession,
     prog_id: str,
     bg_task: BackgroundTasks,
-    # ptm: dict[str, ProgressTrackerManager],
 ):
-    # image_amount = len(additional_images) + 1
-
     prod_id = prog_id
 
     is_mealkit = type(prod_info) is MealKitCreation
 
-    # ptm[prod_id] = ProgressTrackerManager(
-    #     image_amount,
-    #     len(prod_info.ingredients) if is_mealkit else 0,
-    # )
-
     async with ss.begin():
-        # try:
-
         exist = await ss.scalar(
             sqla.select(sqla.exists().where(prod.Product.id == prod_id))
         )
 
         if exist:
-            # ptm[prod_id].halt("Product is already exist")
             raise HandledError("Product is already exists")
-
-        # ptm[prod_id].update(ProdCrtStg.PREPARE, 1)
 
         product = __create_general_product(
             prod_id=prod_id,
             prod_info=prod_info,
-            # main_image=main_image,
-            # yolo_model=yolo_model,
-            # clip_model=clip_model,
-            # prod_tcker=ptm[prod_id],
         )
 
         product_doc = ProductDoc(
@@ -176,13 +141,8 @@ async def product_creation(
             images_url=[""],
             article_md=prod_info.article_md,
             day_before_expiry=prod_info.day_before_expiry,
+            instructions=prod_info.instructions,
         )
-        # ptm[prod_id].update(ProdCrtStg.CREATE_DOC, 1)
-
-        if is_mealkit:
-            product_doc.instructions = prod_info.instructions or [""]
-        else:
-            product_doc.instructions = [""]
 
         ss.add(product)
         ss.add(product_doc)
@@ -287,6 +247,7 @@ async def get_ingredients_list(search: str, pg: Page, ss: AsyncSession):
                 "sale_percent": p.sale_percent,
                 "stock": p.available_quantity,
                 "type": p.product_types,
+                "image": p.image_url,
             }
             for p in r
         ]
