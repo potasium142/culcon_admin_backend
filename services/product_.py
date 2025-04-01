@@ -100,7 +100,7 @@ def __create_general_product(
         product_name=prod_info.product_name,
         available_quantity=0,
         product_types=prod_info.product_type,
-        product_status=prod.ProductStatus.IN_STOCK,
+        product_status=prod.ProductStatus.OUT_OF_STOCK,
         image_url="",
     )
 
