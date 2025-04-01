@@ -9,6 +9,7 @@ class ProductCreation(BaseModel):
     day_before_expiry: int
     description: str
     article_md: str
+    instructions: list[str]
     infos: dict[str, str]
 
     @model_validator(mode="before")
@@ -20,7 +21,6 @@ class ProductCreation(BaseModel):
 
 
 class MealKitCreation(ProductCreation):
-    instructions: list[str]
     ingredients: dict[str, int]
     product_type: p.ProductType = Field(
         exclude=True,
