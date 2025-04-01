@@ -1,6 +1,10 @@
 from typing import Annotated, Any
 import uuid
-from sqlalchemy.exc import NoResultFound
+from psycopg.errors import ForeignKeyViolation
+from sqlalchemy.exc import (
+    NoResultFound,
+    StatementError,
+)
 import uvicorn
 import traceback
 from fastapi import Cookie, FastAPI, Request
@@ -93,6 +97,19 @@ async def local_error_handler(req: Request, exc: HandledError | NoResultFound):
     )
 
 
+@app.exception_handler(StatementError)
+async def sql_error_handler(req: Request, exc: StatementError):
+    msg = exc.orig.__str__().splitlines()
+    return JSONResponse(
+        status_code=500,
+        content={
+            "api": str(req.url),
+            "message": msg[-1],
+            "message_detail": msg,
+        },
+    )
+
+
 @app.get("/")
 async def read_root(cookie: Annotated[str, Cookie()] = None):
     response = JSONResponse(
@@ -107,6 +124,11 @@ async def read_root(cookie: Annotated[str, Cookie()] = None):
             value=str(uuid.uuid4()),
         )
     return response
+
+
+@app.get("/raise")
+async def ra():
+    raise ForeignKeyViolation()
 
 
 if __name__ == "__main__":
