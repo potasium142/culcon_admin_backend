@@ -195,28 +195,28 @@ async def accept_order(id: str, ss: AsyncSession):
     async with ss.begin():
         order = await ss.get_one(OrderHistory, id)
 
-        items = await ss.scalars(
-            sqla.select(OrderHistoryItems).filter(
-                OrderHistoryItems.order_history_id == id
-            )
-        )
+        # items = await ss.scalars(
+        #     sqla.select(OrderHistoryItems).filter(
+        #         OrderHistoryItems.order_history_id == id
+        #     )
+        # )
 
-        for i in items:
-            p_price: ProductPriceHistory = await i.awaitable_attrs.item
-            prod: Product = await p_price.awaitable_attrs.product
+        # for i in items:
+        #     p_price: ProductPriceHistory = await i.awaitable_attrs.item
+        #     prod: Product = await p_price.awaitable_attrs.product
 
-            if prod.product_types == ProductType.MEALKIT:
-                empty_prods = await check_mealkit_availability(prod.id, ss)
+        #     if prod.product_types == ProductType.MEALKIT:
+        #         empty_prods = await check_mealkit_availability(prod.id, ss)
 
-                if len(empty_prods) != 0:
-                    raise HandledError(
-                        f"Ingredients do not have enough stock : {empty_prods}"
-                    )
-            else:
-                if prod.available_quantity < i.quantity:
-                    raise HandledError(
-                        f"{prod.product_name} does not have enough stock"
-                    )
+        #         if len(empty_prods) != 0:
+        #             raise HandledError(
+        #                 f"Ingredients do not have enough stock : {empty_prods}"
+        #             )
+        #     else:
+        #         if prod.available_quantity < i.quantity:
+        #             raise HandledError(
+        #                 f"{prod.product_name} does not have enough stock"
+        #             )
 
         if order.order_status != OrderStatus.ON_CONFIRM:
             raise HandledError("Status of order must be ON_CONFIRM")
