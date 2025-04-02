@@ -92,7 +92,7 @@ async def vector_search_image_yolo(
     pg: Page,
     ss: AsyncSession,
     yolo_dist: float = 1.4,
-    clip_dist: float = 0,
+    clip_dist: float = 0.5,
 ):
     image = [read_image(image_bytes)]
     yp = yolo_.predict(image)[0].summary()[0]
