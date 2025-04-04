@@ -63,6 +63,7 @@ async def create(
 
 async def edit(
     id: str,
+    clip_model: OpenCLIP,
     blog_dto: BlogCreation,
     ss: AsyncSession,
 ):
@@ -73,6 +74,12 @@ async def edit(
         blog.title = blog_dto.title
         blog.description = blog_dto.description
         blog.infos = blog_dto.infos
+
+        blog_embed = await ss.get_one(BlogEmbedding, id)
+
+        embed = clip_model.encode_text(blog_dto.description)[0]
+
+        blog_embed.description_embed = embed
 
         await ss.flush()
 

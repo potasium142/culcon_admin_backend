@@ -236,11 +236,13 @@ async def create_blog(
 )
 async def edit_blog(
     _: Permission,
+    req: Request,
     id: str,
     blog_info: BlogCreation,
     ss: Session,
 ):
-    return await blog.edit(id, blog_info, ss)
+    clip_model = req.state.ai_models["clip"]
+    return await blog.edit(id, clip_model, blog_info, ss)
 
 
 @router.get(
