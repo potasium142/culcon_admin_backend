@@ -39,6 +39,7 @@ class ProductUpdate(BaseModel):
     day_before_expiry: int
     description: str
     article_md: str
+    instructions: list[str]
     infos: dict[str, str]
 
     @model_validator(mode="before")
@@ -50,7 +51,6 @@ class ProductUpdate(BaseModel):
 
 
 class MealKitUpdate(ProductUpdate):
-    instructions: list[str]
     ingredients: list[str]
 
     @model_validator(mode="before")

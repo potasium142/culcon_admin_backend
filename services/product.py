@@ -2,6 +2,7 @@ from typing import Any
 
 import sqlalchemy as sqla
 from sqlalchemy.ext.asyncio import AsyncSession
+from ai.clip import OpenCLIP
 from db.postgresql.models.blog import ProductDoc
 from datetime import datetime
 from db.postgresql.models import product as prod
@@ -19,6 +20,7 @@ from db.postgresql.paging import Page, display_page, paging, table_size
 async def update_info(
     prod_id: str,
     prod_info: ProductUpdate | MealKitUpdate,
+    clip_model: OpenCLIP,
     ss: AsyncSession,
 ):
     async with ss.begin():
@@ -26,12 +28,17 @@ async def update_info(
 
         prod_doc.day_before_expiry = prod_info.day_before_expiry
         prod_doc.description = prod_info.description
+        prod_doc.instructions = prod_info.instructions
         prod_doc.article_md = prod_info.article_md
         prod_doc.infos = prod_info.infos
 
-        if type(prod_info) is MealKitUpdate:
-            prod_doc.instructions = prod_info.instructions
+        embed = clip_model.encode_text(prod_info.description)[0]
 
+        prod_embed = await ss.get_one(prod.ProductEmbedding, prod_id)
+
+        prod_embed.description_embed = embed
+
+        if type(prod_info) is MealKitUpdate:
             await ss.execute(
                 sqla.delete(prod.MealkitIngredients).where(
                     prod.MealkitIngredients.mealkit_id == prod_id
