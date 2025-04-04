@@ -223,7 +223,7 @@ async def get_ingredients_list(search: str, pg: Page, ss: AsyncSession):
             paging(
                 sqla.select(prod.Product).filter(
                     prod.Product.product_types != prod.ProductType.MEALKIT,
-                    prod.Product.product_name.like(f"%{search}%"),
+                    prod.Product.product_name.ilike(f"%{search}%"),
                 ),
                 pg,
             )
@@ -233,7 +233,7 @@ async def get_ingredients_list(search: str, pg: Page, ss: AsyncSession):
                 sqla.select(
                     sqla.func.count(prod.Product.id).filter(
                         prod.Product.product_types != prod.ProductType.MEALKIT,
-                        prod.Product.product_name.like(f"%{search}%"),
+                        prod.Product.product_name.ilike(f"%{search}%"),
                     )
                 )
             )

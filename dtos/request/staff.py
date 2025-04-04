@@ -1,15 +1,16 @@
 import datetime
-from pydantic import BaseModel
+import re
+from pydantic import BaseModel, EmailStr, Field
 
 
 class EditStaffAccount(BaseModel):
-    username: str
+    username: str = Field(pattern=r"^[A-Za-z0-9_-]+$")
     password: str
 
 
 class EditEmployeeInfo(BaseModel):
-    ssn: str
-    phonenumber: str
+    ssn: str = Field(pattern=r"[0-9]+")
+    phonenumber: str = Field(pattern=r"0[1-9]{2}[0-9]{7}")
     realname: str
-    email: str
+    email: EmailStr
     dob: datetime.date
