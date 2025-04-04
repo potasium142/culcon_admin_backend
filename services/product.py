@@ -251,21 +251,65 @@ async def get_product(
             "images_url": product_doc.images_url,
             "article": product_doc.article_md,
             "day_before_expiry": product_doc.day_before_expiry,
+            "instructions": product_doc.instructions,
         }
 
-        if product.product_types == prod.ProductType.MEALKIT:
-            ingredients = await ss.execute(
+    return base_info
+
+
+async def get_ingredients(prod_id: str, ss: AsyncSession, pg: Page):
+    async with ss.begin():
+        is_mealkit = await ss.scalar(
+            sqla.select(
+                sqla.exists().where(
+                    (prod.Product.id == prod_id)
+                    & (prod.Product.product_types == prod.ProductType.MEALKIT)
+                )
+            )
+        )
+
+        if not is_mealkit:
+            raise HandledError("Product is not a mealkit")
+
+        ingredients = await ss.execute(
+            paging(
                 sqla.select(
                     prod.MealkitIngredients.ingredient,
+                    prod.Product.product_name,
+                    prod.Product.image_url,
                     prod.MealkitIngredients.amount,
-                ).filter(prod.MealkitIngredients.mealkit_id == prod_id)
+                )
+                .filter(prod.MealkitIngredients.mealkit_id == prod_id)
+                .join(
+                    prod.Product,
+                    prod.Product.id == prod.MealkitIngredients.ingredient,
+                ),
+                pg,
             )
-            base_info["ingredients"] = [
-                {"name": i[0], "amount": i[1]} for i in ingredients.all()
-            ]
-            base_info["instructions"] = product_doc.instructions
+        )
 
-    return base_info
+        count = (
+            await ss.scalar(
+                sqla.select(
+                    sqla.func.count(prod.MealkitIngredients.ingredient).filter(
+                        prod.MealkitIngredients.mealkit_id == prod_id
+                    )
+                )
+            )
+            or 0
+        )
+
+        content = []
+
+        for i in ingredients:
+            content.append({
+                "id": i[0],
+                "name": i[1],
+                "image": i[2],
+                "amount": i[3],
+            })
+
+        return display_page(content, count, pg)
 
 
 async def get_top_10_products_month(
