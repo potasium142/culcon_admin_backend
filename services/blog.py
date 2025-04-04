@@ -38,7 +38,7 @@ async def create(
             thumbnail=thumbnail_url,
         )
 
-        embed = clip_model.encode_text(blog_dto.description)
+        embed = clip_model.encode_text(blog_dto.description)[0]
 
         blog_embed = BlogEmbedding(
             id=id,
