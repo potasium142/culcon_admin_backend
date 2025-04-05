@@ -188,12 +188,18 @@ async def get_list_product(
     pg: Page,
     session: AsyncSession,
     type: prod.ProductType | None = None,
+    prod_name: str = "",
 ):
     async with session as ss, ss.begin():
         if type:
-            filters = [prod.Product.product_types == type]
+            filters = [
+                prod.Product.product_types == type,
+                prod.Product.product_name.ilike(f"%{prod_name}%"),
+            ]
         else:
-            filters = []
+            filters = [
+                prod.Product.product_name.ilike(f"%{prod_name}%"),
+            ]
 
         products = await ss.scalars(
             paging(

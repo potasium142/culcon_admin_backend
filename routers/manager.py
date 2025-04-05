@@ -136,8 +136,9 @@ async def read_all_staff(
     _: Permission,
     pg: Paging,
     ss: Session,
+    id: str = "",
 ):
-    staff = await staff_sv.get_all_staff(pg, ss)
+    staff = await staff_sv.get_all_staff(pg, ss, id)
     return staff
 
 
@@ -240,7 +241,7 @@ async def get_predicted_top_products(
         ss, product_model, last_year, last_month
     )
 
-    return PredictedProductsResponse(top_predicted_products=predicted_products) 
+    return PredictedProductsResponse(top_predicted_products=predicted_products)
 
 
 @router.get(

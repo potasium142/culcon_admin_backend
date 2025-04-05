@@ -364,8 +364,9 @@ async def get_list_customer(
     _: Permission,
     pg: Paging,
     ss: Session,
+    id: str = "",
 ):
-    return await c_ss.get_all_customer(pg, ss)
+    return await c_ss.get_all_customer(pg, ss, id)
 
 
 @router.get(
@@ -473,8 +474,9 @@ async def get_all_orders(
     _: Permission,
     pg: Paging,
     ss: Session,
+    id: str,
 ):
-    return await ord_ss.get_all_orders(pg, ss)
+    return await ord_ss.get_all_orders(pg, ss, id)
 
 
 @router.get(
