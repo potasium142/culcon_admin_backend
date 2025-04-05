@@ -163,11 +163,18 @@ async def update_info_prod(
 )
 async def update_info_mk(
     _: Permission,
+    req: Request,
     prod_id: str,
     info: prod.MealKitUpdate,
     ss: Session,
 ):
-    return await ps.update_info(prod_id, info, ss)
+    clip_model = req.state.ai_models["clip"]
+    return await ps.update_info(
+        prod_id,
+        info,
+        clip_model,
+        ss,
+    )
 
 
 @router.patch(
