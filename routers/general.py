@@ -33,6 +33,18 @@ async def get_product(
     return await ps.get_product(prod_id, session)
 
 
+@router.get(
+    "/product/fetch/ingredients",
+    tags=["Product"],
+)
+async def get_ingredients(
+    prod_id: str,
+    session: Session,
+    pg: Paging,
+):
+    return await ps.get_ingredients(prod_id, session, pg)
+
+
 @router.get("/product/fetch_all", tags=["Product"])
 async def get_all_product(
     pg: Paging,

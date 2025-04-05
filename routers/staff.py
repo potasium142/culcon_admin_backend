@@ -143,13 +143,16 @@ async def fetch_ingredients(
 )
 async def update_info_prod(
     _: Permission,
+    req: Request,
     prod_id: str,
     info: prod.ProductUpdate,
     ss: Session,
 ):
+    clip_model = req.state.ai_models["clip"]
     return await ps.update_info(
         prod_id,
         info,
+        clip_model,
         ss,
     )
 
@@ -160,11 +163,18 @@ async def update_info_prod(
 )
 async def update_info_mk(
     _: Permission,
+    req: Request,
     prod_id: str,
     info: prod.MealKitUpdate,
     ss: Session,
 ):
-    return await ps.update_info(prod_id, info, ss)
+    clip_model = req.state.ai_models["clip"]
+    return await ps.update_info(
+        prod_id,
+        info,
+        clip_model,
+        ss,
+    )
 
 
 @router.patch(
@@ -236,11 +246,13 @@ async def create_blog(
 )
 async def edit_blog(
     _: Permission,
+    req: Request,
     id: str,
     blog_info: BlogCreation,
     ss: Session,
 ):
-    return await blog.edit(id, blog_info, ss)
+    clip_model = req.state.ai_models["clip"]
+    return await blog.edit(id, clip_model, blog_info, ss)
 
 
 @router.get(

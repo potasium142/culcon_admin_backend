@@ -171,13 +171,21 @@ async def product_creation(
     #     ptm[prod_id].halt(e.__str__())
 
     bg_task.add_task(
-        product_create_bg,
+        __upload_images,
         prod_id,
-        prod_info,
-        additional_images,
         main_image,
+        additional_images,
+        ss,
+        # ptm[prod_id],
+    )
+
+    bg_task.add_task(
+        __embed_data,
+        prod_id,
         yolo_model,
         clip_model,
+        prod_info.description,
+        main_image,
         ss,
     )
 
@@ -188,33 +196,6 @@ async def product_creation(
 
     # if ptm[prod_id].removable():
     #     del ptm[prod_id]
-
-
-async def product_create_bg(
-    prod_id: str,
-    prod_info: MealKitCreation | ProductCreation,
-    additional_images: list[bytes],
-    main_image: bytes,
-    yolo_model: yolo.YOLOEmbed,
-    clip_model: clip.OpenCLIP,
-    ss: AsyncSession,
-):
-    await __upload_images(
-        prod_id,
-        main_image,
-        additional_images,
-        ss,
-        # ptm[prod_id],
-    )
-
-    await __embed_data(
-        prod_id,
-        yolo_model,
-        clip_model,
-        prod_info.description,
-        main_image,
-        ss,
-    )
 
 
 async def get_ingredients_list(search: str, pg: Page, ss: AsyncSession):
