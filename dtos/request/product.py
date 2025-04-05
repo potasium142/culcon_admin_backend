@@ -51,7 +51,7 @@ class ProductUpdate(BaseModel):
 
 
 class MealKitUpdate(ProductUpdate):
-    ingredients: list[str]
+    ingredients: dict[str, int]
 
     @model_validator(mode="before")
     @classmethod

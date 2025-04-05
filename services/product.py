@@ -45,7 +45,7 @@ async def update_info(
                 )
             )
 
-            for ing in prod_info.ingredients:
+            for ing, amount in prod_info.ingredients.items():
                 ing_exist = (
                     await ss.scalar(
                         sqla.select(sqla.exists().where(prod.Product.id == ing))
@@ -57,8 +57,7 @@ async def update_info(
                     raise HandledError(f"Product id {ing} is not exist")
 
                 ingredient = prod.MealkitIngredients(
-                    mealkit_id=prod_id,
-                    ingredient=ing,
+                    mealkit_id=prod_id, ingredient=ing, amount=amount
                 )
                 ss.add(ingredient)
 
