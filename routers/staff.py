@@ -474,7 +474,7 @@ async def get_all_orders(
     _: Permission,
     pg: Paging,
     ss: Session,
-    id: str,
+    id: str = "",
 ):
     return await ord_ss.get_all_orders(pg, ss, id)
 
