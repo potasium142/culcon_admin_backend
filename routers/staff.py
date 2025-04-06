@@ -476,8 +476,9 @@ async def get_all_orders(
     pg: Paging,
     ss: Session,
     id: str = "",
+    status: OrderStatus | None = None,
 ):
-    return await ord_ss.get_all_orders(pg, ss, id)
+    return await ord_ss.get_all_orders(pg, ss, id, status)
 
 
 @router.get(

@@ -63,12 +63,21 @@ async def get_all_orders(
     pg: Page,
     ss: AsyncSession,
     id: str = "",
+    status: OrderStatus | None = None,
 ):
+    if status:
+        filter_list = [
+            OrderHistory.id.ilike(f"%{id}%"),
+            OrderHistory.order_status == status,
+        ]
+    else:
+        filter_list = [OrderHistory.id.ilike(f"%{id}%")]
+
     async with ss.begin():
         orders = await ss.scalars(
             paging(
                 sqla.select(OrderHistory)
-                .filter(OrderHistory.id.ilike(f"%{id}%"))
+                .filter(*filter_list)
                 .order_by(
                     OrderHistory.order_date.desc(),
                     OrderHistory.order_status.asc(),
@@ -80,9 +89,7 @@ async def get_all_orders(
         content = [order_list_item(o) for o in orders]
         count = (
             await ss.scalar(
-                sqla.select(sqla.func.count(OrderHistory.id)).filter(
-                    OrderHistory.id.ilike(f"%{id}%")
-                )
+                sqla.select(sqla.func.count(OrderHistory.id)).filter(*filter_list)
             )
             or 0
         )
