@@ -327,8 +327,9 @@ async def get_blogs(
     _: Permission,
     pg: Paging,
     ss: Session,
+    title: str = "",
 ):
-    return await blog.get_blog_list(pg, ss)
+    return await blog.get_blog_list(pg, ss, title)
 
 
 @router.get(
