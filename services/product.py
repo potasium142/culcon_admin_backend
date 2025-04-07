@@ -172,6 +172,11 @@ async def update_status(
     async with ss.begin():
         product = await ss.get_one(prod.Product, prod_id)
 
+        match status:
+            case prod.ProductStatus.IN_STOCK:
+                if product.available_quantity == 0:
+                    raise HandledError("Quantity is empty")
+
         product.product_status = status
 
         await ss.flush()

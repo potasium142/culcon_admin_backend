@@ -3,7 +3,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Environment(BaseSettings):
     SECRET_KEY: str = ""
-    TOKEN_EXPIRE_MINUTES: int = 30000
+    TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 5
     DB_URL: str = ""
     DB_URL_SUPA: str = ""
     DB_USERNAME: str = "postgres"
