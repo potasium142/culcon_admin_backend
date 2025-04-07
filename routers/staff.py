@@ -71,9 +71,6 @@ async def create_product(
             img = await f.read()
             additional_images_preload.append(img)
 
-    name = re.sub(r"\s+", "", product_detail.product_name)
-    prog_id = f"{product_detail.product_type}_{name}"
-
     return await product_.product_creation(
         product_detail,
         additional_images_preload,
@@ -81,7 +78,6 @@ async def create_product(
         yolo_model,
         clip_model,
         ss,
-        prog_id,
         bg_task,
     )
 
@@ -112,9 +108,6 @@ async def create_mealkit(
             img = await f.read()
             additional_images_preload.append(img)
 
-    name = re.sub(r"\s+", "", product_detail.product_name)
-    prog_id = f"{product_detail.product_type}_{name}"
-
     return await product_.product_creation(
         product_detail,
         additional_images_preload,
@@ -122,7 +115,6 @@ async def create_mealkit(
         yolo_model,
         clip_model,
         ss,
-        prog_id,
         bg_task,
     )
 

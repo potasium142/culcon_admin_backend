@@ -1,4 +1,6 @@
 from io import BytesIO
+import logging
+import re
 from PIL import Image, ImageFile
 from fastapi import BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,6 +21,10 @@ def read_image(file: bytes) -> ImageFile.ImageFile:
 
 
 IMG_DIR = "prod_dir"
+
+logger = logging.getLogger("uvicorn.info")
+
+prod_regex = re.compile(r"^[A-Za-z0-9 ]+$")
 
 
 async def __embed_data(
@@ -60,12 +66,13 @@ async def __upload_images(
     ss: AsyncSession,
     # prod_tcker: ProgressTrackerManager,
 ):
+    logger.info(f"Being upload image of product : {prod_id}")
     async with ss.begin():
         img_dir = f"{IMG_DIR}/{prod_id}"
         main_image_url = cloudinary.upload(
             main_image,
             img_dir,
-            "main",
+            f"main_{prod_id}",
         )
         # prod_tcker.update(ProdCrtStg.UPLOAD_IMAGE, 1)
 
@@ -75,17 +82,20 @@ async def __upload_images(
             img_url = cloudinary.upload(
                 img,
                 img_dir,
-                f"{i + 1}",
+                f"{i + 1}_{prod_id}",
             )
             images_url.append(img_url)
             # prod_tcker.update(ProdCrtStg.UPLOAD_IMAGE, i + 1)
 
         product = await ss.get_one(prod.Product, prod_id)
 
+        logger.info(f"Writing image to product: {product.id}")
+
         product.image_url = main_image_url
 
         product_doc = await ss.get_one(ProductDoc, prod_id)
 
+        logger.info(f"Writing additional images to product doc: {product_doc.id}")
         product_doc.images_url = images_url
 
         await ss.flush()
@@ -114,10 +124,14 @@ async def product_creation(
     yolo_model: yolo.YOLOEmbed,
     clip_model: clip.OpenCLIP,
     ss: AsyncSession,
-    prog_id: str,
     bg_task: BackgroundTasks,
 ):
-    prod_id = prog_id
+    valid_name = prod_regex.match(prod_info.product_name)
+
+    if not valid_name:
+        raise HandledError("Product name is not valid")
+
+    prod_id = re.sub(r"\s+", "", prod_info.product_name)
 
     is_mealkit = type(prod_info) is MealKitCreation
 
@@ -170,6 +184,7 @@ async def product_creation(
     # except Exception as e:
     #     ptm[prod_id].halt(e.__str__())
 
+    logger.info(f"Running backgroud task for product : {prod_id}")
     bg_task.add_task(
         __upload_images,
         prod_id,
