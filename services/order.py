@@ -59,11 +59,26 @@ def order_list_item(o: OrderHistory):
     }
 
 
-async def get_all_orders(pg: Page, ss: AsyncSession):
+async def get_all_orders(
+    pg: Page,
+    ss: AsyncSession,
+    id: str = "",
+    status: OrderStatus | None = None,
+):
+    if status:
+        filter_list = [
+            OrderHistory.id.ilike(f"%{id}%"),
+            OrderHistory.order_status == status,
+        ]
+    else:
+        filter_list = [OrderHistory.id.ilike(f"%{id}%")]
+
     async with ss.begin():
         orders = await ss.scalars(
             paging(
-                sqla.select(OrderHistory).order_by(
+                sqla.select(OrderHistory)
+                .filter(*filter_list)
+                .order_by(
                     OrderHistory.order_date.desc(),
                     OrderHistory.order_status.asc(),
                 ),
@@ -72,7 +87,12 @@ async def get_all_orders(pg: Page, ss: AsyncSession):
         )
 
         content = [order_list_item(o) for o in orders]
-        count = await table_size(OrderHistory.id, ss)
+        count = (
+            await ss.scalar(
+                sqla.select(sqla.func.count(OrderHistory.id)).filter(*filter_list)
+            )
+            or 0
+        )
     return display_page(content, count, pg)
 
 

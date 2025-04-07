@@ -40,11 +40,11 @@ async def create_coupon(c: CouponCreation, ss: AsyncSession):
         }
 
 
-async def get_all_coupons(pg: Page, ss: AsyncSession):
+async def get_all_coupons(pg: Page, ss: AsyncSession, id: str = ""):
     async with ss.begin():
         coupons = await ss.scalars(
             paging(
-                sqla.select(Coupon),
+                sqla.select(Coupon).filter(Coupon.id.ilike(f"%{id}%")),
                 pg,
             )
         )
@@ -60,7 +60,14 @@ async def get_all_coupons(pg: Page, ss: AsyncSession):
             for c in coupons
         ]
 
-        count = await table_size(Coupon.id, ss)
+        count = (
+            await ss.scalar(
+                sqla.select(sqla.func.count(Coupon.id)).filter(
+                    Coupon.id.ilike(f"%{id}%"),
+                )
+            )
+            or 0
+        )
 
         return display_page(
             coupon_dicts,

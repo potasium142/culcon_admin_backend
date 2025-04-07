@@ -5,7 +5,7 @@ import jwt
 
 SECRET_KEY = env.SECRET_KEY
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = env.TOKEN_EXPIRE_MINUTES
 
 
 def encode(account: StaffAccount, expires_delta: timedelta | None = None):

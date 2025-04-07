@@ -23,12 +23,17 @@ def map_staff_output(s: StaffAccount):
     }
 
 
-async def get_all_staff(pg: Page, ss: AsyncSession):
+async def get_all_staff(
+    pg: Page,
+    ss: AsyncSession,
+    id: str = "",
+):
     async with ss.begin():
         data = await ss.scalars(
             paging(
                 sqla.select(StaffAccount).filter(
                     StaffAccount.type == AccountType.STAFF,
+                    StaffAccount.username.ilike(f"%{id}%"),
                 ),
                 pg,
             )
@@ -44,7 +49,8 @@ async def get_all_staff(pg: Page, ss: AsyncSession):
         count = (
             await ss.scalar(
                 sqla.select(sqla.func.count(StaffAccount.id)).filter(
-                    StaffAccount.type == AccountType.STAFF
+                    StaffAccount.type == AccountType.STAFF,
+                    StaffAccount.username.ilike(f"%{id}%"),
                 )
             )
             or 0

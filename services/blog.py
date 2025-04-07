@@ -204,11 +204,11 @@ async def get_comment(post_id: str, pg: Page, ss: AsyncSession):
         return display_page(content, count, pg)
 
 
-async def get_blog_list(page: Page, ss: AsyncSession):
+async def get_blog_list(page: Page, ss: AsyncSession, title: str = ""):
     async with ss.begin():
         blogs = await ss.scalars(
             paging(
-                sqla.select(Blog),
+                sqla.select(Blog).filter(Blog.title.ilike(f"%{title}%")),
                 page,
             )
         )
@@ -220,7 +220,14 @@ async def get_blog_list(page: Page, ss: AsyncSession):
             }
             for b in blogs
         ]
-        count = await table_size(Blog.id, ss)
+        count = (
+            await ss.scalar(
+                sqla.select(sqla.func.count(Blog.id)).filter(
+                    Blog.title.ilike(f"%{title}%")
+                )
+            )
+            or 0
+        )
         return display_page(content, count, page)
 
 

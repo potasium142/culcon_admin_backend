@@ -172,6 +172,11 @@ async def update_status(
     async with ss.begin():
         product = await ss.get_one(prod.Product, prod_id)
 
+        match status:
+            case prod.ProductStatus.IN_STOCK:
+                if product.available_quantity == 0:
+                    raise HandledError("Quantity is empty")
+
         product.product_status = status
 
         await ss.flush()
@@ -188,12 +193,18 @@ async def get_list_product(
     pg: Page,
     session: AsyncSession,
     type: prod.ProductType | None = None,
+    prod_name: str = "",
 ):
     async with session as ss, ss.begin():
         if type:
-            filters = [prod.Product.product_types == type]
+            filters = [
+                prod.Product.product_types == type,
+                prod.Product.product_name.ilike(f"%{prod_name}%"),
+            ]
         else:
-            filters = []
+            filters = [
+                prod.Product.product_name.ilike(f"%{prod_name}%"),
+            ]
 
         products = await ss.scalars(
             paging(
