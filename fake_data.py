@@ -8,8 +8,6 @@ import random
 from tqdm.auto import tqdm
 import json
 
-from db.postgresql.models import order_history
-
 
 # ========================================================
 URL_DATABASE = "postgresql+psycopg://postgres:postgres@localhost:5432/postgres"

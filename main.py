@@ -1,3 +1,4 @@
+import asyncio
 from typing import Annotated, Any
 import uuid
 from psycopg.errors import ForeignKeyViolation
@@ -24,6 +25,9 @@ from contextlib import asynccontextmanager
 import logging
 import ai
 from fastapi.middleware.cors import CORSMiddleware
+import db.postgresql as db
+
+asyncio.run(db.init_db())
 
 preload: dict[Any, Any] = dict()
 
