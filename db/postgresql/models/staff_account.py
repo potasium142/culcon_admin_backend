@@ -12,6 +12,7 @@ from db.postgresql.models import Base
 class AccountType(Flag):
     MANAGER = 1
     STAFF = 2
+    SHIPPER = 3
 
 
 class AccountStatus(str, Enum):
