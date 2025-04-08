@@ -1,4 +1,3 @@
-import re
 from typing import Annotated
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -540,23 +539,6 @@ async def ship_order(
         ss,
         OrderStatus.ON_PROCESSING,
         OrderStatus.ON_SHIPPING,
-    )
-
-
-@router.post(
-    "/order/shipped/{id}",
-    tags=["Order"],
-)
-async def shipped_order(
-    _: Permission,
-    id: str,
-    ss: Session,
-):
-    return await ord_ss.change_order_status(
-        id,
-        ss,
-        OrderStatus.ON_SHIPPING,
-        OrderStatus.SHIPPED,
     )
 
 

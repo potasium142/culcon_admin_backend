@@ -66,3 +66,10 @@ async def staff_permission(
     session=Depends(get_session),
 ) -> bool:
     return await permission(token, AccountType.MANAGER | AccountType.STAFF, session)
+
+
+async def shipper_permission(
+    token: str = Depends(oauth2_scheme),
+    session=Depends(get_session),
+) -> bool:
+    return await permission(token, AccountType.SHIPPER, session)

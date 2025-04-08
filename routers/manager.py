@@ -1,5 +1,5 @@
 from datetime import date
-from typing import Annotated, Any
+from typing import Annotated
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession

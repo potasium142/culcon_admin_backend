@@ -131,7 +131,9 @@ async def product_creation(
     if not valid_name:
         raise HandledError("Product name is not valid")
 
-    prod_id = re.sub(r"\s+", "", prod_info.product_name)
+    __prod_name = re.sub(r"\s+", "", prod_info.product_name)
+
+    prod_id = f"{prod_info.product_type}_{__prod_name}"
 
     is_mealkit = type(prod_info) is MealKitCreation
 
