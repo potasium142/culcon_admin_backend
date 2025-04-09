@@ -20,7 +20,7 @@ CREDENTIAL_EXCEPTION = HTTPException(
 
 async def permission(
     token: str,
-    type: AccountType,
+    role_list: list[AccountType],
     session: AsyncSession,
 ) -> bool:
     async with session as ss, ss.begin():
@@ -41,7 +41,7 @@ async def permission(
             if account is None:
                 raise CREDENTIAL_EXCEPTION
 
-            if account.type not in type:
+            if account.type not in role_list:
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Insufficient permission",
@@ -58,11 +58,41 @@ async def manager_permission(
     token: str = Depends(oauth2_scheme),
     session=Depends(get_session),
 ) -> bool:
-    return await permission(token, AccountType.MANAGER, session)
+    return await permission(
+        token,
+        [AccountType.MANAGER],
+        session,
+    )
 
 
 async def staff_permission(
     token: str = Depends(oauth2_scheme),
     session=Depends(get_session),
 ) -> bool:
-    return await permission(token, AccountType.MANAGER | AccountType.STAFF, session)
+    return await permission(
+        token,
+        [AccountType.STAFF, AccountType.MANAGER],
+        session,
+    )
+
+
+async def shipper_permission(
+    token: str = Depends(oauth2_scheme),
+    session=Depends(get_session),
+) -> bool:
+    return await permission(token, [AccountType.SHIPPER], session)
+
+
+async def staff_id(
+    token: str = Depends(oauth2_scheme),
+    ss: AsyncSession = Depends(get_session),
+) -> str:
+    async with ss.begin():
+        id = await ss.scalar(
+            sqla.select(StaffAccount.id).filter(StaffAccount.token == token).limit(1)
+        )
+
+        if not id:
+            raise CREDENTIAL_EXCEPTION
+
+        return id

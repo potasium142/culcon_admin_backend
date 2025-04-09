@@ -12,11 +12,14 @@ from db.postgresql.models.blog import Blog
 from db.postgresql.models.product import Product
 
 
-class UserAccountStatus(Enum):
-    NON_ACTIVE = "NON_ACTIVE"
+class UserAccountStatus(str, Enum):
     NORMAL = "NORMAL"
     BANNED = "BANNED"
-    DEACTIVATE = "DEACTIVATE"
+
+
+class OnlineStatus(str, Enum):
+    ONLINE = "ONLINE"
+    OFFLINE = "OFFLINE"
 
 
 class UserAccount(Base):
@@ -33,19 +36,19 @@ class UserAccount(Base):
     status: orm.Mapped[UserAccountStatus]
     address: orm.Mapped[str]
     phone: orm.Mapped[str] = orm.mapped_column(unique=True)
-    profile_pic_uri: orm.Mapped[str]
+    profile_pic_uri: orm.Mapped[str] = orm.mapped_column(
+        default="defaultProfile",
+    )
     profile_description: orm.Mapped[str]
     token: orm.Mapped[str] = orm.mapped_column(unique=True)
     cart: orm.Mapped[list["Cart"]] = orm.relationship(back_populates="user")
-    bookmarked_posts: orm.Mapped[list[str]] = orm.mapped_column(
-        ARRAY(
-            VARCHAR(255),
-        ),
+    online_status: orm.Mapped[OnlineStatus] = orm.mapped_column(
+        default=OnlineStatus.OFFLINE
     )
     order_history: orm.Mapped[list["OrderHistory"]] = orm.relationship(
         back_populates="user"
     )
-    chatlog: orm.Mapped["ChatSession"] = orm.relationship(back_populates="user")
+    chatlog: orm.Mapped["ChatHistory"] = orm.relationship(back_populates="user")
 
 
 class Cart(Base):
@@ -108,3 +111,15 @@ class AccountOTP(Base):
     otp: orm.Mapped[str] = orm.mapped_column(sqltypes.VARCHAR(255))
     activity_type: orm.Mapped[str] = orm.mapped_column(sqltypes.VARCHAR(255))
     otp_expiration: orm.Mapped[datetime] = orm.mapped_column(sqltypes.TIMESTAMP)
+
+
+class Bookmark(Base):
+    __tablename__: str = "bookmark"
+    account_id: orm.Mapped[UserAccount] = orm.mapped_column(
+        sqla.ForeignKey(UserAccount.id),
+        primary_key=True,
+    )
+    blog_id: orm.Mapped[Blog] = orm.mapped_column(
+        sqla.ForeignKey(Blog.id),
+        primary_key=True,
+    )

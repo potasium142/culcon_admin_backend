@@ -1,4 +1,4 @@
-import re
+from datetime import date, time
 from typing import Annotated
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,11 +14,7 @@ from dtos.request import product as prod
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Request, UploadFile
 from dtos.request.blog import BlogCreation
 from dtos.request.user_account import EditCustomerAccount, EditCustomerInfo
-from etc.prog_tracker import (
-    ProgressTrackerManager,
-    get_prog_tracker,
-)
-from services import product as ps, product_
+from services import product as ps, product_, shipper
 from services import blog
 from services import customer as c_ss
 from services import order as ord_ss
@@ -31,8 +27,6 @@ Permission = Annotated[bool, Depends(auth.staff_permission)]
 router = APIRouter(prefix="/api/staff", tags=["Staff function"])
 
 oauth2_scheme = auth.oauth2_scheme
-
-ProgTracker = Annotated[dict[str, ProgressTrackerManager], Depends(get_prog_tracker)]
 
 Paging = Annotated[Page, Depends(page_param)]
 
@@ -544,23 +538,6 @@ async def ship_order(
 
 
 @router.post(
-    "/order/shipped/{id}",
-    tags=["Order"],
-)
-async def shipped_order(
-    _: Permission,
-    id: str,
-    ss: Session,
-):
-    return await ord_ss.change_order_status(
-        id,
-        ss,
-        OrderStatus.ON_SHIPPING,
-        OrderStatus.SHIPPED,
-    )
-
-
-@router.post(
     "/order/cancel/{id}",
     tags=["Order"],
 )
@@ -570,3 +547,58 @@ async def cancel_order(
     ss: Session,
 ):
     return await ord_ss.cancel_order(id, ss)
+
+
+@router.get("/shipper/fetch", tags=["Shipper"])
+async def fetch_shipper(
+    _: Permission,
+    ss: Session,
+    pg: Paging,
+    occupied: bool | None = None,
+    start_shift: time | None = None,
+    end_shift: time | None = None,
+):
+    return await shipper.fetch_shipper(
+        ss,
+        pg,
+        occupied,
+        start_shift,
+        end_shift,
+    )
+
+
+@router.get(
+    "/shipment/fetch",
+    tags=["Order", "Shipper"],
+)
+async def fetch_order(
+    _: Permission,
+    pg: Paging,
+    ss: Session,
+    shipper_id: str,
+    staff_id: str,
+    start_date_confirm: date | None = None,
+    end_date_confirm: date | None = None,
+    start_date_shipping: date | None = None,
+    end_date_shipping: date | None = None,
+):
+    return await shipper.fetch_shippment_from_range(
+        pg,
+        ss,
+        start_date_confirm,
+        end_date_confirm,
+        start_date_shipping,
+        end_date_shipping,
+        shipper_id,
+        staff_id,
+    )
+
+
+@router.put("/shipper/assign", tags=["Shipper"])
+async def assign_shipper(
+    _: Permission,
+    ss: Session,
+    order_id: str,
+    shipper_id: str,
+):
+    return await shipper.assign_shipper(order_id, shipper_id, ss)
