@@ -1,4 +1,4 @@
-from datetime import time
+from datetime import date, time
 from typing import Annotated
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -565,3 +565,40 @@ async def fetch_shipper(
         start_shift,
         end_shift,
     )
+
+
+@router.get(
+    "/shipment/fetch",
+    tags=["Order", "Shipper"],
+)
+async def fetch_order(
+    _: Permission,
+    pg: Paging,
+    ss: Session,
+    shipper_id: str,
+    staff_id: str,
+    start_date_confirm: date | None = None,
+    end_date_confirm: date | None = None,
+    start_date_shipping: date | None = None,
+    end_date_shipping: date | None = None,
+):
+    return await shipper.fetch_shippment_from_range(
+        pg,
+        ss,
+        start_date_confirm,
+        end_date_confirm,
+        start_date_shipping,
+        end_date_shipping,
+        shipper_id,
+        staff_id,
+    )
+
+
+@router.put("/shipper/assign", tags=["Shipper"])
+async def assign_shipper(
+    _: Permission,
+    ss: Session,
+    order_id: str,
+    shipper_id: str,
+):
+    return await shipper.assign_shipper(order_id, shipper_id, ss)

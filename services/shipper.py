@@ -219,21 +219,6 @@ async def set_shift_time(
             occupied=False,
         )
 
-        ss.add(sa)
-
-        await ss.commit()
-
-
-async def edit_shift_time(
-    id: str,
-    start_time: time,
-    end_time: time,
-    ss: AsyncSession,
-):
-    async with ss.begin():
-        sa = await ss.get_one(ShipperAvailbility, id)
-
-        sa.start_shift = start_time
-        sa.end_shift = end_time
+        await ss.merge(sa)
 
         await ss.commit()
