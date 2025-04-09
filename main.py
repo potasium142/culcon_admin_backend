@@ -13,6 +13,7 @@ from fastapi.responses import JSONResponse
 from auth import api as auth_api
 from etc.local_error import HandledError
 from routers import (
+    shipper,
     staff,
     manager,
     general,
@@ -67,6 +68,7 @@ app.include_router(auth_api.router)
 app.include_router(websocket_.router)
 app.include_router(public.router)
 app.include_router(ai_ws.router)
+app.include_router(shipper.router)
 
 
 @app.exception_handler(Exception)

@@ -1,3 +1,4 @@
+from datetime import time
 from typing import Annotated
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,11 +14,7 @@ from dtos.request import product as prod
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Request, UploadFile
 from dtos.request.blog import BlogCreation
 from dtos.request.user_account import EditCustomerAccount, EditCustomerInfo
-from etc.prog_tracker import (
-    ProgressTrackerManager,
-    get_prog_tracker,
-)
-from services import product as ps, product_
+from services import product as ps, product_, shipper
 from services import blog
 from services import customer as c_ss
 from services import order as ord_ss
@@ -30,8 +27,6 @@ Permission = Annotated[bool, Depends(auth.staff_permission)]
 router = APIRouter(prefix="/api/staff", tags=["Staff function"])
 
 oauth2_scheme = auth.oauth2_scheme
-
-ProgTracker = Annotated[dict[str, ProgressTrackerManager], Depends(get_prog_tracker)]
 
 Paging = Annotated[Page, Depends(page_param)]
 
@@ -552,3 +547,21 @@ async def cancel_order(
     ss: Session,
 ):
     return await ord_ss.cancel_order(id, ss)
+
+
+@router.get("/shipper/fetch", tags=["Shipper"])
+async def fetch_shipper(
+    _: Permission,
+    ss: Session,
+    pg: Paging,
+    occupied: bool | None = None,
+    start_shift: time | None = None,
+    end_shift: time | None = None,
+):
+    return await shipper.fetch_shipper(
+        ss,
+        pg,
+        occupied,
+        start_shift,
+        end_shift,
+    )

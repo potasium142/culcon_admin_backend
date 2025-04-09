@@ -8,7 +8,7 @@ from db.postgresql.models import Base
 from db.postgresql.models.staff_account import StaffAccount
 
 
-class ShiperAvailbility(Base):
+class ShipperAvailbility(Base):
     __tablename__ = "shipper_availbility"
     id: orm.Mapped[str] = orm.mapped_column(
         sqla.ForeignKey(StaffAccount.id),
@@ -16,4 +16,4 @@ class ShiperAvailbility(Base):
     )
     start_shift: orm.Mapped[datetime.time] = orm.mapped_column(sqltypes.TIME)
     end_shift: orm.Mapped[datetime.time] = orm.mapped_column(sqltypes.TIME)
-    available: orm.Mapped[bool]
+    occupied: orm.Mapped[bool]
