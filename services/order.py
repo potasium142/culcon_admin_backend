@@ -1,3 +1,4 @@
+from datetime import datetime
 import sqlalchemy as sqla
 from sqlalchemy.ext.asyncio import AsyncSession
 from db.postgresql.models.product import (
@@ -5,13 +6,13 @@ from db.postgresql.models.product import (
     Product,
     ProductPriceHistory,
     ProductStatus,
-    ProductType,
 )
-from db.postgresql.paging import Page, display_page, paging, table_size
+from db.postgresql.paging import Page, display_page, paging
 from db.postgresql.models.order_history import (
     Coupon,
     OrderHistory,
     OrderHistoryItems,
+    OrderProcess,
     OrderStatus,
     PaymentMethod,
     PaymentStatus,
@@ -212,7 +213,7 @@ async def check_mealkit_availability(id: str, ss: AsyncSession):
     return oft_prod
 
 
-async def accept_order(id: str, ss: AsyncSession):
+async def accept_order(id: str, ss: AsyncSession, self_id: str):
     async with ss.begin():
         order = await ss.get_one(OrderHistory, id)
 
@@ -247,6 +248,14 @@ async def accept_order(id: str, ss: AsyncSession):
                 raise HandledError("Order has not paid")
 
         order.order_status = OrderStatus.ON_PROCESSING
+
+        order_process = OrderProcess(
+            order_id=order.id,
+            confirm_date=datetime.now(),
+            process_by=self_id,
+        )
+
+        ss.add(order_process)
 
         await ss.flush()
 

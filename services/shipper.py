@@ -1,13 +1,27 @@
+import asyncio
 from datetime import date, time, datetime
+import logging
 
 
+from fastapi import BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 import sqlalchemy as sqla
 
-from db.postgresql.models.order_history import OrderProcess, ShippingStatus
+from db.postgresql.models.order_history import (
+    OrderHistory,
+    OrderProcess,
+    OrderStatus,
+    PaymentMethod,
+    ShippingStatus,
+)
 from db.postgresql.models.shipper import ShipperAvailbility
+from db.postgresql.models.staff_account import EmployeeInfo
 from db.postgresql.paging import Page, display_page, paging
+from etc import smtp
 from etc.local_error import HandledError
+
+
+logger = logging.getLogger("uvicorn.info")
 
 
 async def fetch_shipper(
@@ -33,9 +47,20 @@ async def fetch_shipper(
                 ShipperAvailbility.end_shift > end_shift,
             )
 
-        shippers = await ss.scalars(
+        shippers = await ss.execute(
             paging(
-                sqla.select(ShipperAvailbility).filter(*filter),
+                sqla.select(
+                    ShipperAvailbility.id,
+                    ShipperAvailbility.start_shift,
+                    ShipperAvailbility.end_shift,
+                    EmployeeInfo.realname,
+                    EmployeeInfo.email,
+                )
+                .filter(*filter)
+                .join(
+                    EmployeeInfo,
+                    EmployeeInfo.account_id == ShipperAvailbility.id,
+                ),
                 pg,
             )
         )
@@ -47,11 +72,13 @@ async def fetch_shipper(
         )
         content = [
             {
-                "id": s.id,
-                "start_ship": s.start_shift,
-                "end_shift": s.end_shift,
+                "id": s[0],
+                "start_ship": s[1],
+                "end_shift": s[2],
+                "name": s[3],
+                "email": s[4],
             }
-            for s in shippers
+            for s in shippers.all()
         ]
         return display_page(content, count, pg)
 
@@ -116,6 +143,7 @@ async def assign_shipper(
     order_id: str,
     shipper_id: str,
     ss: AsyncSession,
+    bg: BackgroundTasks,
 ):
     async with ss.begin():
         shipment = await ss.get_one(OrderProcess, order_id)
@@ -124,15 +152,90 @@ async def assign_shipper(
 
         shiper = await ss.get_one(ShipperAvailbility, shipper_id)
 
+        if shipment.deliver_by == shipper_id:
+            raise HandledError("Shipment already assign to this shipper")
+
         if shiper.occupied:
             raise HandledError("Shipper is occupied")
 
-        if (shiper.start_shift > current_hr) or (shiper.end_shift < current_hr):
+        if (shiper.start_shift > current_hr) or (current_hr > shiper.end_shift):
             raise HandledError("Shipper is not in shift")
 
         shipment.deliver_by = shiper.id
 
+        order_detail: OrderHistory = await shipment.awaitable_attrs.order
+
+        shipper_detail = await ss.get_one(EmployeeInfo, shipper_id)
+
+        bg.add_task(
+            smtp.send_template_email,
+            shipper_detail.email,
+            "New Delivery Request",
+            "shipping_notice",
+            {
+                "shipper_name": shipper_detail.realname,
+                "order_id": order_detail.id,
+                "order_date": order_detail.order_date,
+                "customer_name": order_detail.receiver,
+                "customer_phone": order_detail.phonenumber,
+                "delivery_address": order_detail.delivery_address,
+                "note": order_detail.note,
+                "cod_amount": order_detail.total_price
+                if order_detail.payment_method == PaymentMethod.COD
+                else 0,
+            },
+        )
+
         await ss.commit()
+
+    bg.add_task(
+        __delivery_timeout,
+        order_id,
+        shipper_id,
+        ss,
+    )
+
+    return True
+
+
+async def __delivery_timeout(
+    order_id: str,
+    shipper_id: str,
+    ss: AsyncSession,
+):
+    logger.info(f"Set delivery timeout for {order_id}")
+    await asyncio.sleep(60 * 15)
+    async with ss.begin():
+        shipment = await ss.get_one(OrderProcess, order_id)
+
+        if shipment.status:
+            return
+
+        shipper_detail = await ss.get_one(EmployeeInfo, shipper_id)
+
+        order_detail: OrderHistory = await shipment.awaitable_attrs.order
+
+        shipment.deliver_by = None
+
+        await ss.flush()
+
+        smtp.send_template_email(
+            shipper_detail.email,
+            "New Delivery Request",
+            "delivery_cancellation",
+            {
+                "shipper_name": shipper_detail.realname,
+                "order_id": order_detail.id,
+                "order_date": order_detail.order_date,
+                "customer_name": order_detail.receiver,
+                "customer_phone": order_detail.phonenumber,
+                "delivery_address": order_detail.delivery_address,
+                "note": order_detail.note,
+                "cod_amount": order_detail.total_price
+                if order_detail.payment_method == PaymentMethod.COD
+                else 0,
+            },
+        )
 
 
 async def reject_shipment(
@@ -183,7 +286,11 @@ async def complete_shipment(
         shiper = await ss.get_one(ShipperAvailbility, self_id)
         shiper.occupied = False
 
-        await ss.commit()
+        order: OrderHistory = await shipment.awaitable_attrs.order
+
+        order.order_status = OrderStatus.SHIPPED
+
+        await ss.flush()
 
 
 async def accept_shipment(
@@ -222,3 +329,66 @@ async def set_shift_time(
         await ss.merge(sa)
 
         await ss.commit()
+
+
+async def get_await_order(
+    self_id: str,
+    ss: AsyncSession,
+):
+    async with ss.begin():
+        filter = [
+            OrderProcess.deliver_by == self_id,
+            OrderProcess.status.is_(None),
+        ]
+        o = await ss.scalar(
+            sqla.select(OrderHistory)
+            .select_from(OrderProcess)
+            .filter(*filter)
+            .join(OrderHistory, OrderHistory.id == OrderProcess.order_id)
+            .order_by(OrderProcess.shipping_date.desc())
+            .limit(1),
+        )
+
+        if not o:
+            raise HandledError("Your shipping queue is empty")
+
+        return {
+            "id": o.id,
+            "receiver": o.receiver,
+            "address": o.delivery_address,
+            "phone": o.phonenumber,
+            "note": o.note,
+            "pay": o.total_price if o.payment_method == PaymentMethod.COD else 0,
+        }
+
+
+async def get_current_order(
+    self_id: str,
+    ss: AsyncSession,
+):
+    async with ss.begin():
+        filter = [
+            OrderProcess.deliver_by == self_id,
+            (OrderProcess.status == ShippingStatus.ACCEPTED)
+            | (OrderProcess.status == ShippingStatus.ON_SHIPPING),
+        ]
+        o = await ss.scalar(
+            sqla.select(OrderHistory)
+            .select_from(OrderProcess)
+            .filter(*filter)
+            .join(OrderHistory, OrderHistory.id == OrderProcess.order_id)
+            .order_by(OrderProcess.shipping_date.desc())
+            .limit(1),
+        )
+
+        if not o:
+            raise HandledError("Cannot found order")
+
+        return {
+            "id": o.id,
+            "receiver": o.receiver,
+            "address": o.delivery_address,
+            "phone": o.phonenumber,
+            "note": o.note,
+            "pay": o.total_price if o.payment_method == PaymentMethod.COD else 0,
+        }

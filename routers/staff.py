@@ -32,6 +32,8 @@ Paging = Annotated[Page, Depends(page_param)]
 
 Session = Annotated[AsyncSession, Depends(get_session)]
 
+Id = Annotated[str, Depends(auth.staff_id)]
+
 
 @router.get("/permission_test")
 async def test(_permission: Permission):
@@ -513,11 +515,9 @@ async def accept_order(
     _: Permission,
     id: str,
     ss: Session,
+    self_id: Id,
 ):
-    return await ord_ss.accept_order(
-        id,
-        ss,
-    )
+    return await ord_ss.accept_order(id, ss, self_id)
 
 
 @router.post(
@@ -598,7 +598,8 @@ async def fetch_order(
 async def assign_shipper(
     _: Permission,
     ss: Session,
+    bg_task: BackgroundTasks,
     order_id: str,
     shipper_id: str,
 ):
-    return await shipper.assign_shipper(order_id, shipper_id, ss)
+    return await shipper.assign_shipper(order_id, shipper_id, ss, bg_task)

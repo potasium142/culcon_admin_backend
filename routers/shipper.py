@@ -91,3 +91,25 @@ async def fetch_order(
         end_date_shipping,
         shipper_id=self_id,
     )
+
+
+@router.get(
+    "/order/fetch_current",
+    tags=["Order", "Shipper"],
+)
+async def get_latest_order(
+    self_id: Id,
+    ss: Session,
+):
+    return await sp.get_current_order(self_id, ss)
+
+
+@router.get(
+    "/order/fetch_await",
+    tags=["Order", "Shipper"],
+)
+async def get_await_order(
+    self_id: Id,
+    ss: Session,
+):
+    return await sp.get_await_order(self_id, ss)
