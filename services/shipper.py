@@ -24,6 +24,52 @@ from etc.local_error import HandledError
 logger = logging.getLogger("uvicorn.info")
 
 
+async def fetch_non_assign_shifttime(
+    ss: AsyncSession,
+    pg: Page,
+):
+    async with ss.begin():
+        filter = [
+            ShipperAvailbility.start_shift.is_(None)
+            | ShipperAvailbility.end_shift.is_(None)
+        ]
+
+        shippers = await ss.execute(
+            paging(
+                sqla.select(
+                    ShipperAvailbility.id,
+                    ShipperAvailbility.start_shift,
+                    ShipperAvailbility.end_shift,
+                    EmployeeInfo.realname,
+                    EmployeeInfo.email,
+                )
+                .filter(*filter)
+                .join(
+                    EmployeeInfo,
+                    EmployeeInfo.account_id == ShipperAvailbility.id,
+                ),
+                pg,
+            )
+        )
+        count = (
+            await ss.scalar(
+                sqla.select(sqla.func.count(ShipperAvailbility.id).filter(*filter))
+            )
+            or 0
+        )
+        content = [
+            {
+                "id": s[0],
+                "start_ship": s[1],
+                "end_shift": s[2],
+                "name": s[3],
+                "email": s[4],
+            }
+            for s in shippers.all()
+        ]
+        return display_page(content, count, pg)
+
+
 async def fetch_shipper(
     ss: AsyncSession,
     pg: Page,
@@ -146,17 +192,26 @@ async def assign_shipper(
     bg: BackgroundTasks,
 ):
     async with ss.begin():
-        shipment = await ss.get_one(OrderProcess, order_id)
+        shipment = await ss.get(OrderProcess, order_id)
+
+        if not shipment:
+            raise HandledError("Cannot find shipment")
 
         current_hr = datetime.now().time()
 
-        shiper = await ss.get_one(ShipperAvailbility, shipper_id)
+        shiper = await ss.get(ShipperAvailbility, shipper_id)
+
+        if not shiper:
+            raise HandledError("Cannot find shipper")
 
         if shipment.deliver_by == shipper_id:
             raise HandledError("Shipment already assign to this shipper")
 
         if shiper.occupied:
             raise HandledError("Shipper is occupied")
+
+        if (shiper.start_shift is None) or (shiper.end_shift is None):
+            raise HandledError("Shipper was not assign shift time")
 
         if (shiper.start_shift > current_hr) or (current_hr > shiper.end_shift):
             raise HandledError("Shipper is not in shift")
@@ -221,7 +276,7 @@ async def __delivery_timeout(
 
         smtp.send_template_email(
             shipper_detail.email,
-            "New Delivery Request",
+            "Delivery Request Cancelled",
             "delivery_cancellation",
             {
                 "shipper_name": shipper_detail.realname,

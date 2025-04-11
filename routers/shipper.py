@@ -3,8 +3,6 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from db.postgresql.models.order_history import OrderStatus
-from services import order as ord_ss
 from services import shipper as sp
 
 import auth
@@ -98,6 +96,7 @@ async def fetch_order(
     tags=["Order", "Shipper"],
 )
 async def get_latest_order(
+    _: Permission,
     self_id: Id,
     ss: Session,
 ):
@@ -109,6 +108,7 @@ async def get_latest_order(
     tags=["Order", "Shipper"],
 )
 async def get_await_order(
+    _: Permission,
     self_id: Id,
     ss: Session,
 ):

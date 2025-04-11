@@ -80,7 +80,7 @@ async def shipper_permission(
     token: str = Depends(oauth2_scheme),
     session=Depends(get_session),
 ) -> bool:
-    return await permission(token, [AccountType.SHIPPER], session)
+    return await permission(token, [AccountType.SHIPPER, AccountType.MANAGER], session)
 
 
 async def staff_id(

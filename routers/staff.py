@@ -549,6 +549,18 @@ async def cancel_order(
     return await ord_ss.cancel_order(id, ss)
 
 
+@router.get("/shipper/non_shift", tags=["Shipper"])
+async def fetch_non_shift(
+    _: Permission,
+    ss: Session,
+    pg: Paging,
+):
+    return await shipper.fetch_non_assign_shifttime(
+        ss,
+        pg,
+    )
+
+
 @router.get("/shipper/fetch", tags=["Shipper"])
 async def fetch_shipper(
     _: Permission,

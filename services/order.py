@@ -7,6 +7,7 @@ from db.postgresql.models.product import (
     ProductPriceHistory,
     ProductStatus,
 )
+from db.postgresql.models.transaction import PaymentTransaction
 from db.postgresql.paging import Page, display_page, paging
 from db.postgresql.models.order_history import (
     Coupon,
@@ -18,6 +19,7 @@ from db.postgresql.models.order_history import (
     PaymentStatus,
 )
 from etc.local_error import HandledError
+from etc.paypal import payment_controller
 
 
 async def __order_detail_json(
@@ -282,7 +284,18 @@ async def cancel_order(id: str, ss: AsyncSession):
             )
         )
 
-        # TODO:refund
+        if order.payment_method == PaymentMethod.PAYPAL:
+            payment_record = await ss.get_one(PaymentTransaction, id)
+
+            refund_capture = payment_controller.refund_captured_payment({
+                "capture_id": payment_record.payment_id,
+                "prefer": "return=minimal",
+            })
+
+            payment_record.refund_id = refund_capture.body.id  # type: ignore
+
+            payment_record.status = PaymentStatus.REFUNDED
+
         for i in items:
             amount = i.quantity
             prod_price: ProductPriceHistory = await i.awaitable_attrs.item
