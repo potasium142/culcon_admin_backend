@@ -1,6 +1,7 @@
 import asyncio
 from datetime import date, time, datetime
 import logging
+import pytz
 
 
 from fastapi import BackgroundTasks
@@ -197,7 +198,7 @@ async def assign_shipper(
         if not shipment:
             raise HandledError("Cannot find shipment")
 
-        current_hr = datetime.now().time()
+        current_hr = datetime.now(pytz.timezone("Asia/Saigon")).time()
 
         shiper = await ss.get(ShipperAvailbility, shipper_id)
 
@@ -395,13 +396,12 @@ async def get_await_order(
             OrderProcess.deliver_by == self_id,
             OrderProcess.status.is_(None),
         ]
-        o = await ss.scalar(
+        o = await ss.scalars(
             sqla.select(OrderHistory)
             .select_from(OrderProcess)
             .filter(*filter)
             .join(OrderHistory, OrderHistory.id == OrderProcess.order_id)
             .order_by(OrderProcess.shipping_date.desc())
-            .limit(1),
         )
 
         if not o:
