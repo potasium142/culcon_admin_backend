@@ -217,8 +217,17 @@ async def get_chat_queue(
 
 
 @router.get("/chat/list")
-async def get_all_chat_customer(pg: Paging, ss: Session):
+async def get_all_chat_customer(
+    pg: Paging,
+    ss: Session,
+    username: str | None = None,
+):
     async with ss.begin():
+        filter = []
+
+        if username:
+            filter.append(UserAccount.username == username)
+
         c_list = (
             await ss.execute(
                 paging(
@@ -227,13 +236,22 @@ async def get_all_chat_customer(pg: Paging, ss: Session):
                         UserAccount.username,
                         UserAccount.profile_pic_uri,
                         UserAccount.online_status,
-                    ),
+                    ).filter(*filter),
                     pg,
                 )
             )
         ).all()
 
-        count = await table_size(UserAccount.id, ss)
+        count = (
+            await ss.scalar(
+                sqla.select(
+                    sqla.func.count(UserAccount.id).filter(
+                        *filter,
+                    )
+                )
+            )
+            or 0
+        )
 
         content = []
         for ci in c_list:

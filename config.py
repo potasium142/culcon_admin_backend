@@ -21,6 +21,8 @@ class Environment(BaseSettings):
     SMTP_PASSWORD: str = ""
     SENDER_EMAIL: str = ""
     SENDER_NAME: str = "Culinary Connect"
+    PAYPAL_CLIENT_ID: str = ""
+    PAYPAL_CLIENT_SECRET: str = ""
     model_config = SettingsConfigDict(env_file="dev.env")
 
 

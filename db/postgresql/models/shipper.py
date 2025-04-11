@@ -14,6 +14,10 @@ class ShipperAvailbility(Base):
         sqla.ForeignKey(StaffAccount.id),
         primary_key=True,
     )
-    start_shift: orm.Mapped[datetime.time] = orm.mapped_column(sqltypes.TIME)
-    end_shift: orm.Mapped[datetime.time] = orm.mapped_column(sqltypes.TIME)
-    occupied: orm.Mapped[bool]
+    start_shift: orm.Mapped[datetime.time | None] = orm.mapped_column(
+        sqltypes.TIME, default=None
+    )
+    end_shift: orm.Mapped[datetime.time | None] = orm.mapped_column(
+        sqltypes.TIME, default=None
+    )
+    occupied: orm.Mapped[bool] = orm.mapped_column(default=False)
