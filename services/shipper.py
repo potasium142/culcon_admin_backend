@@ -193,6 +193,19 @@ async def assign_shipper(
     bg: BackgroundTasks,
 ):
     async with ss.begin():
+        already_assign = await ss.scalar(
+            sqla.select(
+                sqla.exists().where(
+                    OrderProcess.deliver_by == shipper_id,
+                    (OrderProcess.status == ShippingStatus.REJECTED)
+                    | (OrderProcess.status == ShippingStatus.DELIVERED),
+                )
+            )
+        )
+
+        if already_assign:
+            raise HandledError("Shipper already assign to another order")
+
         shipment = await ss.get(OrderProcess, order_id)
 
         if not shipment:
@@ -355,6 +368,11 @@ async def accept_shipment(
     ss: AsyncSession,
 ):
     async with ss.begin():
+        shiper = await ss.get_one(ShipperAvailbility, self_id)
+
+        if shiper.occupied:
+            raise HandledError("You already deliver an order")
+
         shipment = await ss.get_one(OrderProcess, order_id)
 
         if shipment.deliver_by != self_id:
@@ -362,7 +380,6 @@ async def accept_shipment(
 
         shipment.status = ShippingStatus.ACCEPTED
 
-        shiper = await ss.get_one(ShipperAvailbility, self_id)
         shiper.occupied = True
 
         await ss.commit()
@@ -374,6 +391,15 @@ async def set_shift_time(
     end_time: time,
     ss: AsyncSession,
 ):
+    if start_time > end_time:
+        raise HandledError("Start time must be before end time")
+
+    if start_time < time(8):
+        raise HandledError("Start shift had to be after 8 AM")
+
+    if end_time > time(23):
+        raise HandledError("End shift had to be before 11 PM")
+
     async with ss.begin():
         sa = ShipperAvailbility(
             id=id,
@@ -396,7 +422,7 @@ async def get_await_order(
             OrderProcess.deliver_by == self_id,
             OrderProcess.status.is_(None),
         ]
-        o = await ss.scalars(
+        o = await ss.scalar(
             sqla.select(OrderHistory)
             .select_from(OrderProcess)
             .filter(*filter)

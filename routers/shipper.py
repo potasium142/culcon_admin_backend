@@ -3,7 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from services import shipper as sp
+from services import order, shipper as sp
 
 import auth
 from db.postgresql.db_session import get_session
@@ -67,7 +67,7 @@ async def accept_shipping_order(
 
 
 @router.get(
-    "/order/fetch",
+    "/order/fetch/summary",
     tags=["Order", "Shipper"],
 )
 async def fetch_order(
@@ -92,7 +92,7 @@ async def fetch_order(
 
 
 @router.get(
-    "/order/fetch_current",
+    "/order/fetch/current",
     tags=["Order", "Shipper"],
 )
 async def get_latest_order(
@@ -104,7 +104,7 @@ async def get_latest_order(
 
 
 @router.get(
-    "/order/fetch_await",
+    "/order/fetch/await",
     tags=["Order", "Shipper"],
 )
 async def get_await_order(
@@ -113,3 +113,28 @@ async def get_await_order(
     ss: Session,
 ):
     return await sp.get_await_order(self_id, ss)
+
+
+@router.get(
+    "/order/fetch/detail/{id}",
+    tags=["Order", "Shipper"],
+)
+async def get_order_detail(
+    _: Permission,
+    id: str,
+    ss: Session,
+):
+    return await order.get_order_detail(id, ss)
+
+
+@router.get(
+    "/order/fetch/items/{id}",
+    tags=["Order", "Shipper"],
+)
+async def get_order_item(
+    _: Permission,
+    id: str,
+    pg: Paging,
+    ss: Session,
+):
+    return await order.get_order_items(id, pg, ss)
