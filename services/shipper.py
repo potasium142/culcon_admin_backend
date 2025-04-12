@@ -495,7 +495,6 @@ async def get_await_order(
                 OrderHistory,
                 OrderHistory.id == ShipperAvailbility.current_order,
             )
-            .order_by(OrderProcess.shipping_date.desc())
             .limit(1)
         )
 
@@ -530,7 +529,6 @@ async def get_current_order(
                 OrderHistory,
                 OrderHistory.id == ShipperAvailbility.current_order,
             )
-            .order_by(OrderProcess.shipping_date.desc())
             .limit(1)
         )
 
