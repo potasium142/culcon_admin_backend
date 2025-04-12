@@ -73,7 +73,7 @@ async def fetch_non_assign_shifttime(
 async def fetch_shipper(
     ss: AsyncSession,
     pg: Page,
-    status: ShipperAvailbility | None = None,
+    status: ShipperStatus | None = None,
     start_shift: time | None = None,
     end_shift: time | None = None,
 ):
@@ -94,9 +94,7 @@ async def fetch_shipper(
         shippers = await ss.execute(
             paging(
                 sqla.select(
-                    ShipperAvailbility.id,
-                    ShipperAvailbility.start_shift,
-                    ShipperAvailbility.end_shift,
+                    ShipperAvailbility,
                     EmployeeInfo.realname,
                     EmployeeInfo.email,
                 )
@@ -116,11 +114,13 @@ async def fetch_shipper(
         )
         content = [
             {
-                "id": s[0],
-                "start_ship": s[1],
-                "end_shift": s[2],
-                "name": s[3],
-                "email": s[4],
+                "id": s[0].id,
+                "name": s[1],
+                "email": s[2],
+                "start_shift": s[0].start_shift,
+                "end_shift": s[0].end_shift,
+                "current_order": s[0].current_order,
+                "status": s[0].status,
             }
             for s in shippers.all()
         ]
@@ -461,7 +461,7 @@ async def set_shift_time(
             id=id,
             start_shift=start_time,
             end_shift=end_time,
-            occupied=False,
+            status=ShipperStatus.IDLE,
         )
 
         await ss.merge(sa)

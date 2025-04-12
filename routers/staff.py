@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.postgresql.db_session import get_session
 from db.postgresql.models.order_history import OrderStatus
+from db.postgresql.models.shipper import ShipperStatus
 from db.postgresql.models.user_account import (
     CommentStatus,
     CommentType,
@@ -566,14 +567,14 @@ async def fetch_shipper(
     _: Permission,
     ss: Session,
     pg: Paging,
-    occupied: bool | None = None,
+    status: ShipperStatus | None = None,
     start_shift: time | None = None,
     end_shift: time | None = None,
 ):
     return await shipper.fetch_shipper(
         ss,
         pg,
-        occupied,
+        status,
         start_shift,
         end_shift,
     )
