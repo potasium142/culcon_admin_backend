@@ -101,6 +101,7 @@ class ShippingStatus(str, Enum):
     REJECTED = "REJECTED"
     ON_SHIPPING = "ON_SHIPPING"
     DELIVERED = "DELIVERED"
+    ASSIGN = "ASSIGN"
 
 
 class OrderProcess(Base):

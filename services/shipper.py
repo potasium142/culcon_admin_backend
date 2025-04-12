@@ -197,8 +197,10 @@ async def assign_shipper(
             sqla.select(
                 sqla.exists().where(
                     OrderProcess.deliver_by == shipper_id,
-                    (OrderProcess.status == ShippingStatus.REJECTED)
-                    | (OrderProcess.status == ShippingStatus.DELIVERED),
+                    OrderProcess.status.is_(None)
+                    | (OrderProcess.status == ShippingStatus.ASSIGN)
+                    | (OrderProcess.status == ShippingStatus.ON_SHIPPING)
+                    | (OrderProcess.status == ShippingStatus.ACCEPTED),
                 )
             )
         )
@@ -218,9 +220,10 @@ async def assign_shipper(
         if not shiper:
             raise HandledError("Cannot find shipper")
 
-        if shipment.deliver_by == shipper_id:
+        if (str(shipment.deliver_by) == shipper_id) and (
+            shipment.status != ShippingStatus.REJECTED
+        ):
             raise HandledError("Shipment already assign to this shipper")
-
         if shiper.occupied:
             raise HandledError("Shipper is occupied")
 
@@ -379,6 +382,7 @@ async def accept_shipment(
             raise HandledError("Order does not deliver by you")
 
         shipment.status = ShippingStatus.ACCEPTED
+        shipment.shipping_date = datetime.now()
 
         shiper.occupied = True
 
@@ -410,7 +414,15 @@ async def set_shift_time(
 
         await ss.merge(sa)
 
-        await ss.commit()
+        await ss.flush()
+
+        rf = await ss.get_one(ShipperAvailbility, id)
+
+    return {
+        "id": rf.id,
+        "start_time": rf.start_shift,
+        "end_time": rf.end_shift,
+    }
 
 
 async def get_await_order(
