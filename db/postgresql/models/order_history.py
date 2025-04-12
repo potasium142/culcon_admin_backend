@@ -96,14 +96,6 @@ class OrderHistory(Base):
     process: orm.Mapped["OrderProcess"] = orm.relationship(back_populates="order")
 
 
-class ShippingStatus(str, Enum):
-    ACCEPTED = "ACCEPTED"
-    REJECTED = "REJECTED"
-    ON_SHIPPING = "ON_SHIPPING"
-    DELIVERED = "DELIVERED"
-    ASSIGN = "ASSIGN"
-
-
 class OrderProcess(Base):
     __tablename__ = "order_process"
     order_id: orm.Mapped[str] = orm.mapped_column(
@@ -122,5 +114,4 @@ class OrderProcess(Base):
     deliver_by: orm.Mapped[str | None] = orm.mapped_column(
         sqla.ForeignKey(StaffAccount.id), default=None
     )
-    status: orm.Mapped[ShippingStatus | None] = orm.mapped_column(default=None)
     order: orm.Mapped[OrderHistory] = orm.relationship(back_populates="process")
