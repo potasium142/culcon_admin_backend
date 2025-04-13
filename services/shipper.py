@@ -429,7 +429,7 @@ async def accept_shipment(
         if not shipper_:
             raise HandledError("This order was not assigned to you")
 
-        if shipper_.status != ShipperStatus.ACCEPTED:
+        if shipper_.status != ShipperStatus.ASSIGN:
             raise HandledError("You already deliver this order")
 
         shipment = await ss.get_one(OrderProcess, order_id)
