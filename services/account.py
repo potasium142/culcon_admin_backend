@@ -1,5 +1,8 @@
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from db.postgresql.models.shipper import ShipperAvailbility
+from db.postgresql.models.staff_account import AccountType, StaffAccount
+import sqlalchemy as sqla
 from dtos.request.account import AccountCreateDto
 from datetime import timedelta
 
@@ -24,7 +27,25 @@ async def create_account(
 
             ss.add(account)
 
-            await ss.commit()
+            await ss.flush()
+
+            if account.type == AccountType.SHIPPER:
+                acc_id = await ss.scalar(
+                    sqla.select(StaffAccount.id)
+                    .filter(
+                        StaffAccount.type == AccountType.SHIPPER,
+                        StaffAccount.token == token,
+                    )
+                    .limit(1)
+                )
+
+                if not acc_id:
+                    raise HandledError("Cannot find account after created")
+
+                shipper_info = ShipperAvailbility(id=acc_id)
+
+                ss.add(shipper_info)
+                await ss.flush()
 
         except IntegrityError as e:
             raise HandledError(e._message())

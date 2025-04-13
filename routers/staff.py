@@ -1,10 +1,11 @@
-import re
+from datetime import date, time
 from typing import Annotated
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.postgresql.db_session import get_session
 from db.postgresql.models.order_history import OrderStatus
+from db.postgresql.models.shipper import ShipperStatus
 from db.postgresql.models.user_account import (
     CommentStatus,
     CommentType,
@@ -14,11 +15,7 @@ from dtos.request import product as prod
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Request, UploadFile
 from dtos.request.blog import BlogCreation
 from dtos.request.user_account import EditCustomerAccount, EditCustomerInfo
-from etc.prog_tracker import (
-    ProgressTrackerManager,
-    get_prog_tracker,
-)
-from services import product as ps, product_
+from services import product as ps, product_, shipper
 from services import blog
 from services import customer as c_ss
 from services import order as ord_ss
@@ -32,11 +29,11 @@ router = APIRouter(prefix="/api/staff", tags=["Staff function"])
 
 oauth2_scheme = auth.oauth2_scheme
 
-ProgTracker = Annotated[dict[str, ProgressTrackerManager], Depends(get_prog_tracker)]
-
 Paging = Annotated[Page, Depends(page_param)]
 
 Session = Annotated[AsyncSession, Depends(get_session)]
+
+Id = Annotated[str, Depends(auth.staff_id)]
 
 
 @router.get("/permission_test")
@@ -71,9 +68,6 @@ async def create_product(
             img = await f.read()
             additional_images_preload.append(img)
 
-    name = re.sub(r"\s+", "", product_detail.product_name)
-    prog_id = f"{product_detail.product_type}_{name}"
-
     return await product_.product_creation(
         product_detail,
         additional_images_preload,
@@ -81,7 +75,6 @@ async def create_product(
         yolo_model,
         clip_model,
         ss,
-        prog_id,
         bg_task,
     )
 
@@ -112,9 +105,6 @@ async def create_mealkit(
             img = await f.read()
             additional_images_preload.append(img)
 
-    name = re.sub(r"\s+", "", product_detail.product_name)
-    prog_id = f"{product_detail.product_type}_{name}"
-
     return await product_.product_creation(
         product_detail,
         additional_images_preload,
@@ -122,7 +112,6 @@ async def create_mealkit(
         yolo_model,
         clip_model,
         ss,
-        prog_id,
         bg_task,
     )
 
@@ -143,13 +132,16 @@ async def fetch_ingredients(
 )
 async def update_info_prod(
     _: Permission,
+    req: Request,
     prod_id: str,
     info: prod.ProductUpdate,
     ss: Session,
 ):
+    clip_model = req.state.ai_models["clip"]
     return await ps.update_info(
         prod_id,
         info,
+        clip_model,
         ss,
     )
 
@@ -160,11 +152,18 @@ async def update_info_prod(
 )
 async def update_info_mk(
     _: Permission,
+    req: Request,
     prod_id: str,
     info: prod.MealKitUpdate,
     ss: Session,
 ):
-    return await ps.update_info(prod_id, info, ss)
+    clip_model = req.state.ai_models["clip"]
+    return await ps.update_info(
+        prod_id,
+        info,
+        clip_model,
+        ss,
+    )
 
 
 @router.patch(
@@ -236,11 +235,13 @@ async def create_blog(
 )
 async def edit_blog(
     _: Permission,
+    req: Request,
     id: str,
     blog_info: BlogCreation,
     ss: Session,
 ):
-    return await blog.edit(id, blog_info, ss)
+    clip_model = req.state.ai_models["clip"]
+    return await blog.edit(id, clip_model, blog_info, ss)
 
 
 @router.get(
@@ -315,8 +316,9 @@ async def get_blogs(
     _: Permission,
     pg: Paging,
     ss: Session,
+    title: str = "",
 ):
-    return await blog.get_blog_list(pg, ss)
+    return await blog.get_blog_list(pg, ss, title)
 
 
 @router.get(
@@ -352,8 +354,9 @@ async def get_list_customer(
     _: Permission,
     pg: Paging,
     ss: Session,
+    id: str = "",
 ):
-    return await c_ss.get_all_customer(pg, ss)
+    return await c_ss.get_all_customer(pg, ss, id)
 
 
 @router.get(
@@ -461,8 +464,10 @@ async def get_all_orders(
     _: Permission,
     pg: Paging,
     ss: Session,
+    id: str = "",
+    status: OrderStatus | None = None,
 ):
-    return await ord_ss.get_all_orders(pg, ss)
+    return await ord_ss.get_all_orders(pg, ss, id, status)
 
 
 @router.get(
@@ -511,11 +516,9 @@ async def accept_order(
     _: Permission,
     id: str,
     ss: Session,
+    self_id: Id,
 ):
-    return await ord_ss.accept_order(
-        id,
-        ss,
-    )
+    return await ord_ss.accept_order(id, ss, self_id)
 
 
 @router.post(
@@ -536,23 +539,6 @@ async def ship_order(
 
 
 @router.post(
-    "/order/shipped/{id}",
-    tags=["Order"],
-)
-async def shipped_order(
-    _: Permission,
-    id: str,
-    ss: Session,
-):
-    return await ord_ss.change_order_status(
-        id,
-        ss,
-        OrderStatus.ON_SHIPPING,
-        OrderStatus.SHIPPED,
-    )
-
-
-@router.post(
     "/order/cancel/{id}",
     tags=["Order"],
 )
@@ -562,3 +548,71 @@ async def cancel_order(
     ss: Session,
 ):
     return await ord_ss.cancel_order(id, ss)
+
+
+@router.get("/shipper/non_shift", tags=["Shipper"])
+async def fetch_non_shift(
+    _: Permission,
+    ss: Session,
+    pg: Paging,
+):
+    return await shipper.fetch_non_assign_shifttime(
+        ss,
+        pg,
+    )
+
+
+@router.get("/shipper/fetch", tags=["Shipper"])
+async def fetch_shipper(
+    _: Permission,
+    ss: Session,
+    pg: Paging,
+    status: ShipperStatus | None = None,
+    start_shift: time | None = None,
+    end_shift: time | None = None,
+):
+    return await shipper.fetch_shipper(
+        ss,
+        pg,
+        status,
+        start_shift,
+        end_shift,
+    )
+
+
+@router.get(
+    "/shipment/fetch",
+    tags=["Order", "Shipper"],
+)
+async def fetch_order(
+    _: Permission,
+    pg: Paging,
+    ss: Session,
+    shipper_id: str,
+    staff_id: str,
+    start_date_confirm: date | None = None,
+    end_date_confirm: date | None = None,
+    start_date_shipping: date | None = None,
+    end_date_shipping: date | None = None,
+):
+    return await shipper.fetch_shippment_from_range(
+        pg,
+        ss,
+        start_date_confirm,
+        end_date_confirm,
+        start_date_shipping,
+        end_date_shipping,
+        shipper_id,
+        staff_id,
+    )
+
+
+@router.put("/shipper/assign", tags=["Shipper"])
+async def assign_shipper(
+    _: Permission,
+    ss: Session,
+    bg_task: BackgroundTasks,
+    order_id: str,
+    shipper_id: str,
+):
+    return await shipper.assign_shipper(order_id, shipper_id, ss, bg_task)

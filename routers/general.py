@@ -33,13 +33,26 @@ async def get_product(
     return await ps.get_product(prod_id, session)
 
 
+@router.get(
+    "/product/fetch/ingredients",
+    tags=["Product"],
+)
+async def get_ingredients(
+    prod_id: str,
+    session: Session,
+    pg: Paging,
+):
+    return await ps.get_ingredients(prod_id, session, pg)
+
+
 @router.get("/product/fetch_all", tags=["Product"])
 async def get_all_product(
     pg: Paging,
     session: Session,
+    prod_name: str = "",
     type: ProductType | None = None,
 ):
-    return await ps.get_list_product(pg, session, type)
+    return await ps.get_list_product(pg, session, type, prod_name)
 
 
 @router.get("/progress/get")
@@ -64,5 +77,6 @@ async def get_coupon(
 async def get_all_coupon(
     pg: Paging,
     ss: Session,
+    id: str = "",
 ):
-    return await coupon_service.get_all_coupons(pg, ss)
+    return await coupon_service.get_all_coupons(pg, ss, id)

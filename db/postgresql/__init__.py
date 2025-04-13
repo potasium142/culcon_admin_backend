@@ -43,6 +43,5 @@ async def init_db():
 #     with async_sessionmaker(engine) as ss:
 #         yield ss
 
-asyncio.run(init_db())
 
 DBSession = async_sessionmaker(engine)

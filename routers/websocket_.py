@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime
 from enum import Enum
 from typing import Annotated
 from fastapi import (
@@ -12,9 +12,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from db.postgresql.db_session import get_session
 
 import auth
-from db.postgresql.models.chat import ChatSession
+from db.postgresql.models.chat import ChatHistory, Sender
 from db.postgresql.models.staff_account import StaffAccount
-from db.postgresql.models.user_account import UserAccount
+from db.postgresql.models.user_account import OnlineStatus, UserAccount
 from db.postgresql.paging import Page, display_page, page_param, paging, table_size
 
 Permission = Annotated[bool, Depends(auth.staff_permission)]
@@ -40,6 +40,7 @@ class ChatInstance:
     ) -> None:
         self.customer_ws: WebSocket | None = None
         self.staff_ws: WebSocket | None = None
+        self.new_msg = False
         self.cid = cid
 
     def closable(self):
@@ -59,7 +60,7 @@ class ChatInstance:
 
         await src_ws.send_json({
             "sender": "system",
-            "timestamp": str(datetime.datetime.now()),
+            "timestamp": str(datetime.now()),
             "type": MsgType.DATA,
             "chatlog": self.chat_history,
         })
@@ -67,7 +68,7 @@ class ChatInstance:
         if target_ws:
             await target_ws.send_json({
                 "sender": "system",
-                "timestamp": str(datetime.datetime.now()),
+                "timestamp": str(datetime.now()),
                 "type": MsgType.INFO,
                 "info": f"{name} joined the chat",
             })
@@ -79,32 +80,38 @@ class ChatInstance:
     async def c_connect(self, ws: WebSocket, ss: AsyncSession):
         self.customer_ws = ws
         await self.__connect(self.customer_ws, self.staff_ws, self.cid)
-        await self.toggle_connection_status(True, ss)
+        await self.toggle_connection_status(OnlineStatus.ONLINE, ss)
 
-    async def toggle_connection_status(self, status: bool, ss: AsyncSession):
-        chat_session = await ss.get(ChatSession, self.cid)
-        if chat_session:
-            chat_session.connected = status
-        else:
-            chat_session = ChatSession(
-                id=self.cid,
-                chatlog=[],
-                connected=status,
-            )
+    async def toggle_connection_status(
+        self,
+        status: OnlineStatus,
+        ss: AsyncSession,
+    ):
+        user = await ss.get_one(UserAccount, self.cid)
+        user.online_status = status
         await ss.commit()
 
     async def load_chat_history(
         self,
         ss: AsyncSession,
     ):
-        chat_history = await ss.get(ChatSession, self.cid)
+        __chat_history = await ss.scalars(
+            sqla.select(ChatHistory)
+            .filter(ChatHistory.user_id == self.cid)
+            .order_by(ChatHistory.timestamp.desc())
+            .limit(20)
+        )
 
-        if chat_history:
-            chatlog = chat_history.chatlog
-        else:
-            chatlog: list[dict[str, str]] = []
+        chatlog = [
+            {
+                "msg": c.msg,
+                "sender": self.cid if c.sender == Sender.CUSTOMER else "staff",
+                "timestamp": str(c.timestamp),
+            }
+            for c in __chat_history
+        ]
 
-        self.chat_history = chatlog[-14:]
+        self.chat_history = chatlog
 
         return self.chat_history
 
@@ -112,18 +119,17 @@ class ChatInstance:
         self,
         ss: AsyncSession,
     ):
-        chat_history = await ss.get(ChatSession, self.cid)
+        for c in self.chat_history[-14:]:
+            sender = Sender.STAFF if c["sender"] == "staff" else Sender.CUSTOMER
+            await ss.merge(
+                ChatHistory(
+                    user_id=self.cid,
+                    msg=c["msg"],
+                    sender=sender,
+                    timestamp=c["timestamp"],
+                )
+            )
 
-        if chat_history:
-            chatlog = chat_history.chatlog
-        else:
-            chatlog = []
-
-        chatlog[-14:] = self.chat_history
-
-        chat_history = ChatSession(id=self.cid, chatlog=chatlog)
-
-        await ss.merge(chat_history)
         await ss.commit()
 
     async def __send_msg(
@@ -136,22 +142,30 @@ class ChatInstance:
         del msg["type"]
         self.chat_history.append(msg)
 
-    async def c_send_msg(self, msg: dict[str, str]):
+    async def c_send_msg(
+        self,
+        msg: dict[str, str],
+    ):
+        self.new_msg = True
         await self.__send_msg(msg, self.staff_ws)
 
-    async def s_send_msg(self, msg: dict[str, str]):
+    async def s_send_msg(
+        self,
+        msg: dict[str, str],
+    ):
+        self.new_msg = False
         await self.__send_msg(msg, self.customer_ws)
 
     async def c_left_chat(self, ss: AsyncSession):
         self.customer_ws = None
         msg = {
             "sender": "system",
-            "timestamp": str(datetime.datetime.now()),
+            "timestamp": str(datetime.now()),
             "type": MsgType.INFO,
             "info": f"{self.cid} has left the chat.",
         }
         await self.save_chat_history(ss)
-        await self.toggle_connection_status(False, ss)
+        await self.toggle_connection_status(OnlineStatus.OFFLINE, ss)
         if self.staff_ws:
             await self.staff_ws.send_json(msg)
 
@@ -159,7 +173,7 @@ class ChatInstance:
         self.staff_ws = None
         msg = {
             "sender": "system",
-            "timestamp": str(datetime.datetime.now()),
+            "timestamp": str(datetime.now()),
             "type": MsgType.INFO,
             "info": "staff has left the chat.",
         }
@@ -177,65 +191,85 @@ async def get_chat_queue(
     ss: Session,
 ):
     async with ss.begin():
-        chatlist = await ss.scalars(
-            paging(
-                sqla.select(
-                    ChatSession,
-                ),
-                page,
-            )
-        )
+        start_idx = page.page_index * page.page_size
+
+        queue = list(chatlist.keys())[start_idx : start_idx + page.page_size]
 
         content = []
 
-        for ci in chatlist:
-            user: UserAccount = await ci.awaitable_attrs.user
+        for q in queue:
+            ci = await ss.scalar(
+                sqla.select(
+                    UserAccount.id,
+                    UserAccount.username,
+                    UserAccount.profile_pic_uri,
+                    UserAccount.online_status,
+                ).filter(UserAccount.id == q)
+            )
             content.append({
-                "id": ci.id,
-                "username": user.username,
-                "user_pfp": user.profile_pic_uri,
-                "online": ci.connected,
+                "id": ci[0],
+                "username": ci[1],
+                "user_pfp": ci[2],
+                "new_msg": ci[4],
             })
 
-        count = await table_size(ChatSession.id, ss)
-        return display_page(content, count, page)
+        return display_page(content, len(queue), page)
 
 
 @router.get("/chat/list")
-async def get_all_chat_customer(pg: Paging, ss: Session):
+async def get_all_chat_customer(
+    pg: Paging,
+    ss: Session,
+    username: str | None = None,
+):
     async with ss.begin():
-        chatlist = (
+        filter = []
+
+        if username:
+            filter.append(UserAccount.username == username)
+
+        c_list = (
             await ss.execute(
                 paging(
                     sqla.select(
                         UserAccount.id,
                         UserAccount.username,
                         UserAccount.profile_pic_uri,
-                        ChatSession.connected,
-                    ).join_from(
-                        UserAccount,
-                        ChatSession,
-                        full=True,
-                    ),
+                        UserAccount.online_status,
+                    ).filter(*filter),
                     pg,
                 )
             )
         ).all()
 
-        count = await table_size(UserAccount.id, ss)
-        return display_page(
-            [
-                {
-                    "id": ci[0],
-                    "username": ci[1],
-                    "user_pfp": ci[2],
-                    "has_chat": ci[3],
-                }
-                for ci in chatlist
-            ],
-            count,
-            pg,
+        count = (
+            await ss.scalar(
+                sqla.select(
+                    sqla.func.count(UserAccount.id).filter(
+                        *filter,
+                    )
+                )
+            )
+            or 0
         )
+
+        content = []
+        for ci in c_list:
+            _new_msg = chatlist.get(ci[0])
+
+            if _new_msg:
+                new_msg = _new_msg.new_msg
+            else:
+                new_msg = False
+
+            content.append({
+                "id": ci[0],
+                "username": ci[1],
+                "user_pfp": ci[2],
+                "new_msg": new_msg,
+            })
+
+        return display_page(content, count, pg)
 
 
 @router.websocket("/chat/connect/{id}")
@@ -260,7 +294,7 @@ async def connect_customer_chat(
         if not customer:
             await ws.send_json({
                 "sender": "system",
-                "timestamp": str(datetime.datetime.now()),
+                "timestamp": str(datetime.now()),
                 "type": MsgType.ERROR,
                 "msg": f'User with id "{id}" does not exist',
             })
@@ -270,7 +304,7 @@ async def connect_customer_chat(
         if not staff:
             await ws.send_json({
                 "sender": "system",
-                "timestamp": str(datetime.datetime.now()),
+                "timestamp": str(datetime.now()),
                 "type": MsgType.ERROR,
                 "msg": "Staff token is invalid",
             })
@@ -285,7 +319,7 @@ async def connect_customer_chat(
 
         await ws.send_json({
             "sender": "system",
-            "timestamp": str(datetime.datetime.now()),
+            "timestamp": str(datetime.now()),
             "type": MsgType.INFO,
             "customer_profile": {
                 "pfp": customer.profile_pic_uri,
@@ -297,7 +331,7 @@ async def connect_customer_chat(
             data = await ws.receive_text()
             await chatlist[id].s_send_msg({
                 "sender": "staff",
-                "timestamp": str(datetime.datetime.now()),
+                "timestamp": str(datetime.now()),
                 "type": MsgType.MSG,
                 "msg": data,
             })
@@ -329,7 +363,7 @@ async def customer_chat(
         if not user:
             await ws.send_json({
                 "sender": "system",
-                "timestamp": str(datetime.datetime.now()),
+                "timestamp": str(datetime.now()),
                 "type": MsgType.ERROR,
                 "msg": "User token is invalid",
             })
@@ -347,7 +381,7 @@ async def customer_chat(
             data = await ws.receive_text()
             await chatlist[id].c_send_msg({
                 "sender": id,
-                "timestamp": str(datetime.datetime.now()),
+                "timestamp": str(datetime.now()),
                 "type": MsgType.MSG,
                 "msg": data,
             })

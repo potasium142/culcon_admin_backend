@@ -33,11 +33,17 @@ async def set_account_status(
         }
 
 
-async def get_all_customer(pg: Page, ss: AsyncSession):
+async def get_all_customer(
+    pg: Page,
+    ss: AsyncSession,
+    id: str = "",
+):
     async with ss.begin():
         customers = await ss.scalars(
             paging(
-                sqla.select(UserAccount),
+                sqla.select(UserAccount).filter(
+                    UserAccount.username.ilike(f"%{id}%"),
+                ),
                 pg,
             )
         )
@@ -53,7 +59,14 @@ async def get_all_customer(pg: Page, ss: AsyncSession):
             for c in customers
         ]
 
-        count = await table_size(UserAccount.id, ss)
+        count = (
+            await ss.scalar(
+                sqla.select(sqla.func.count(UserAccount.id)).filter(
+                    UserAccount.username.ilike(f"%{id}%")
+                )
+            )
+            or 0
+        )
 
         return display_page(content, count, pg)
 

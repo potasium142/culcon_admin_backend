@@ -38,7 +38,7 @@ async def create(
             thumbnail=thumbnail_url,
         )
 
-        embed = clip_model.encode_text(blog_dto.description)
+        embed = clip_model.encode_text(blog_dto.description)[0]
 
         blog_embed = BlogEmbedding(
             id=id,
@@ -63,6 +63,7 @@ async def create(
 
 async def edit(
     id: str,
+    clip_model: OpenCLIP,
     blog_dto: BlogCreation,
     ss: AsyncSession,
 ):
@@ -73,6 +74,12 @@ async def edit(
         blog.title = blog_dto.title
         blog.description = blog_dto.description
         blog.infos = blog_dto.infos
+
+        blog_embed = await ss.get_one(BlogEmbedding, id)
+
+        embed = clip_model.encode_text(blog_dto.description)[0]
+
+        blog_embed.description_embed = embed
 
         await ss.flush()
 
@@ -197,11 +204,11 @@ async def get_comment(post_id: str, pg: Page, ss: AsyncSession):
         return display_page(content, count, pg)
 
 
-async def get_blog_list(page: Page, ss: AsyncSession):
+async def get_blog_list(page: Page, ss: AsyncSession, title: str = ""):
     async with ss.begin():
         blogs = await ss.scalars(
             paging(
-                sqla.select(Blog),
+                sqla.select(Blog).filter(Blog.title.ilike(f"%{title}%")),
                 page,
             )
         )
@@ -213,7 +220,14 @@ async def get_blog_list(page: Page, ss: AsyncSession):
             }
             for b in blogs
         ]
-        count = await table_size(Blog.id, ss)
+        count = (
+            await ss.scalar(
+                sqla.select(sqla.func.count(Blog.id)).filter(
+                    Blog.title.ilike(f"%{title}%")
+                )
+            )
+            or 0
+        )
         return display_page(content, count, page)
 
 

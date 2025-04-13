@@ -1,3 +1,4 @@
+from datetime import datetime
 import sqlalchemy as sqla
 from sqlalchemy.ext.asyncio import AsyncSession
 from db.postgresql.models.product import (
@@ -5,18 +6,20 @@ from db.postgresql.models.product import (
     Product,
     ProductPriceHistory,
     ProductStatus,
-    ProductType,
 )
-from db.postgresql.paging import Page, display_page, paging, table_size
+from db.postgresql.models.transaction import PaymentTransaction
+from db.postgresql.paging import Page, display_page, paging
 from db.postgresql.models.order_history import (
     Coupon,
     OrderHistory,
     OrderHistoryItems,
+    OrderProcess,
     OrderStatus,
     PaymentMethod,
     PaymentStatus,
 )
 from etc.local_error import HandledError
+from etc.paypal import payment_controller
 
 
 async def __order_detail_json(
@@ -59,11 +62,26 @@ def order_list_item(o: OrderHistory):
     }
 
 
-async def get_all_orders(pg: Page, ss: AsyncSession):
+async def get_all_orders(
+    pg: Page,
+    ss: AsyncSession,
+    id: str = "",
+    status: OrderStatus | None = None,
+):
+    if status:
+        filter_list = [
+            OrderHistory.id.ilike(f"%{id}%"),
+            OrderHistory.order_status == status,
+        ]
+    else:
+        filter_list = [OrderHistory.id.ilike(f"%{id}%")]
+
     async with ss.begin():
         orders = await ss.scalars(
             paging(
-                sqla.select(OrderHistory).order_by(
+                sqla.select(OrderHistory)
+                .filter(*filter_list)
+                .order_by(
                     OrderHistory.order_date.desc(),
                     OrderHistory.order_status.asc(),
                 ),
@@ -72,7 +90,12 @@ async def get_all_orders(pg: Page, ss: AsyncSession):
         )
 
         content = [order_list_item(o) for o in orders]
-        count = await table_size(OrderHistory.id, ss)
+        count = (
+            await ss.scalar(
+                sqla.select(sqla.func.count(OrderHistory.id)).filter(*filter_list)
+            )
+            or 0
+        )
     return display_page(content, count, pg)
 
 
@@ -192,7 +215,7 @@ async def check_mealkit_availability(id: str, ss: AsyncSession):
     return oft_prod
 
 
-async def accept_order(id: str, ss: AsyncSession):
+async def accept_order(id: str, ss: AsyncSession, self_id: str):
     async with ss.begin():
         order = await ss.get_one(OrderHistory, id)
 
@@ -228,6 +251,14 @@ async def accept_order(id: str, ss: AsyncSession):
 
         order.order_status = OrderStatus.ON_PROCESSING
 
+        order_process = OrderProcess(
+            order_id=order.id,
+            confirm_date=datetime.now(),
+            process_by=self_id,
+        )
+
+        ss.add(order_process)
+
         await ss.flush()
 
         order_refetch = await ss.get_one(OrderHistory, id)
@@ -253,7 +284,18 @@ async def cancel_order(id: str, ss: AsyncSession):
             )
         )
 
-        # TODO:refund
+        if order.payment_method == PaymentMethod.PAYPAL:
+            payment_record = await ss.get_one(PaymentTransaction, id)
+
+            refund_capture = payment_controller.refund_captured_payment({
+                "capture_id": payment_record.payment_id,
+                "prefer": "return=minimal",
+            })
+
+            payment_record.refund_id = refund_capture.body.id  # type: ignore
+
+            payment_record.status = PaymentStatus.REFUNDED
+
         for i in items:
             amount = i.quantity
             prod_price: ProductPriceHistory = await i.awaitable_attrs.item

@@ -2,11 +2,12 @@ from datetime import datetime, date
 from enum import Enum
 from uuid import uuid4
 
-from sqlalchemy import Column, ForeignKey, Table, orm, ForeignKeyConstraint
+from sqlalchemy import ForeignKey, orm
 from sqlalchemy.sql import sqltypes
 
 from db.postgresql.models import Base
-from db.postgresql.models.product import Product, ProductPriceHistory
+from db.postgresql.models.product import ProductPriceHistory
+from db.postgresql.models.staff_account import StaffAccount
 from db.postgresql.models.user_account import UserAccount
 
 import sqlalchemy as sqla
@@ -31,9 +32,6 @@ class PaymentStatus(str, Enum):
     PENDING = "PENDING"
     RECEIVED = "RECEIVED"
     REFUNDED = "REFUNDED"
-    REFUNDING = "REFUNDING"
-    CREATED = "CREATED"
-    CHANGED = "CHANGED"
 
 
 class Coupon(Base):
@@ -47,20 +45,6 @@ class Coupon(Base):
     orders: orm.Mapped[list["OrderHistory"]] = orm.relationship(
         back_populates="coupon_detail",
     )
-
-
-# OrderHistoryItems = Table(
-#     "order_history_items",
-#     Base.metadata,
-#     Column("order_history_id", ForeignKey("order_history.id")),
-#     Column("product_id_product_id"),
-#     Column("product_id_date"),
-#     Column("quantity", sqltypes.INTEGER),
-#     ForeignKeyConstraint(
-#         ["product_id_date", "product_id_product_id"],
-#         ["product_price_history.date", "product_price_history.product_id"],
-#     ),
-# )
 
 
 class OrderHistoryItems(Base):
@@ -108,3 +92,26 @@ class OrderHistory(Base):
     user: orm.Mapped[UserAccount] = orm.relationship(back_populates="order_history")
 
     coupon_detail: orm.Mapped[Coupon | None] = orm.relationship(back_populates="orders")
+
+    process: orm.Mapped["OrderProcess"] = orm.relationship(back_populates="order")
+
+
+class OrderProcess(Base):
+    __tablename__ = "order_process"
+    order_id: orm.Mapped[str] = orm.mapped_column(
+        sqla.ForeignKey(OrderHistory.id),
+        primary_key=True,
+    )
+    confirm_date: orm.Mapped[datetime] = orm.mapped_column(
+        sqltypes.TIMESTAMP,
+    )
+    process_by: orm.Mapped[str] = orm.mapped_column(
+        sqla.ForeignKey(StaffAccount.id),
+    )
+    shipping_date: orm.Mapped[datetime | None] = orm.mapped_column(
+        sqltypes.TIMESTAMP, default=None
+    )
+    deliver_by: orm.Mapped[str | None] = orm.mapped_column(
+        sqla.ForeignKey(StaffAccount.id), default=None
+    )
+    order: orm.Mapped[OrderHistory] = orm.relationship(back_populates="process")

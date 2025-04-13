@@ -2,7 +2,7 @@ from io import BytesIO
 from typing import Any
 from PIL import Image, ImageFile
 from sqlalchemy.ext.asyncio import AsyncSession
-from db.postgresql.models.blog import BlogEmbedding
+from db.postgresql.models.blog import Blog, BlogEmbedding
 from db.postgresql.models.product import Product, ProductEmbedding, ProductType
 from ai import clip, yolo
 import sqlalchemy as sqla
@@ -165,12 +165,17 @@ async def vector_search_blog(
             paging(
                 sqla.select(
                     BlogEmbedding,
+                    Blog.id,
+                    Blog.title,
+                    Blog.description,
+                    Blog.thumbnail,
                     dist_text,
                 )
                 .filter(
                     (dist_text < text_dist),
                 )
-                .order_by(dist_text),
+                .order_by(dist_text)
+                .join(Blog, Blog.id == BlogEmbedding.id),
                 pg,
             )
         )
@@ -187,6 +192,12 @@ async def vector_search_blog(
         content = []
 
         for r in results.all():
-            content.append(await __prod_dto(r))
+            content.append({
+                "id": r[1],
+                "title": r[2],
+                "description": r[3],
+                "thumbnail": r[4],
+                "dist_text": r[5],
+            })
 
     return display_page(content, count, pg)

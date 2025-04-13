@@ -1,9 +1,11 @@
 from datetime import date
-from typing import Annotated, Any
+from typing import Annotated
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from services import shipper as s_sv
+from dtos.request import shipper as s_dto
 from services.predict import (
     load_product_model,
     predict_top_selling_products,
@@ -33,6 +35,7 @@ from db.postgresql.paging import page_param, Page
 
 Paging = Annotated[Page, Depends(page_param)]
 Permission = Annotated[bool, Depends(auth.manager_permission)]
+StaffPermission = Annotated[bool, Depends(auth.staff_permission)]
 Session = Annotated[AsyncSession, Depends(get_session)]
 
 router = APIRouter(prefix="/api/manager", tags=["Manager function"])
@@ -136,8 +139,9 @@ async def read_all_staff(
     _: Permission,
     pg: Paging,
     ss: Session,
+    id: str = "",
 ):
-    staff = await staff_sv.get_all_staff(pg, ss)
+    staff = await staff_sv.get_all_staff(pg, ss, id)
     return staff
 
 
@@ -193,12 +197,26 @@ async def edit_staff_status(
     return await staff_sv.set_staff_status(id, status, ss)
 
 
+@router.post("/shipper/shift/set")
+async def set_shipper_shift_time(
+    shift_info: s_dto.ShipperShift,
+    _: Permission,
+    ss: Session,
+):
+    return await s_sv.set_shift_time(
+        shift_info.shipper_id,
+        shift_info.start_time,
+        shift_info.end_time,
+        ss,
+    )
+
+
 @router.get(
     "/revenue",
     response_model=CombinedRevenueAndProductsResponse,
 )
 async def get_revenue_and_top_products(
-    _: Permission,
+    _: StaffPermission,
     ss: Session,
 ) -> CombinedRevenueAndProductsResponse:
     daily_revenues = await get_last_7_days_revenue(ss)
@@ -229,7 +247,7 @@ async def get_revenue_and_top_products(
     response_model=PredictedProductsResponse,
 )
 async def get_predicted_top_products(
-    _: Permission,
+    _: StaffPermission,
     ss: Session,
 ) -> PredictedProductsResponse:
     today = date.today()
@@ -240,7 +258,7 @@ async def get_predicted_top_products(
         ss, product_model, last_year, last_month
     )
 
-    return PredictedProductsResponse(top_predicted_products=predicted_products) 
+    return PredictedProductsResponse(top_predicted_products=predicted_products)
 
 
 @router.get(
@@ -248,7 +266,7 @@ async def get_predicted_top_products(
     response_model=RevenuePredictionResponse,
 )
 async def get_next_month_revenue_prediction(
-    _: Permission,
+    _: StaffPermission,
     ss: Session,
 ) -> RevenuePredictionResponse:
     today = date.today()
