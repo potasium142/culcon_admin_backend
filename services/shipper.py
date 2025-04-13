@@ -6,9 +6,11 @@ import pytz
 
 from fastapi import BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
+from services import order as ord_sv
 import sqlalchemy as sqla
 
 from db.postgresql.models.order_history import (
+    DeliveryStatus,
     OrderHistory,
     OrderProcess,
     OrderStatus,
@@ -130,6 +132,7 @@ async def fetch_shipper(
 async def fetch_shippment_from_range(
     pg: Page,
     ss: AsyncSession,
+    delivery_status: DeliveryStatus | None = None,
     start_date_confirm: date | None = None,
     end_date_confirm: date | None = None,
     start_date_shipping: date | None = None,
@@ -139,6 +142,9 @@ async def fetch_shippment_from_range(
 ):
     async with ss.begin():
         filter = []
+
+        if delivery_status:
+            filter.append(OrderProcess.delivery_status == delivery_status)
 
         if start_date_confirm:
             filter.append(OrderProcess.shipping_date > start_date_confirm)
@@ -187,6 +193,7 @@ async def assign_shipper(
     shipper_id: str,
     ss: AsyncSession,
     bg: BackgroundTasks,
+    current_hr: time | None = None,
 ):
     async with ss.begin():
         is_free = await ss.scalar(
@@ -206,9 +213,32 @@ async def assign_shipper(
         if not shipment:
             raise HandledError("Cannot find shipment")
 
-        current_hr = datetime.now(pytz.timezone("Asia/Saigon")).time()
+        if not current_hr:
+            current_hr = datetime.now(pytz.timezone("Asia/Saigon")).time()
 
         shiper = await ss.get(ShipperAvailbility, shipper_id)
+
+        match shipment.delivery_status:
+            case DeliveryStatus.ACCEPTED | DeliveryStatus.AWAIT:
+                if str(shipment.deliver_by) == shipper_id:
+                    raise HandledError("Shipment already assign to this shipper")
+
+                prev_shipper = await ss.get(
+                    ShipperAvailbility,
+                    shipment.deliver_by,
+                )
+
+                if prev_shipper:
+                    prev_shipper.current_order = None
+                    prev_shipper.status = ShipperStatus.IDLE
+            case DeliveryStatus.DELIVERED:
+                raise HandledError("Shipment is delivered")
+            case DeliveryStatus.DELIVERING:
+                raise HandledError("Shipment is delivering")
+            case DeliveryStatus.CANCELLED:
+                raise HandledError("Delivery for this shippment is cancelled")
+            case _:
+                pass
 
         order_detail: OrderHistory = await shipment.awaitable_attrs.order
 
@@ -218,19 +248,16 @@ async def assign_shipper(
         if not shiper:
             raise HandledError("Cannot find shipper")
 
-        if str(shipment.deliver_by) == shipper_id:
-            raise HandledError("Shipment already assign to this shipper")
-
         if (shiper.start_shift is None) or (shiper.end_shift is None):
             raise HandledError("Shipper was not assign shift time")
 
         if (shiper.start_shift > current_hr) or (current_hr > shiper.end_shift):
             raise HandledError("Shipper is not in shift")
 
-        shipper_ = await ss.get_one(ShipperAvailbility, shipper_id)
+        shiper.status = ShipperStatus.ASSIGN
+        shiper.current_order = order_id
 
-        shipper_.status = ShipperStatus.ASSIGN
-        shipper_.current_order = order_id
+        shipment.deliver_by = shipper_id
 
         shipper_detail = await ss.get_one(EmployeeInfo, shipper_id)
 
@@ -288,6 +315,7 @@ async def __delivery_timeout(
         order_detail: OrderHistory = await shipment.awaitable_attrs.order
 
         shipment.deliver_by = None
+        shipment.delivery_status = DeliveryStatus.TIMEOUT
 
         await ss.flush()
 
@@ -322,6 +350,7 @@ async def reject_shipment(
             raise HandledError("Order does not deliver by you")
 
         shipment.deliver_by = None
+        shipment.delivery_status = DeliveryStatus.REJECTED
 
         shipper_ = await ss.scalar(
             sqla.select(ShipperAvailbility).filter(
@@ -333,7 +362,8 @@ async def reject_shipment(
         if not shipper_:
             raise HandledError("Record for this shipment was not found on shipper")
 
-        shipper_.status = ShipperStatus.REJECTED
+        shipper_.status = ShipperStatus.IDLE
+        shipper_.current_order = None
 
         await ss.commit()
 
@@ -349,7 +379,8 @@ async def shipping(
         if shipment.deliver_by != shipper_id:
             raise HandledError("Order does not deliver by you")
 
-        shipment.shipping_date = datetime.now()
+        if shipment.delivery_status != DeliveryStatus.ACCEPTED:
+            raise HandledError("Shipment was not accepted by shipper")
 
         order: OrderHistory = await shipment.awaitable_attrs.order
 
@@ -357,6 +388,9 @@ async def shipping(
             raise HandledError("Order is not suitable for shipping")
 
         order.order_status = OrderStatus.ON_SHIPPING
+
+        shipment.shipping_date = datetime.now()
+        shipment.delivery_status = DeliveryStatus.DELIVERING
 
         shipper_ = await ss.scalar(
             sqla.select(ShipperAvailbility).filter(
@@ -386,13 +420,15 @@ async def complete_shipment(
         if shipment.deliver_by != self_id:
             raise HandledError("Order does not deliver by you")
 
-        shipment.shipping_date = datetime.now()
+        if shipment.delivery_status != DeliveryStatus.DELIVERING:
+            raise HandledError("Shippment was not delivering")
 
         order: OrderHistory = await shipment.awaitable_attrs.order
 
         if order.order_status != OrderStatus.ON_SHIPPING:
             raise HandledError("Order is not suitable for complete shipment")
 
+        shipment.shipping_date = datetime.now()
         order.order_status = OrderStatus.SHIPPED
 
         shipper_ = await ss.scalar(
@@ -426,19 +462,65 @@ async def accept_shipment(
             )
         )
 
+        shipment = await ss.get(OrderProcess, order_id)
+
+        if not shipment:
+            raise HandledError("Cannot find shipment")
+
         if not shipper_:
             raise HandledError("This order was not assigned to you")
 
         if shipper_.status != ShipperStatus.ASSIGN:
             raise HandledError("You already deliver this order")
 
-        shipment = await ss.get_one(OrderProcess, order_id)
+        if shipment.deliver_by != self_id:
+            raise HandledError("This order was to assigned to you")
 
         shipment.deliver_by = self_id
+        shipment.delivery_status = DeliveryStatus.ACCEPTED
 
         shipper_.status = ShipperStatus.ACCEPTED
 
         await ss.commit()
+
+
+async def cancel_shipment(
+    order_id: str,
+    self_id: str,
+    ss: AsyncSession,
+):
+    async with ss.begin():
+        shipment = await ss.get_one(OrderProcess, order_id)
+
+        if shipment.deliver_by != self_id:
+            raise HandledError("Order does not deliver by you")
+
+        if shipment.delivery_status != DeliveryStatus.DELIVERING:
+            raise HandledError("Shippment was not delivering")
+
+        order: OrderHistory = await shipment.awaitable_attrs.order
+
+        if order.order_status != OrderStatus.ON_SHIPPING:
+            raise HandledError("Order is not suitable for complete shipment")
+
+        shipper_ = await ss.scalar(
+            sqla.select(ShipperAvailbility).filter(
+                ShipperAvailbility.id == self_id,
+                ShipperAvailbility.current_order == order_id,
+            )
+        )
+
+        if not shipper_:
+            raise HandledError(
+                "Desync in database, U SHOULD NOT SEE THIS MSG AT ALL, GOD HELP US"
+            )
+
+        shipper_.status = ShipperStatus.IDLE
+        shipper_.current_order = None
+
+        await ss.flush()
+
+        return await ord_sv.cancel(order_id, ss)
 
 
 async def set_shift_time(

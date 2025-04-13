@@ -10,7 +10,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = env.TOKEN_EXPIRE_MINUTES
 
 def encode(account: StaffAccount, expires_delta: timedelta | None = None):
     if not expires_delta:
-        expires_delta = timedelta(hours=1)
+        expires_delta = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
 
     expire = datetime.now(timezone.utc) + expires_delta
 

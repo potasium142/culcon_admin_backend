@@ -48,8 +48,12 @@ async def permission(
                     headers={"WWW-Authenticate": "Bearer"},
                 )
 
-        except InvalidTokenError:
-            raise CREDENTIAL_EXCEPTION
+        except InvalidTokenError as e:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=f"{e}",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
 
         return True
 

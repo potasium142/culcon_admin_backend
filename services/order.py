@@ -270,40 +270,46 @@ async def cancel_order(id: str, ss: AsyncSession):
     async with ss.begin():
         order = await ss.get_one(OrderHistory, id)
 
-        if order.order_status in (OrderStatus.ON_SHIPPING, OrderStatus.SHIPPED):
-            raise HandledError("Order already in delivering or delivered")
+        if order.order_status is OrderStatus.ON_SHIPPING:
+            raise HandledError("Order already in delivering")
+        return await cancel(id, ss)
 
-        if order.order_status is OrderStatus.CANCELLED:
-            raise HandledError("Order already cancelled")
 
-        order.order_status = OrderStatus.CANCELLED
+async def cancel(id: str, ss: AsyncSession):
+    order = await ss.get_one(OrderHistory, id)
 
-        items = await ss.scalars(
-            sqla.select(OrderHistoryItems).filter(
-                OrderHistoryItems.order_history_id == id
-            )
-        )
+    if order.order_status is OrderStatus.SHIPPED:
+        raise HandledError("Order already  delivered")
 
-        if order.payment_method == PaymentMethod.PAYPAL:
-            payment_record = await ss.get_one(PaymentTransaction, id)
+    if order.order_status is OrderStatus.CANCELLED:
+        raise HandledError("Order already cancelled")
 
-            refund_capture = payment_controller.refund_captured_payment({
-                "capture_id": payment_record.payment_id,
-                "prefer": "return=minimal",
-            })
+    order.order_status = OrderStatus.CANCELLED
 
-            payment_record.refund_id = refund_capture.body.id  # type: ignore
+    items = await ss.scalars(
+        sqla.select(OrderHistoryItems).filter(OrderHistoryItems.order_history_id == id)
+    )
 
-            payment_record.status = PaymentStatus.REFUNDED
+    if order.payment_method == PaymentMethod.PAYPAL:
+        payment_record = await ss.get_one(PaymentTransaction, id)
 
-        for i in items:
-            amount = i.quantity
-            prod_price: ProductPriceHistory = await i.awaitable_attrs.item
-            prod = await prod_price.awaitable_attrs.product
-            prod.available_quantity += amount
+        refund_capture = payment_controller.refund_captured_payment({
+            "capture_id": payment_record.payment_id,
+            "prefer": "return=minimal",
+        })
 
-        await ss.flush()
+        payment_record.refund_id = refund_capture.body.id  # type: ignore
 
-        order_refetch = await ss.get_one(OrderHistory, id)
+        payment_record.status = PaymentStatus.REFUNDED
 
-        return order.order_status == order_refetch.order_status
+    for i in items:
+        amount = i.quantity
+        prod_price: ProductPriceHistory = await i.awaitable_attrs.item
+        prod = await prod_price.awaitable_attrs.product
+        prod.available_quantity += amount
+
+    await ss.flush()
+
+    order_refetch = await ss.get_one(OrderHistory, id)
+
+    return order.order_status == order_refetch.order_status

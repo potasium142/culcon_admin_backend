@@ -3,6 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from db.postgresql.models.order_history import DeliveryStatus
 from services import order, shipper as sp
 
 import auth
@@ -53,6 +54,19 @@ async def reject_shipping_order(
     return await sp.reject_shipment(id, self_id, ss)
 
 
+@router.delete(
+    "/order/cancel/{id}",
+    tags=["Order", "Shipper"],
+)
+async def cancel_shipment(
+    _: Permission,
+    id: str,
+    self_id: Id,
+    ss: Session,
+):
+    return await sp.cancel_shipment(id, self_id, ss)
+
+
 @router.put(
     "/order/accept/{id}",
     tags=["Order", "Shipper"],
@@ -75,6 +89,7 @@ async def fetch_order(
     pg: Paging,
     self_id: Id,
     ss: Session,
+    status: DeliveryStatus | None = None,
     start_date_confirm: date | None = None,
     end_date_confirm: date | None = None,
     start_date_shipping: date | None = None,
@@ -83,6 +98,7 @@ async def fetch_order(
     return await sp.fetch_shippment_from_range(
         pg,
         ss,
+        status,
         start_date_confirm,
         end_date_confirm,
         start_date_shipping,

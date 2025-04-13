@@ -614,5 +614,12 @@ async def assign_shipper(
     bg_task: BackgroundTasks,
     order_id: str,
     shipper_id: str,
+    assign_time: time | None = None,
 ):
-    return await shipper.assign_shipper(order_id, shipper_id, ss, bg_task)
+    return await shipper.assign_shipper(
+        order_id,
+        shipper_id,
+        ss,
+        bg_task,
+        assign_time,
+    )

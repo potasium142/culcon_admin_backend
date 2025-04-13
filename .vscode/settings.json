@@ -1,4 +1,5 @@
 {
     "python.analysis.typeEvaluation.strictParameterNoneValue": false,
-    "remote.autoForwardPorts": false
+    "remote.autoForwardPorts": false,
+    "postman.settings.dotenv-detection-notification-visibility": false
 }
