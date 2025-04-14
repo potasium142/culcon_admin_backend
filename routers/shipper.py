@@ -1,6 +1,6 @@
 from datetime import date
 from typing import Annotated
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, BackgroundTasks, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.postgresql.models.order_history import DeliveryStatus
@@ -37,8 +37,14 @@ async def shipped_order(
     id: str,
     self_id: Id,
     ss: Session,
+    bg_task: BackgroundTasks,
 ):
-    return await sp.complete_shipment(id, self_id, ss)
+    return await sp.complete_shipment(
+        id,
+        self_id,
+        ss,
+        bg_task,
+    )
 
 
 @router.delete(

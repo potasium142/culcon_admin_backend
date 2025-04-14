@@ -409,10 +409,26 @@ async def shipping(
         await ss.commit()
 
 
+async def __receive_timeout(
+    order_id: str,
+    ss: AsyncSession,
+):
+    logger.info(f"Set receive timeout for {order_id}")
+    await asyncio.sleep(60 * 60)
+    async with ss.begin():
+        shipment = await ss.get_one(OrderHistory, order_id)
+
+        shipment.order_status = OrderStatus.DELIVERED
+
+        logger.info(f"Order {order_id} is set to delivered")
+        await ss.flush()
+
+
 async def complete_shipment(
     id: str,
     self_id: str,
     ss: AsyncSession,
+    bg: BackgroundTasks,
 ):
     async with ss.begin():
         shipment = await ss.get_one(OrderProcess, id)
@@ -446,7 +462,12 @@ async def complete_shipment(
         shipper_.status = ShipperStatus.IDLE
         shipper_.current_order = None
 
-        await ss.flush()
+        await ss.commit()
+    bg.add_task(
+        __receive_timeout,
+        id,
+        ss,
+    )
 
 
 async def accept_shipment(
