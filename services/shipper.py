@@ -76,6 +76,9 @@ async def fetch_shipper(
     ss: AsyncSession,
     pg: Page,
     status: ShipperStatus | None = None,
+    name: str | None = None,
+    email: str | None = None,
+    phone: str | None = None,
     start_shift: time | None = None,
     end_shift: time | None = None,
 ):
@@ -92,6 +95,13 @@ async def fetch_shipper(
             filter.append(
                 ShipperAvailbility.end_shift > end_shift,
             )
+
+        if name:
+            filter.append(EmployeeInfo.realname.ilike(f"%{name}%"))
+        if email:
+            filter.append(EmployeeInfo.realname.ilike(f"%{email}%"))
+        if phone:
+            filter.append(EmployeeInfo.realname.ilike(f"%{phone}%"))
 
         shippers = await ss.execute(
             paging(
