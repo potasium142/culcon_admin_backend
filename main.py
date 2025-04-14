@@ -1,7 +1,6 @@
 import asyncio
 from typing import Annotated, Any
 import uuid
-from psycopg.errors import ForeignKeyViolation
 from sqlalchemy.exc import (
     NoResultFound,
     StatementError,
@@ -130,11 +129,6 @@ async def read_root(cookie: Annotated[str, Cookie()] = None):
             value=str(uuid.uuid4()),
         )
     return response
-
-
-@app.get("/raise")
-async def ra():
-    raise ForeignKeyViolation()
 
 
 if __name__ == "__main__":

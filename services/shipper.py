@@ -159,7 +159,7 @@ async def fetch_shippment_from_range(
         if shipper_id:
             filter.append(OrderProcess.deliver_by == shipper_id)
         if staff_id:
-            filter.append(OrderProcess.deliver_by == staff_id)
+            filter.append(OrderProcess.process_by == staff_id)
 
         results = await ss.scalars(
             paging(sqla.select(OrderProcess).filter(*filter), pg)
@@ -600,7 +600,8 @@ async def get_current_order(
     async with ss.begin():
         filter = [
             ShipperAvailbility.id == self_id,
-            ShipperAvailbility.status == ShipperStatus.ACCEPTED,
+            (ShipperAvailbility.status == ShipperStatus.ACCEPTED)
+            | (ShipperAvailbility.status == ShipperStatus.ON_SHIPPING),
         ]
 
         o = await ss.scalar(

@@ -31,19 +31,6 @@ async def cors() -> str:
     return "CORS"
 
 
-@router.post("/mail/test")
-async def email_test(receiver: list[EmailStr]):
-    return smtp.send_template_email(
-        receiver,
-        "Test",
-        "test",
-        {
-            "name": "sus",
-            "year": datetime.now().year,
-        },
-    )
-
-
 @router.get("/mail/smtp/test")
 def test_smtp_connection():
     smtp_host = "smtp.gmail.com"

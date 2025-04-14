@@ -4,7 +4,7 @@ from typing import Annotated
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.postgresql.db_session import get_session
-from db.postgresql.models.order_history import OrderStatus
+from db.postgresql.models.order_history import DeliveryStatus, OrderStatus
 from db.postgresql.models.shipper import ShipperStatus
 from db.postgresql.models.user_account import (
     CommentStatus,
@@ -588,8 +588,9 @@ async def fetch_order(
     _: Permission,
     pg: Paging,
     ss: Session,
-    shipper_id: str,
-    staff_id: str,
+    delivery_status: DeliveryStatus | None = None,
+    deliver_by: str | None = None,
+    process_by: str | None = None,
     start_date_confirm: date | None = None,
     end_date_confirm: date | None = None,
     start_date_shipping: date | None = None,
@@ -598,12 +599,13 @@ async def fetch_order(
     return await shipper.fetch_shippment_from_range(
         pg,
         ss,
+        delivery_status,
         start_date_confirm,
         end_date_confirm,
         start_date_shipping,
         end_date_shipping,
-        shipper_id,
-        staff_id,
+        deliver_by,
+        process_by,
     )
 
 
