@@ -68,6 +68,19 @@ async def cancel_shipment(
 
 
 @router.put(
+    "/order/ship/{id}",
+    tags=["Order", "Shipper"],
+)
+async def start_shipping_order(
+    _: Permission,
+    id: str,
+    self_id: Id,
+    ss: Session,
+):
+    return await sp.shipping(id, self_id, ss)
+
+
+@router.put(
     "/order/accept/{id}",
     tags=["Order", "Shipper"],
 )
