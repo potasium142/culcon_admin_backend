@@ -601,28 +601,32 @@ async def get_current_order(
         filter = [
             ShipperAvailbility.id == self_id,
             (ShipperAvailbility.status == ShipperStatus.ACCEPTED)
-            | (ShipperAvailbility.status == ShipperStatus.ON_SHIPPING),
+            | (ShipperAvailbility.status == ShipperStatus.ON_SHIPPING)
+            | (ShipperAvailbility.status == ShipperStatus.DELIVERED),
         ]
 
-        o = await ss.scalar(
-            sqla.select(OrderHistory)
-            .select_from(ShipperAvailbility)
-            .filter(*filter)
-            .join(
-                OrderHistory,
-                OrderHistory.id == ShipperAvailbility.current_order,
+        o = (
+            await ss.execute(
+                sqla.select(OrderHistory, ShipperAvailbility.status)
+                .select_from(ShipperAvailbility)
+                .filter(*filter)
+                .join(
+                    OrderHistory,
+                    OrderHistory.id == ShipperAvailbility.current_order,
+                )
+                .limit(1)
             )
-            .limit(1)
-        )
+        ).one()
 
         if not o:
             raise HandledError("Cannot found order")
 
         return {
-            "id": o.id,
-            "receiver": o.receiver,
-            "address": o.delivery_address,
-            "phone": o.phonenumber,
-            "note": o.note,
-            "pay": o.total_price if o.payment_method == PaymentMethod.COD else 0,
+            "id": o[0].id,
+            "receiver": o[0].receiver,
+            "address": o[0].delivery_address,
+            "phone": o[0].phonenumber,
+            "note": o[0].note,
+            "pay": o[0].total_price if o[0].payment_method == PaymentMethod.COD else 0,
+            "status": o[1],
         }
