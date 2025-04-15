@@ -226,7 +226,7 @@ async def get_all_chat_customer(
         filter = []
 
         if username:
-            filter.append(UserAccount.username == username)
+            filter.append(UserAccount.username.ilike(f"%{username}%"))
 
         c_list = (
             await ss.execute(
