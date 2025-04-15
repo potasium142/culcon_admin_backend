@@ -253,23 +253,11 @@ async def get_all_comment(
     _: Permission,
     pg: Paging,
     ss: Session,
+    id: str,
     status: CommentStatus | None = None,
     type: CommentType | None = None,
 ):
-    return await blog.get_comment_by_status(pg, ss, status, type)
-
-
-@router.get(
-    "/comment/fetch",
-    tags=["Blog", "Comment"],
-)
-async def get_blog_comment(
-    _: Permission,
-    id: str,
-    pg: Paging,
-    ss: Session,
-):
-    return await blog.get_comment(id, pg, ss)
+    return await blog.get_comment_by_status(pg, ss, id, status, type)
 
 
 @router.delete(
@@ -297,19 +285,6 @@ async def unflag_comment(
 
 
 @router.get(
-    "/comment/report/fetch/{id}",
-    tags=["Blog", "Comment"],
-)
-async def get_blog_report_cmt(
-    _: Permission,
-    id: str,
-    pg: Paging,
-    ss: Session,
-):
-    return await blog.get_reported_comment_of_blog(id, pg, ss)
-
-
-@router.get(
     "/blog/fetch/all",
     tags=["Blog"],
 )
@@ -332,19 +307,6 @@ async def get_blog(
     ss: Session,
 ):
     return await blog.get(id, ss)
-
-
-@router.get(
-    "/customer/fetch/comment",
-    tags=["Blog", "Comment", "Customer"],
-)
-async def get_customer_comment(
-    _: MPermission,
-    id: str,
-    pg: Paging,
-    ss: Session,
-):
-    return await blog.get_comment_by_customer(id, pg, ss)
 
 
 @router.get(

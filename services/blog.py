@@ -115,46 +115,19 @@ async def change_comment_status(
         return await ss.get_one(PostComment, id)
 
 
-async def get_reported_comment_of_blog(
-    post_id: str,
-    pg: Page,
-    ss: AsyncSession,
-):
-    async with ss.begin():
-        r = await ss.scalars(
-            paging(
-                sqla.select(PostComment)
-                .filter(
-                    PostComment.post_id == post_id,
-                    PostComment.status == CommentStatus.REPORTED,
-                )
-                .order_by(PostComment.timestamp.desc()),
-                pg,
-            )
-        )
-        content = r.all()
-
-        count = (
-            await ss.scalar(
-                sqla.select(sqla.func.count(PostComment.id)).filter(
-                    PostComment.post_id == post_id,
-                    PostComment.status == CommentStatus.REPORTED,
-                )
-            )
-            or 0
-        )
-        return display_page(content, count, pg)
-
-
 async def get_comment_by_status(
     pg: Page,
     ss: AsyncSession,
+    id: str,
     status: CommentStatus | None = None,
     type: CommentType | None = None,
+    user_id: str | None = None,
 ):
     async with ss.begin():
-        filters = []
+        filters = [PostComment.id == id]
 
+        if user_id:
+            filters.append(PostComment.account_id == user_id)
         if type:
             filters.append(PostComment.comment_type == type)
         if status:
@@ -173,31 +146,6 @@ async def get_comment_by_status(
         count = (
             await ss.scalar(
                 sqla.select(sqla.func.count(PostComment.id)).filter(*filters)
-            )
-            or 0
-        )
-        return display_page(content, count, pg)
-
-
-async def get_comment(post_id: str, pg: Page, ss: AsyncSession):
-    async with ss.begin():
-        r = await ss.scalars(
-            paging(
-                sqla.select(PostComment)
-                .filter(
-                    PostComment.post_id == post_id,
-                )
-                .order_by(PostComment.timestamp.desc()),
-                pg,
-            )
-        )
-        content = r.all()
-
-        count = (
-            await ss.scalar(
-                sqla.select(sqla.func.count(PostComment.id)).filter(
-                    PostComment.post_id == post_id,
-                )
             )
             or 0
         )
@@ -224,41 +172,6 @@ async def get_blog_list(page: Page, ss: AsyncSession, title: str = ""):
             await ss.scalar(
                 sqla.select(sqla.func.count(Blog.id)).filter(
                     Blog.title.ilike(f"%{title}%")
-                )
-            )
-            or 0
-        )
-        return display_page(content, count, page)
-
-
-async def get_comment_by_customer(
-    user_id: str,
-    page: Page,
-    ss: AsyncSession,
-):
-    async with ss.begin():
-        usr_chk = await ss.scalar(
-            sqla.select(sqla.exists().where(UserAccount.id == user_id))
-        )
-
-        if not usr_chk:
-            raise HandledError("User not exist")
-
-        content = (
-            await ss.scalars(
-                paging(
-                    sqla.select(PostComment).filter(
-                        PostComment.account_id == user_id,
-                    ),
-                    page,
-                )
-            )
-        ).all()
-
-        count = (
-            await ss.scalar(
-                sqla.select(sqla.func.count(PostComment.id)).filter(
-                    PostComment.account_id == user_id,
                 )
             )
             or 0
