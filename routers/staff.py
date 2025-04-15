@@ -254,10 +254,26 @@ async def get_all_comment(
     pg: Paging,
     ss: Session,
     id: str,
+    user_id: str | None = None,
     status: CommentStatus | None = None,
     type: CommentType | None = None,
 ):
-    return await blog.get_comment_by_status(pg, ss, id, status, type)
+    return await blog.get_comment_by_status(pg, ss, id, status, type, user_id)
+
+
+@router.get(
+    "/comment/fetch/reply",
+    tags=["Blog", "Comment"],
+)
+async def get_reply(
+    _: Permission,
+    pg: Paging,
+    ss: Session,
+    parent_id: str,
+    post_id: str,
+    status: CommentStatus | None = None,
+):
+    return await blog.get_reply(pg, ss, parent_id, post_id, status)
 
 
 @router.delete(

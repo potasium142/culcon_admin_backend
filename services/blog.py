@@ -124,7 +124,7 @@ async def get_comment_by_status(
     user_id: str | None = None,
 ):
     async with ss.begin():
-        filters = [PostComment.id == id]
+        filters = [PostComment.post_id == id]
 
         if user_id:
             filters.append(PostComment.account_id == user_id)
@@ -150,6 +150,38 @@ async def get_comment_by_status(
             or 0
         )
         return display_page(content, count, pg)
+
+
+async def get_reply(
+    pg: Page,
+    ss: AsyncSession,
+    cmt_id: str,
+    blog_id: str,
+    status: CommentStatus | None = None,
+):
+    async with ss.begin():
+        filter = [
+            PostComment.post_id == blog_id,
+            PostComment.parent_comment == cmt_id,
+        ]
+        if status:
+            filter.append(PostComment.status == status)
+
+        replies = await ss.scalars(
+            paging(
+                sqla.select(PostComment).filter(*filter),
+                pg,
+            )
+        )
+
+        count = (
+            await ss.scalar(
+                sqla.select(sqla.func.count(PostComment.id)).filter(*filter)
+            )
+            or 0
+        )
+
+        return display_page(replies.all(), count, pg)
 
 
 async def get_blog_list(page: Page, ss: AsyncSession, title: str = ""):
