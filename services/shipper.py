@@ -15,6 +15,7 @@ from db.postgresql.models.order_history import (
     OrderProcess,
     OrderStatus,
     PaymentMethod,
+    PaymentStatus,
 )
 from db.postgresql.models.shipper import ShipperAvailbility, ShipperStatus
 from db.postgresql.models.staff_account import EmployeeInfo
@@ -44,6 +45,7 @@ async def fetch_non_assign_shifttime(
                     ShipperAvailbility.end_shift,
                     EmployeeInfo.realname,
                     EmployeeInfo.email,
+                    EmployeeInfo.phonenumber,
                 )
                 .filter(*filter)
                 .join(
@@ -66,6 +68,7 @@ async def fetch_non_assign_shifttime(
                 "end_shift": s[2],
                 "name": s[3],
                 "email": s[4],
+                "phonenumber": s[5],
             }
             for s in shippers.all()
         ]
@@ -456,6 +459,9 @@ async def complete_shipment(
 
         shipment.shipping_date = datetime.now()
         order.order_status = OrderStatus.SHIPPED
+
+        if order.payment_method == PaymentMethod.COD:
+            order.payment_status = PaymentStatus.RECEIVED
 
         shipper_ = await ss.scalar(
             sqla.select(ShipperAvailbility).filter(

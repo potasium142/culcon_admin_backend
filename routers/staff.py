@@ -24,6 +24,7 @@ from db.postgresql.paging import page_param, Page
 import auth
 
 Permission = Annotated[bool, Depends(auth.staff_permission)]
+MPermission = Annotated[bool, Depends(auth.manager_permission)]
 
 router = APIRouter(prefix="/api/staff", tags=["Staff function"])
 
@@ -338,7 +339,7 @@ async def get_blog(
     tags=["Blog", "Comment", "Customer"],
 )
 async def get_customer_comment(
-    _: Permission,
+    _: MPermission,
     id: str,
     pg: Paging,
     ss: Session,
@@ -351,7 +352,7 @@ async def get_customer_comment(
     tags=["Customer"],
 )
 async def get_list_customer(
-    _: Permission,
+    _: MPermission,
     pg: Paging,
     ss: Session,
     id: str = "",
@@ -364,7 +365,7 @@ async def get_list_customer(
     tags=["Customer"],
 )
 async def get_customer_cart(
-    _: Permission,
+    _: MPermission,
     pg: Paging,
     id: str,
     ss: Session,
@@ -377,7 +378,7 @@ async def get_customer_cart(
     tags=["Customer"],
 )
 async def get_customer(
-    _: Permission,
+    _: MPermission,
     id: str,
     ss: Session,
 ):
@@ -389,7 +390,7 @@ async def get_customer(
     tags=["Customer"],
 )
 async def get_customer_order(
-    _: Permission,
+    _: MPermission,
     id: str,
     ss: Session,
     pg: Paging,
@@ -402,7 +403,7 @@ async def get_customer_order(
     tags=["Customer"],
 )
 async def change_customer_status(
-    _: Permission,
+    _: MPermission,
     id: str,
     status: UserAccountStatus,
     ss: Session,
@@ -415,7 +416,7 @@ async def change_customer_status(
     tags=["Customer"],
 )
 async def change_customer_account(
-    _: Permission,
+    _: MPermission,
     id: str,
     info: EditCustomerAccount,
     ss: Session,
@@ -428,7 +429,7 @@ async def change_customer_account(
     tags=["Customer"],
 )
 async def change_customer_info(
-    _: Permission,
+    _: MPermission,
     id: str,
     info: EditCustomerInfo,
     ss: Session,
