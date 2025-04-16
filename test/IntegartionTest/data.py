@@ -73,8 +73,164 @@ coupon_disable_sucess = {
     "coupon_id": "CPTEST"
 }
 
+product_update_info = {
+  "day_before_expiry": 10,
+  "description": "short desc",
+  "article_md": "test article_md update",
+  "instructions": [
+    "update instuctions"
+  ],
+  "infos": {
+    "weight": "800g"
+  }
+}
+
+product_update_info_blankDayExpiry = {
+  "day_before_expiry": None,
+  "description": "short desc",
+  "article_md": "test article_md update",
+  "instructions": [
+    "update instuctions"
+  ],
+  "infos": {
+    "weight": "800g"
+  }
+}
 
 
+product_update_info_ExpiredDayEualZero = {
+  "day_before_expiry": 0,
+  "description": "short desc",
+  "article_md": "test article_md update",
+  "instructions": [
+    "update instuctions"
+  ],
+  "infos": {
+    "weight": "800g"
+  }
+}
+
+product_update_info_ExpiredDayNegative = {
+  "day_before_expiry": -10,
+  "description": "short desc",
+  "article_md": "test article_md update",
+  "instructions": [
+    "update instuctions"
+  ],
+  "infos": {
+    "weight": "800g"
+  }
+}
+
+product_update_info_BlankKeyInfo = {
+  "day_before_expiry": -10,
+  "description": "short desc",
+  "article_md": "test article_md update",
+  "instructions": [
+    "update instuctions"
+  ],
+  "infos": {
+    "": "800g"
+  }
+}
+
+product_update_quantity_valid = {
+    "prod_id": "VEG_Potato",
+    "quantity": 50,
+    "in_price": 15000
+}
+
+product_update_quantity_missing_price = {
+    "prod_id": "VEG_Potato",
+    "quantity": 20,
+    "in_price": None  
+}
+
+product_update_quantity_missing_prodId = {
+    "prod_id": "",
+    "quantity": 20,
+    "in_price": 100  
+}
+
+product_update_quantity_missing_quantity = {
+    "prod_id": "VEG_Potato",
+    "quantity": None,
+    "in_price": 15000
+}
+
+product_update_quantity_quantityNegative = {
+    "prod_id": "VEG_Potato",
+    "quantity": -10,
+    "in_price": 15000
+}
+
+product_update_quantity_inPriceNegative = {
+    "prod_id": "VEG_Potato",
+    "quantity": 10,
+    "in_price": -15000
+}
+
+# data.py
+
+product_update_price_valid = {
+    "product_id": "VEG_Potato",
+    "price": 1000,
+    "sale_percent": 10
+}
+
+product_update_price_Negative_price = {
+    "product_id": "VEG_Potato",
+    "price": -500,
+    "sale_percent": 10
+}
+
+product_update__price_Negative_salePercent = {
+    "product_id": "VEG_Potato",
+    "price": 1000,
+    "sale_percent": -10
+}
+
+product_update_price_blank_productId = {
+    "product_id": "",
+    "price": 1000,
+    "sale_percent": 10
+}
+
+product_update_price_blank_price = {
+    "product_id": "",
+    "price": 1000,
+    "sale_percent": 10
+}
+
+product_update_price_blank_sale_percent = {
+    "product_id": "",
+    "price": 1000,
+    "sale_percent": None
+}
+
+product_history_stock_valid = {
+    "prod_id" : "VEG_Potato",
+    "index" : 0,
+    "size" : 7
+}
+
+product_history_stock_prodId_notExist = {
+    "prod_id" : "notexist",
+    "index" : 0,
+    "size" : 7
+}
+
+product_history_price_valid = {
+    "prod_id" : "VEG_Potato",
+    "index" : 0,
+    "size" : 7
+}
+
+product_history_price_prodId_notExist = {
+    "prod_id" : "notexist",
+    "index" : 0,
+    "size" : 7
+}
 main_image_path_mealkit = "test/IntegartionTest/image_test/1_BaconWrappedVeggies.jpg"
 additional_image_path_mealkit = "test/IntegartionTest/image_test/main_BaconWrappedVeggies.jpg"
 additional_image_path_mealkit2 = "test/IntegartionTest/image_test/main_BaconWrappedVeggies.jpg"
