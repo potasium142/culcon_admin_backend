@@ -344,7 +344,7 @@ async def get_customer_cart(
     tags=["Customer"],
 )
 async def get_customer(
-    _: MPermission,
+    _: Permission,
     id: str,
     ss: Session,
 ):
