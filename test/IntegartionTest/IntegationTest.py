@@ -2,7 +2,7 @@ import pytest
 import httpx
 import json
 import os
-from .data import mealkit_valid_data, main_image_path_mealkit, additional_image_path_mealkit,mealkit_no_article
+from .data import mealkit_valid_data, main_image_path_mealkit, additional_image_path_mealkit,mealkit_no_article, main_image_path_blog
 from . import data
 
 
@@ -658,6 +658,7 @@ def test_product_update_info_BlankExpiredDay(client, auth_token):
             }
         )
     assert response.status_code == 422
+
 def test_product_update_info_ExpiredDayEualZero(client, auth_token):
     valid_prod_id = "VEG_Potato"
     test_data = getattr(data, "product_update_info_ExpiredDayEualZero")
@@ -715,7 +716,6 @@ def test_product_update_status_NoLongerInSale(client, auth_token):
     )
 
     assert response.status_code == 200
-
 
 def test_product_update_status_Instock(client, auth_token):
     valid_prod_id = "VEG_Potato"
@@ -1060,20 +1060,843 @@ def test_mealkit_create_blankInfo(client, auth_token):
     assert response.status_code == 422
 
 def test_fetch_ingredients_success(client, auth_token):
-#     test_data = getattr(data, "fetch_ingredients_valid_params")
-#     response = client.get(
-#         f"{BASE_URL}/staff/mealkit/create/fetch/ingredients",
-#         headers={"Authorization": f"Bearer {auth_token}"},
-#         params=test_data
-#     )
+    test_data = getattr(data, "fetch_ingredients_valid_params")
+    response = client.get(
+        f"{BASE_URL}/staff/mealkit/create/fetch/ingredients",
+        headers={"Authorization": f"Bearer {auth_token}"},
+        params=test_data
+    )
 
-#     assert response.status_code == 200
-#     json_data = response.json()
-#     assert "content" in json_data
-#     assert isinstance(json_data["content"], list)
+    assert response.status_code == 200
+    json_data = response.json()
+    assert "content" in json_data
+    assert isinstance(json_data["content"], list)
+
+def test_create_account_success(client, auth_token):
+    test_data = getattr(data, "create_account_manager_success")
+    response = client.post(
+        f"{BASE_URL}/manager/create/account",
+        headers={
+            "Authorization": f"Bearer {auth_token}",
+            "Content-Type": "application/json"
+        },
+        json=test_data
+    )
+
+    assert response.status_code == 200
+
+def test_staff_fetch_all(client, auth_token):
+    test_data = getattr(data, "staff_fetch_all")
+    response = client.get(
+        f"{BASE_URL}/manager/staff/fetch/all",
+        headers={
+            "Authorization": f"Bearer {auth_token}",
+            "Content-Type": "application/json"
+        },
+        params=test_data
+    )
+
+    assert response.status_code == 200
+    json_data = response.json()
+    assert "content" in json_data
+    assert isinstance(json_data["content"], list)
+
+def test_staff_fetch_all_oneaccount(client, auth_token):
+    test_data = getattr(data, "staff_fetch_all")
+    response = client.get(
+        f"{BASE_URL}/manager/staff/fetch/all",
+        headers={
+            "Authorization": f"Bearer {auth_token}",
+            "Content-Type": "application/json"
+        },
+        params=test_data
+    )
+
+    assert response.status_code == 200
+    json_data = response.json()
+    assert "content" in json_data
+    assert isinstance(json_data["content"], list)
+
+def test_staff_fetch_id_readStaffProfile(client, auth_token):
+    test_data = getattr(data, "staff_fetch_id_readStaffProfile")
+    response = client.get(
+        f"{BASE_URL}/manager/staff/fetch/{id}",
+        headers={
+            "Authorization": f"Bearer {auth_token}",
+            "Content-Type": "application/json"
+        },
+        params=test_data
+    )
+
+    assert response.status_code == 200
+
+def test_staff_fetch_id_readStaffProfile_IdNotExist(client, auth_token):
+    test_data = getattr(data, "staff_fetch_all")
+    response = client.get(
+        f"{BASE_URL}/manager/staff/fetch/{id}",
+        headers={
+            "Authorization": f"Bearer {auth_token}",
+            "Content-Type": "application/json"
+        },
+        params=test_data
+    )
+
+    assert response.status_code == 500
+
+def test_edit_staff_account_valid(client, auth_token):
+    test_data = data.edit_staff_account
+
+    response = client.post(
+        f"{BASE_URL}/manager/staff/edit/account",
+        headers={
+            "Authorization": f"Bearer {auth_token}",
+            "Content-Type": "application/json"
+        },
+        params=test_data["params"],
+        json=test_data["payload"]
+    )
+
+    assert response.status_code == 200
+
+def test_edit_staff_account_blankUsername(client, auth_token):
+    test_data = data.edit_staff_account_blankUsername
+
+    response = client.post(
+        f"{BASE_URL}/manager/staff/edit/account",
+        headers={
+            "Authorization": f"Bearer {auth_token}",
+            "Content-Type": "application/json"
+        },
+        params=test_data["params"],
+        json=test_data["payload"]
+    )
+
+    assert response.status_code == 422
+
+def test_edit_staff_account_blankPassword(client, auth_token):
+    test_data = data.edit_staff_account_blankpassword
+
+    response = client.post(
+        f"{BASE_URL}/manager/staff/edit/account",
+        headers={
+            "Authorization": f"Bearer {auth_token}",
+            "Content-Type": "application/json"
+        },
+        params=test_data["params"],
+        json=test_data["payload"]
+    )
+
+    assert response.status_code == 422
+
+def test_edit_staff_account_wrongId(client, auth_token):
+    test_data = data.edit_staff_account_wrongId
+
+    response = client.post(
+        f"{BASE_URL}/manager/staff/edit/account",
+        headers={
+            "Authorization": f"Bearer {auth_token}",
+            "Content-Type": "application/json"
+        },
+        params=test_data["params"],
+        json=test_data["payload"]
+    )
+
+    assert response.status_code == 500
+
+def test_edit_staff_account_infos_valid(client, auth_token):
+    test_data = data.edit_staff_account_infos_valid
+
+    response = client.post(
+        f"{BASE_URL}/api/manager/staff/edit/info",
+        headers={
+            "Authorization": f"Bearer {auth_token}",
+            "Content-Type": "application/json"
+        },
+        params=test_data["params"],
+        json=test_data["payload"]
+    )
+
+    assert response.status_code == 200
+
+def test_edit_staff_account_infos_invalidSsn(client, auth_token):
+    test_data = data.edit_staff_account_infos_invalidSsn
+
+    response = client.post(
+        f"{BASE_URL}/manager/staff/edit/info",
+        headers={
+            "Authorization": f"Bearer {auth_token}",
+            "Content-Type": "application/json"
+        },
+        params=test_data["params"],
+        json=test_data["payload"]
+    )
+
+    assert response.status_code == 422
+
+def test_edit_staff_account_infos_invalidEmail(client, auth_token):
+    test_data = data.edit_staff_account_infos_invalidEmail
+
+    response = client.post(
+        f"{BASE_URL}/manager/staff/edit/info",
+        headers={
+            "Authorization": f"Bearer {auth_token}",
+            "Content-Type": "application/json"
+        },
+        params=test_data["params"],
+        json=test_data["payload"]
+    )
+
+    assert response.status_code == 422
+
+def test_edit_staff_account_infos_invalidPhone(client, auth_token):
+    test_data = data.edit_staff_account_infos_invalid_phone
+    response = client.post(
+        f"{BASE_URL}/manager/staff/edit/info",
+        headers={
+            "Authorization": f"Bearer {auth_token}",
+            "Content-Type": "application/json"
+        },
+        params=test_data["params"],
+        json=test_data["payload"]
+    )
+
+    assert response.status_code == 422
+
+def test_manager_staff_edit_status_disable(client, auth_token):
+    valid_prod_id = "939348b9-cda5-4611-94c5-7e0dde363129"
+    new_status = "DISABLE"
+
+    response = client.post(
+        f"{BASE_URL}/manager/staff/edit/status?id={valid_prod_id}&status={new_status}",
+        headers={"Authorization": f"Bearer {auth_token}"}
+    )
+
+    assert response.status_code == 200
+
+def test_manager_staff_edit_status_active(client, auth_token):
+    valid_prod_id = "939348b9-cda5-4611-94c5-7e0dde363129"
+    new_status = "ACTIVE"
+
+    response = client.post(
+        f"{BASE_URL}/manager/staff/edit/status?id={valid_prod_id}&status={new_status}",
+        headers={"Authorization": f"Bearer {auth_token}"}
+    )
+
+    assert response.status_code == 200
+
+def test_blog_create_success(client, auth_token):
+    test_data = getattr(data, "test_blog_create_success")
+    with open(main_image_path_blog, "rb") as main_img:
+        response = client.post(
+            f"{BASE_URL}/staff/blog/create",
+            headers={"Authorization": f"Bearer {auth_token}"},
+            files={
+                "blog_info": (None, json.dumps(test_data), "application/json"),
+                "main_image": ("test_image_main.jpg", main_img, "image/jpeg")
+            }
+        )
+    assert response.status_code == 200
+
+def test_blog_success_blank_title(client, auth_token):
+    test_data = getattr(data, "test_blog_success_blank_title")
+    with open(main_image_path_blog, "rb") as main_img:
+        response = client.post(
+            f"{BASE_URL}/staff/blog/create",
+            headers={"Authorization": f"Bearer {auth_token}"},
+            files={
+                "blog_info": (None, json.dumps(test_data), "application/json"),
+                "main_image": ("test_image_main.jpg", main_img, "image/jpeg")
+            }
+        )
+    assert response.status_code == 422
+
+def test_blog_create_blank_descripton(client, auth_token):
+    test_data = getattr(data, "test_blog_create_blank_descripton")
+    with open(main_image_path_blog, "rb") as main_img:
+        response = client.post(
+            f"{BASE_URL}/staff/blog/create",
+            headers={"Authorization": f"Bearer {auth_token}"},
+            files={
+                "blog_info": (None, json.dumps(test_data), "application/json"),
+                "main_image": ("test_image_main.jpg", main_img, "image/jpeg")
+            }
+        )
+    assert response.status_code == 422
+
+def test_edit_blog_success(client, auth_token):
+    test_data = data.edit_blog_success
+    response = client.post(
+        f"{BASE_URL}/staff/blog/edit",
+        headers={
+            "Authorization": f"Bearer {auth_token}",
+            "Content-Type": "application/json"
+        },
+        params=test_data["params"],
+        json=test_data["payload"]
+    )
+    assert response.status_code == 200
+
+def test_edit_blog_blank_title(client, auth_token):
+    test_data = data.edit_blog_blank_title
+    response = client.post(
+        f"{BASE_URL}/staff/blog/edit",
+        headers={
+            "Authorization": f"Bearer {auth_token}",
+            "Content-Type": "application/json"
+        },
+        params=test_data["params"],
+        json=test_data["payload"]
+    )
+    assert response.status_code == 422
+
+def test_edit_blog_blank_description(client, auth_token):
+    test_data = data.edit_blog_blank_description
+    response = client.post(
+        f"{BASE_URL}/staff/blog/edit",
+        headers={
+            "Authorization": f"Bearer {auth_token}",
+            "Content-Type": "application/json"
+        },
+        params=test_data["params"],
+        json=test_data["payload"]
+    )
+    assert response.status_code == 422
+
+def test_edit_blog_blank_markdown_text(client, auth_token):
+    test_data = data.edit_blog_blank_markdown_text
+    response = client.post(
+        f"{BASE_URL}/staff/blog/edit",
+        headers={
+            "Authorization": f"Bearer {auth_token}",
+            "Content-Type": "application/json"
+        },
+        params=test_data["params"],
+        json=test_data["payload"]
+    )
+    assert response.status_code == 422
+
+def test_comment_fetch_all(client, auth_token):
+    test_data = data.test_comment_fetch_all
+    response = client.get(
+        f"{BASE_URL}/staff/comment/fetch/all",
+        headers={
+            "Authorization": f"Bearer {auth_token}",
+            "Content-Type": "application/json"
+        },
+        params=test_data
+    )
+    assert response.status_code == 200
+
+def test_comment_fetch_all_normalStatus(client, auth_token):
+    test_data = data.test_comment_fetch_all_normalStatus
+    response = client.get(
+        f"{BASE_URL}/staff/comment/fetch/all",
+        headers={
+            "Authorization": f"Bearer {auth_token}",
+            "Content-Type": "application/json"
+        },
+        params=test_data
+    )
+    assert response.status_code == 200
+
+def test_comment_fetch_all_reportedStatus(client, auth_token):
+    test_data = data.test_comment_fetch_all_reportedStatus
+    response = client.get(
+        f"{BASE_URL}/staff/comment/fetch/all",
+        headers={
+            "Authorization": f"Bearer {auth_token}",
+            "Content-Type": "application/json"
+        },
+        params=test_data
+    )
+    assert response.status_code == 200
+
+def test_comment_fetch_all_deletedStatus(client, auth_token):
+    test_data = data.test_comment_fetch_all_deletedStatus
+    response = client.get(
+        f"{BASE_URL}/staff/comment/fetch/all",
+        headers={
+            "Authorization": f"Bearer {auth_token}",
+            "Content-Type": "application/json"
+        },
+        params=test_data
+    )
+    assert response.status_code == 200
+
+def test_comment_fetch_all_normalStatus_typePost(client, auth_token):
+    test_data = data.test_comment_fetch_all_normalStatus_typePost
+    response = client.get(
+        f"{BASE_URL}/staff/comment/fetch/all",
+        headers={
+            "Authorization": f"Bearer {auth_token}",
+            "Content-Type": "application/json"
+        },
+        params=test_data
+    )
+    assert response.status_code == 200
+
+def test_comment_fetch_all_reportedStatus_typePost(client, auth_token):
+    test_data = data.test_comment_fetch_all_reportedStatus_typePost
+    response = client.get(
+        f"{BASE_URL}/staff/comment/fetch/all",
+        headers={
+            "Authorization": f"Bearer {auth_token}",
+            "Content-Type": "application/json"
+        },
+        params=test_data
+    )
+    assert response.status_code == 200
+
+def test_comment_fetch_all_deletedStatus_typePost(client, auth_token):
+    test_data = data.test_comment_fetch_all_deletedStatus_typePost
+    response = client.get(
+        f"{BASE_URL}/staff/comment/fetch/all",
+        headers={
+            "Authorization": f"Bearer {auth_token}",
+            "Content-Type": "application/json"
+        },
+        params=test_data
+    )
+    assert response.status_code == 200
+
+def test_comment_fetch_all_normalStatus_typePost(client, auth_token):
+    test_data = data.test_comment_fetch_all_normalStatus_typePost
+    response = client.get(
+        f"{BASE_URL}/staff/comment/fetch/all",
+        headers={
+            "Authorization": f"Bearer {auth_token}",
+            "Content-Type": "application/json"
+        },
+        params=test_data
+    )
+    assert response.status_code == 200
+
+def test_comment_fetch_all_reportedStatus_typePost(client, auth_token):
+    test_data = data.test_comment_fetch_all_reportedStatus_typePost
+    response = client.get(
+        f"{BASE_URL}/staff/comment/fetch/all",
+        headers={
+            "Authorization": f"Bearer {auth_token}",
+            "Content-Type": "application/json"
+        },
+        params=test_data
+    )
+    assert response.status_code == 200
+
+def test_comment_fetch_all_deletedStatus_typePost(client, auth_token):
+    test_data = data.test_comment_fetch_all_deletedStatus_typePost
+    response = client.get(
+        f"{BASE_URL}/staff/comment/fetch/all",
+        headers={
+            "Authorization": f"Bearer {auth_token}",
+            "Content-Type": "application/json"
+        },
+        params=test_data
+    )
+    assert response.status_code == 200
+
+def test_comment_fetch_oneBlog(client, auth_token):
+    test_data = data.test_comment_fetch_oneBlog
+    response = client.get(
+        f"{BASE_URL}/staff/comment/fetch/all",
+        headers={
+            "Authorization": f"Bearer {auth_token}",
+            "Content-Type": "application/json"
+        },
+        params=test_data
+    )
+    assert response.status_code == 200
+
+def test_customer_fetch_all(client, auth_token):
+    test_data = data.test_customer_fetch_all
+    response = client.get(
+        f"{BASE_URL}/staff/customer/fetch/all",
+        headers={
+            "Authorization": f"Bearer {auth_token}",
+            "Content-Type": "application/json"
+        },
+        params=test_data
+    )
+    assert response.status_code == 200
+
+def test_customer_fetch_cart(client, auth_token):
+    test_data = data.test_customer_fetch_cart
+    customer_id = test_data["id"]  
+    response = client.get(
+        f"{BASE_URL}/staff/customer/fetch/cart/{customer_id}",
+        headers={
+            "Authorization": f"Bearer {auth_token}",
+            "Content-Type": "application/json"
+        },
+        params=test_data
+    )
+    assert response.status_code == 200
+
+def test_customer_fetch_infos(client, auth_token):
+    test_data = data.test_customer_fetch_infos
+    customer_id = test_data["id"]  
+    response = client.get(
+        f"{BASE_URL}/staff/customer/fetch/id/{customer_id}",
+        headers={
+            "Authorization": f"Bearer {auth_token}",
+            "Content-Type": "application/json"
+        }
+    )
+    assert response.status_code == 200
 
 
+def test_customer_fetch_order(client, auth_token):
+    test_data = data.test_customer_fetch_order
+    customer_id = test_data["id"]  
+    response = client.get(
+        f"{BASE_URL}/staff/customer/fetch/order/{customer_id}",
+        headers={
+            "Authorization": f"Bearer {auth_token}",
+            "Content-Type": "application/json"
+        },
+        params=test_data
+    )
+    assert response.status_code == 200
 
+def test_customer_edit_status_banned(client, auth_token):
+    test_data = data.test_customer_edit_status_banned
+    response = client.patch(
+        f"{BASE_URL}/staff/customer/edit/status",
+        headers={
+            "Authorization": f"Bearer {auth_token}",
+            "Content-Type": "application/json"
+        },
+        params=test_data
+    )
+    assert response.status_code == 200
 
+def test_customer_edit_status_normal(client, auth_token):
+    test_data = data.test_customer_edit_status_normal
+    response = client.patch(
+        f"{BASE_URL}/staff/customer/edit/status",
+        headers={
+            "Authorization": f"Bearer {auth_token}",
+            "Content-Type": "application/json"
+        },
+        params=test_data
+    )
+    assert response.status_code == 200
+
+def test_customer_edit_account_success(client, auth_token):
+    test_data = data.test_customer_edit_account_success
+    response = client.patch(
+        f"{BASE_URL}/staff/customer/edit/account",
+        headers={
+            "Authorization": f"Bearer {auth_token}",
+            "Content-Type": "application/json"
+        },
+        params=test_data["params"],
+        json=test_data["payload"]
+    )
+    assert response.status_code == 200
+
+def test_customer_edit_account_blankUsername(client, auth_token):
+    test_data = data.test_customer_edit_account_blankUsername
+    response = client.patch(
+        f"{BASE_URL}/staff/customer/edit/account",
+        headers={
+            "Authorization": f"Bearer {auth_token}",
+            "Content-Type": "application/json"
+        },
+        params=test_data["params"],
+        json=test_data["payload"]
+    )
+    assert response.status_code == 422
+
+def test_customer_edit_account_blankPassword(client, auth_token):
+    test_data = data.test_customer_edit_account_blankPassword
+    response = client.patch(
+        f"{BASE_URL}/staff/customer/edit/account",
+        headers={
+            "Authorization": f"Bearer {auth_token}",
+            "Content-Type": "application/json"
+        },
+        params=test_data["params"],
+        json=test_data["payload"]
+    )
+    assert response.status_code == 422
+
+def test_customer_edit_account_infos_valid(client, auth_token):
+    test_data = data.test_customer_edit_account_infos_valid
+    response = client.patch(
+        f"{BASE_URL}/staff/customer/edit/info",
+        headers={
+            "Authorization": f"Bearer {auth_token}",
+            "Content-Type": "application/json"
+        },
+        params=test_data["params"],
+        json=test_data["payload"]
+    )
+    assert response.status_code == 200
+
+def test_customer_edit_account_infos_invalid_email(client, auth_token):
+    test_data = data.test_customer_edit_account_infos_invalid_email
+    response = client.patch(
+        f"{BASE_URL}/staff/customer/edit/info",
+        headers={
+            "Authorization": f"Bearer {auth_token}",
+            "Content-Type": "application/json"
+        },
+        params=test_data["params"],
+        json=test_data["payload"]
+    )
+    assert response.status_code == 422
+
+def test_customer_edit_account_infos_invalid_phone(client, auth_token):
+    test_data = data.test_customer_edit_account_infos_invalid_phone
+    response = client.patch(
+        f"{BASE_URL}/staff/customer/edit/info",
+        headers={
+            "Authorization": f"Bearer {auth_token}",
+            "Content-Type": "application/json"
+        },
+        params=test_data["params"],
+        json=test_data["payload"]
+    )
+    assert response.status_code == 422
+
+def test_order_fetch_all(client, auth_token):
+    test_data = data.test_order_fetch_all
+    response = client.get(
+        f"{BASE_URL}/staff/order/fetch/all",
+        headers={
+            "Authorization": f"Bearer {auth_token}",
+            "Content-Type": "application/json"
+        },
+        params=test_data
+
+    )
+    assert response.status_code == 200
+
+def test_order_fetch_all_onConfirm(client, auth_token):
+    test_data = data.test_order_fetch_all
+    response = client.get(
+        f"{BASE_URL}/staff/order/fetch/all",
+        headers={
+            "Authorization": f"Bearer {auth_token}",
+            "Content-Type": "application/json"
+        },
+        params=test_data
+
+    )
+    assert response.status_code == 200
+
+def test_order_fetch_all_PROCESSING(client, auth_token):
+    test_data = data.test_order_fetch_all_ON_PROCESSING
+    response = client.get(
+        f"{BASE_URL}/staff/order/fetch/all",
+        headers={
+            "Authorization": f"Bearer {auth_token}",
+            "Content-Type": "application/json"
+        },
+        params=test_data
+
+    )
+    assert response.status_code == 200
+
+def test_order_fetch_all_ON_SHIPPING(client, auth_token):
+    test_data = data.test_order_fetch_all_ON_SHIPPING
+    response = client.get(
+        f"{BASE_URL}/staff/order/fetch/all",
+        headers={
+            "Authorization": f"Bearer {auth_token}",
+            "Content-Type": "application/json"
+        },
+        params=test_data
+
+    )
+    assert response.status_code == 200
+
+def test_order_fetch_all_SHIPPED(client, auth_token):
+    test_data = data.test_order_fetch_all_SHIPPED
+    response = client.get(
+        f"{BASE_URL}/staff/order/fetch/all",
+        headers={
+            "Authorization": f"Bearer {auth_token}",
+            "Content-Type": "application/json"
+        },
+        params=test_data
+
+    )
+    assert response.status_code == 200
+
+def test_order_fetch_all_DELIVERED(client, auth_token):
+    test_data = data.test_order_fetch_all_DELIVERED
+    response = client.get(
+        f"{BASE_URL}/staff/order/fetch/all",
+        headers={
+            "Authorization": f"Bearer {auth_token}",
+            "Content-Type": "application/json"
+        },
+        params=test_data
+
+    )
+    assert response.status_code == 200
+
+def test_order_fetch_all_CANCELLED(client, auth_token):
+    test_data = data.test_order_fetch_all_CANCELLED
+    response = client.get(
+        f"{BASE_URL}/staff/order/fetch/all",
+        headers={
+            "Authorization": f"Bearer {auth_token}",
+            "Content-Type": "application/json"
+        },
+        params=test_data
+
+    )
+    assert response.status_code == 200
+
+def test_order_fetch_status_onConfirm(client, auth_token):
+    test_data = data.test_order_fetch_status_onConfirm
+    response = client.get(
+        f"{BASE_URL}/staff/order/fetch/all",
+        headers={
+            "Authorization": f"Bearer {auth_token}",
+            "Content-Type": "application/json"
+        },
+        params=test_data
+
+    )
+    assert response.status_code == 200
+
+def test_order_fetch_status_PROCESSING(client, auth_token):
+    test_data = data.test_order_fetch_status_ON_PROCESSING
+    response = client.get(
+        f"{BASE_URL}/staff/order/fetch/all",
+        headers={
+            "Authorization": f"Bearer {auth_token}",
+            "Content-Type": "application/json"
+        },
+        params=test_data
+
+    )
+    assert response.status_code == 200
+
+def test_order_fetch_status_ON_SHIPPING(client, auth_token):
+    test_data = data.test_order_fetch_status_ON_SHIPPING
+    response = client.get(
+        f"{BASE_URL}/staff/order/fetch/status",
+        headers={
+            "Authorization": f"Bearer {auth_token}",
+            "Content-Type": "application/json"
+        },
+        params=test_data
+
+    )
+    assert response.status_code == 200
+
+def test_order_fetch_status_SHIPPED(client, auth_token):
+    test_data = data.test_order_fetch_status_SHIPPED
+    response = client.get(
+        f"{BASE_URL}/staff/order/fetch/status",
+        headers={
+            "Authorization": f"Bearer {auth_token}",
+            "Content-Type": "application/json"
+        },
+        params=test_data
+
+    )
+    assert response.status_code == 200
+
+def test_order_fetch_status_DELIVERED(client, auth_token):
+    test_data = data.test_order_fetch_status_DELIVERED
+    response = client.get(
+        f"{BASE_URL}/staff/order/fetch/status",
+        headers={
+            "Authorization": f"Bearer {auth_token}",
+            "Content-Type": "application/json"
+        },
+        params=test_data
+
+    )
+    assert response.status_code == 200
+
+def test_order_fetch_status_CANCELLED(client, auth_token):
+    test_data = data.test_order_fetch_status_CANCELLED
+    response = client.get(
+        f"{BASE_URL}/staff/order/fetch/status",
+        headers={
+            "Authorization": f"Bearer {auth_token}",
+            "Content-Type": "application/json"
+        },
+        params=test_data
+
+    )
+    assert response.status_code == 200
+
+def test_order_fetch_infos(client, auth_token):
+    test_data = data.test_order_fetch_infos
+    customer_id = test_data["id"] 
+    response = client.get(
+        f"{BASE_URL}/staff/order/fetch/{customer_id}",
+        headers={
+            "Authorization": f"Bearer {auth_token}",
+            "Content-Type": "application/json"
+        },
+        params=test_data
+
+    )
+    assert response.status_code == 200
+
+def test_order_fetch_items(client, auth_token):
+    test_data = data.test_order_fetch_items
+    customer_id = test_data["id"] 
+    response = client.get(
+        f"{BASE_URL}/api/staff/order/fetch/{customer_id}/items",
+        headers={
+            "Authorization": f"Bearer {auth_token}",
+            "Content-Type": "application/json"
+        },
+        params=test_data
+
+    )
+    assert response.status_code == 200
+
+def test_order_accept(client, auth_token):
+    test_data = data.test_order_accept
+    customer_id = test_data["id"] 
+    response = client.get(
+        f"{BASE_URL}/staff/order/accept/{customer_id}",
+        headers={
+            "Authorization": f"Bearer {auth_token}",
+            "Content-Type": "application/json"
+        },
+        params=test_data
+
+    )
+    assert response.status_code == 200
+
+def test_order_ship(client, auth_token):
+    test_data = data.test_order_ship
+    customer_id = test_data["id"] 
+    response = client.get(
+        f"{BASE_URL}/staff/order/ship/{customer_id}",
+        headers={
+            "Authorization": f"Bearer {auth_token}",
+            "Content-Type": "application/json"
+        },
+        params=test_data
+
+    )
+    assert response.status_code == 200
+
+def test_order_cancel(client, auth_token):
+    test_data = data.test_order_cancel
+    customer_id = test_data["id"] 
+    response = client.get(
+        f"{BASE_URL}/staff/order/cancel/{customer_id}",
+        headers={
+            "Authorization": f"Bearer {auth_token}",
+            "Content-Type": "application/json"
+        },
+        params=test_data
+
+    )
+    assert response.status_code == 200
 
 
