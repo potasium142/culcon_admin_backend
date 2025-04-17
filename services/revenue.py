@@ -15,12 +15,14 @@ async def get_last_7_days_revenue(db: AsyncSession) -> list[dict[str, float]]:
             daily_revenue = (
                 await db.scalar(
                     sqla.select(func.sum(PaymentTransaction.amount)).filter(
-                        func.date(PaymentTransaction.create_time) == target_date
+                        func.date(
+                            PaymentTransaction.create_time) == target_date
                     )
                 )
                 or 0.0
             )
-            revenues.append({"date": target_date.isoformat(), "revenue": daily_revenue})
+            revenues.append({"date": target_date.isoformat(),
+                            "revenue": daily_revenue})
         return revenues
 
 
@@ -29,8 +31,10 @@ async def get_last_6_months_revenue(ss: AsyncSession) -> list[dict[str, float]]:
         today = date.today()
         revenues = []
         for i in range(6):
-            target_month = (today.month - i - 1) % 12 + 1
-            target_year = today.year - ((today.month - i - 1) // 12)
+            target_date = today.replace(day=1) - timedelta(days=i * 30)
+            target_month = target_date.month
+            target_year = target_date.year
+
             monthly_revenue = (
                 await ss.scalar(
                     sqla.select(func.sum(PaymentTransaction.amount))
