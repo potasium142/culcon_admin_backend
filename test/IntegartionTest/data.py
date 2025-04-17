@@ -1,3 +1,11 @@
+test_coupon_create_success = {
+    "expire_date": "2026-04-10",
+  "sale_percent": 10,
+  "usage_amount": 5,
+  "minimum_price": 100,
+  "id": "CPTESTING"
+}
+
 mealkit_valid_data = {
     "product_name": "Bacon Wrapped Veggies test",
     "product_type": "MK",
@@ -267,7 +275,7 @@ staff_fetch_id_readStaffProfile_IdNotExist = {
 
 edit_staff_account = {
     "params": {
-        "id": "939348b9-cda5-4611-94c5-7e0dde363129"
+        "id": "8a223f34-aa8b-4c41-91db-c6c629dbe727"
     },
     "payload": {
         "username": "manager_test",
@@ -277,7 +285,7 @@ edit_staff_account = {
 
 edit_staff_account_blankUsername = {
     "params": {
-        "id": "939348b9-cda5-4611-94c5-7e0dde363129"
+        "id": "8a223f34-aa8b-4c41-91db-c6c629dbe727"
     },
     "payload": {
         "username": "",
@@ -287,7 +295,7 @@ edit_staff_account_blankUsername = {
 
 edit_staff_account_blankpassword = {
     "params": {
-        "id": "939348b9-cda5-4611-94c5-7e0dde363129"
+        "id": "8a223f34-aa8b-4c41-91db-c6c629dbe727"
     },
     "payload": {
         "username": "manager_test",
@@ -307,7 +315,7 @@ edit_staff_account_wrongId = {
 
 edit_staff_account_infos_valid = {
     "params": {
-        "id": "939348b9-cda5-4611-94c5-7e0dde363129"
+        "id": "8a223f34-aa8b-4c41-91db-c6c629dbe727"
     },
         "payload": {
   "ssn": "001648456784",
@@ -320,7 +328,7 @@ edit_staff_account_infos_valid = {
 
 edit_staff_account_infos_invalidSsn = {
     "params": {
-        "id": "939348b9-cda5-4611-94c5-7e0dde363129"
+        "id": "8a223f34-aa8b-4c41-91db-c6c629dbe727"
     },
         "payload": {
   "ssn": "0123",
@@ -333,7 +341,7 @@ edit_staff_account_infos_invalidSsn = {
 
 edit_staff_account_infos_invalidEmail = {
     "params": {
-        "id": "939348b9-cda5-4611-94c5-7e0dde363129"
+        "id": "8a223f34-aa8b-4c41-91db-c6c629dbe727"
     },
         "payload": {
   "ssn": "0123",
@@ -346,7 +354,7 @@ edit_staff_account_infos_invalidEmail = {
 
 edit_staff_account_infos_valid = {
     "params": {
-        "id": "939348b9-cda5-4611-94c5-7e0dde363129"
+        "id": "8a223f34-aa8b-4c41-91db-c6c629dbe727"
     },
         "payload": {
   "ssn": "001648456784",
@@ -358,7 +366,7 @@ edit_staff_account_infos_valid = {
 }
 edit_staff_account_infos_invalid_phone = {
     "params": {
-        "id": "939348b9-cda5-4611-94c5-7e0dde363129"
+        "id": "8a223f34-aa8b-4c41-91db-c6c629dbe727"
     },
         "payload": {
   "ssn": "001648456784",
@@ -400,7 +408,7 @@ edit_blog_success = {
     "params": {
         "id": "4d3e0483-c967-4fc1-802c-9872801b01a2"
     },
-        "payload": {
+  "payload": {
   "title": "test",
   "description": "test",
   "markdown_text": "test",
@@ -430,7 +438,7 @@ edit_blog_blank_description = {
     },
         "payload": {
   "title": "test",
-  "description": "test",
+  "description": "",
   "markdown_text": "test",
   "infos": {
     "serving": "2 people"
@@ -445,7 +453,7 @@ edit_blog_blank_markdown_text = {
         "payload": {
   "title": "test",
   "description": "test",
-  "markdown_text": "test",
+  "markdown_text": "",
   "infos": {
     "serving": "2 people"
 }
