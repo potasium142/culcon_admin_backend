@@ -7,7 +7,7 @@ test_coupon_create_success = {
 }
 
 mealkit_valid_data = {
-    "product_name": "Bacon Wrapped Veggies test",
+    "product_name": "Bacon Wrapped Veggies valid",
     "product_type": "MK",
     "day_before_expiry": 5,
     "description": "A delicious and easy-to-make appetizer featuring crispy bacon wrapped around fresh mini cucumbers and carrots.",
@@ -21,12 +21,17 @@ mealkit_valid_data = {
         "Preparation Time": "20 minutes"
     },
     "ingredients": {
-        "Bacon": 10,
-        "Mini Cucumbers": 2,
-        "Carrots": 2,
-        "Parsley": 1
+        "MEAT_BeefBottomRoundSteakThin2lbTray": 10
     }
 }
+
+test_mealkit_create_invalid_ingredient = {
+    **mealkit_valid_data,
+    "ingredients": {
+        "Nothing": 10
+    }
+}
+
 mealkit_no_product_name = {
     **mealkit_valid_data, #** dùng để unpacking thằng sau dấu * và ghi đè nội dung lên nó
     "product_name": ""
@@ -241,7 +246,20 @@ product_history_price_prodId_notExist = {
 }
 
 create_account_manager_success = {
-    "username": "manager_123",
+    "username": "manager_1234",
+    "password": "123456",
+    "type": 2,
+    "employee_info": {
+        "ssn": "123456789101",
+        "phonenumber": "09910033142",
+        "realname": "Nguyen Van A",
+        "email": "manager1234@example.com",
+        "dob": "1990-01-01"
+    },
+    "account_status": "ACTIVE"
+}
+
+create_account_missing_username = {
     "password": "123456",
     "type": 2,
     "employee_info": {
@@ -253,6 +271,81 @@ create_account_manager_success = {
     },
     "account_status": "ACTIVE"
 }
+
+create_account_invalid_email = {
+    "username": "manager_5678",
+    "password": "123456",
+    "type": 2,
+    "employee_info": {
+        "ssn": "987654321",
+        "phonenumber": "09910433142",
+        "realname": "Nguyen Van B",
+        "email": "invalid-email",
+        "dob": "1995-01-01"
+    },
+    "account_status": "ACTIVE"
+}
+
+test_create_account_duplicate_ssn = {
+        "username": "manager_duplicate_ssn",
+        "password": "123456",
+        "type": 2,
+        "employee_info": {
+            "ssn": "123456789",  
+            "phonenumber": "0911222333",
+            "realname": "Nguyen Van B",
+            "email": "duplicate@example.com",
+            "dob": "1995-05-20"
+        },
+        "account_status": "ACTIVE"
+    }
+
+test_create_account_invalid_ssn = {
+    "username": "managerInvalidSsn",
+    "password": "123456",
+    "type": 2,
+    "employee_info": {
+        "ssn": "9",
+        "phonenumber": "013425564874",
+        "realname": "Nguyen Van A",
+        "email": "managerInvalidSsn@example.com",
+        "dob": "1990-01-01"
+    },
+    "account_status": "ACTIVE"
+}
+
+test_create_account_invalid_phoneNumber = {
+    **create_account_manager_success,
+    "phonenumber": "013425564875"
+}
+
+test_create_account_exist_phoneNumber = {
+        "username": "manager_12345",
+    "password": "123456",
+    "type": 2,
+    "employee_info": {
+        "ssn": "124536458741",
+        "phonenumber": "09910433142",
+        "realname": "Nguyen Van B",
+        "email": "manager12345@example.com",
+        "dob": "1990-01-01"
+    },
+    "account_status": "ACTIVE"
+}
+
+test_create_accout_underage_dob = {
+        "username": "manager_underage",
+        "password": "123456",
+        "type": 2,
+        "employee_info": {
+            "ssn": "987654321",
+            "phonenumber": "0911333444",
+            "realname": "Nguyen Van C",
+            "email": "underage@example.com",
+            "dob": "2010-01-01"  
+        },
+        "account_status": "ACTIVE"
+    }
 staff_fetch_all = {
     "id": "",
     "index": 0,
@@ -275,17 +368,26 @@ staff_fetch_id_readStaffProfile_IdNotExist = {
 
 edit_staff_account = {
     "params": {
-        "id": "8a223f34-aa8b-4c41-91db-c6c629dbe727"
+        "id": "916c473a-f3ec-4a89-82c7-777e7f70909e"
     },
     "payload": {
-        "username": "manager_test",
+        "username": "managertest",
         "password": "123456"
     }
 }
 
+edit_staff_account_changeOnlyUsername = {
+    **edit_staff_account,
+    "username": "managertest01"
+}
+
+edit_staff_account_changeOnlyPassword = {
+    **edit_staff_account,
+    "password": "1234567"
+}
 edit_staff_account_blankUsername = {
     "params": {
-        "id": "8a223f34-aa8b-4c41-91db-c6c629dbe727"
+        "id": "916c473a-f3ec-4a89-82c7-777e7f70909e"
     },
     "payload": {
         "username": "",
@@ -295,7 +397,7 @@ edit_staff_account_blankUsername = {
 
 edit_staff_account_blankpassword = {
     "params": {
-        "id": "8a223f34-aa8b-4c41-91db-c6c629dbe727"
+        "id": "916c473a-f3ec-4a89-82c7-777e7f70909e"
     },
     "payload": {
         "username": "manager_test",
@@ -315,7 +417,7 @@ edit_staff_account_wrongId = {
 
 edit_staff_account_infos_valid = {
     "params": {
-        "id": "8a223f34-aa8b-4c41-91db-c6c629dbe727"
+        "id": "916c473a-f3ec-4a89-82c7-777e7f70909e"
     },
         "payload": {
   "ssn": "001648456784",
@@ -328,7 +430,7 @@ edit_staff_account_infos_valid = {
 
 edit_staff_account_infos_invalidSsn = {
     "params": {
-        "id": "8a223f34-aa8b-4c41-91db-c6c629dbe727"
+        "id": "916c473a-f3ec-4a89-82c7-777e7f70909e"
     },
         "payload": {
   "ssn": "0123",
@@ -341,7 +443,7 @@ edit_staff_account_infos_invalidSsn = {
 
 edit_staff_account_infos_invalidEmail = {
     "params": {
-        "id": "8a223f34-aa8b-4c41-91db-c6c629dbe727"
+        "id": "916c473a-f3ec-4a89-82c7-777e7f70909e"
     },
         "payload": {
   "ssn": "0123",
@@ -354,7 +456,7 @@ edit_staff_account_infos_invalidEmail = {
 
 edit_staff_account_infos_valid = {
     "params": {
-        "id": "8a223f34-aa8b-4c41-91db-c6c629dbe727"
+        "id": "916c473a-f3ec-4a89-82c7-777e7f70909e"
     },
         "payload": {
   "ssn": "001648456784",
@@ -366,7 +468,7 @@ edit_staff_account_infos_valid = {
 }
 edit_staff_account_infos_invalid_phone = {
     "params": {
-        "id": "8a223f34-aa8b-4c41-91db-c6c629dbe727"
+        "id": "916c473a-f3ec-4a89-82c7-777e7f70909e"
     },
         "payload": {
   "ssn": "001648456784",
@@ -712,15 +814,18 @@ test_order_fetch_items = {
 }
 
 test_order_accept = {
-    "id": "41c9da8a-bbeb-437a-bdd8-e574a4f50962"
-}
-
-test_order_ship = {
-    "id": "41c9da8a-bbeb-437a-bdd8-e574a4f50962"
+    "id": "a67f8690-45ac-4171-8e0b-5726c2dc4d9f"
 }
 
 test_order_cancel = {
-    "id": "41c9da8a-bbeb-437a-bdd8-e574a4f50962"
+    "id": "55fc01a3-a02b-46fa-8a8f-e89870c87b87"
+}
+test_order_shipper_assign = {
+    "order_id": "a67f8690-45ac-4171-8e0b-5726c2dc4d9f",
+    "shipper_id": "4891a57f-8fbf-48d5-838b-d733b92a98d7"
+}
+test_order_shipper_accept = {
+    "id": "a67f8690-45ac-4171-8e0b-5726c2dc4d9f"
 }
 main_image_path_blog = "test/IntegartionTest/image_test/1_BaconWrappedVeggies.jpg"
 main_image_path_mealkit = "test/IntegartionTest/image_test/1_BaconWrappedVeggies.jpg"
