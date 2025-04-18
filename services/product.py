@@ -23,6 +23,12 @@ async def update_info(
     clip_model: OpenCLIP,
     ss: AsyncSession,
 ):
+    if not prod_info.description:
+        raise HandledError("Product description cannot be empty")
+
+    if prod_info.day_before_expiry <= 0:
+        raise HandledError("Expired day must be bigger than 0")
+
     async with ss.begin():
         prod_doc = await ss.get_one(ProductDoc, prod_id)
 
@@ -90,6 +96,12 @@ async def update_price(
     sale_percent: float,
     ss: AsyncSession,
 ):
+    if price <= 0:
+        raise HandledError("Price is not valid")
+
+    if sale_percent < 0:
+        raise HandledError("Sale percent is not valid")
+
     async with ss.begin():
         product_price = prod.ProductPriceHistory(
             price=price,
@@ -130,6 +142,12 @@ async def restock_product(
     import_price: float,
     ss: AsyncSession,
 ):
+    if amount <= 0:
+        raise HandledError("Amount is not valid")
+
+    if import_price <= 0:
+        raise HandledError("Price is not valid")
+
     async with ss.begin():
         product = await ss.get_one(prod.Product, prod_id)
 

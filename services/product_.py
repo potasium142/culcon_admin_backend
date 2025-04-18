@@ -135,6 +135,17 @@ async def product_creation(
 
     prod_id = f"{prod_info.product_type}_{__prod_name}"
 
+    if len(prod_id) > 255:
+        raise HandledError(
+            "Product id is longer than 255, please trim down product name"
+        )
+
+    if not prod_info.description:
+        raise HandledError("Product description cannot be empty")
+
+    if prod_info.day_before_expiry <= 0:
+        raise HandledError("Expired day must be bigger than 0")
+
     is_mealkit = type(prod_info) is MealKitCreation
 
     async with ss.begin():

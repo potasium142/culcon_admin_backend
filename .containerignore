@@ -10,7 +10,6 @@ __pycache__/
 .gitignore
 debian_setup.bash
 fake_data.py
-requirements.txt
 
 # C extensions
 *.so

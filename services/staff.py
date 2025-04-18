@@ -93,6 +93,9 @@ async def edit_staff_account(
     info: EditStaffAccount,
     ss: AsyncSession,
 ):
+    if not info.password:
+        raise HandledError("Password cannot be empty")
+
     async with ss.begin():
         try:
             uid = UUID(staff_id.strip())
@@ -106,8 +109,13 @@ async def edit_staff_account(
 
         new_password = encryption.hash(info.password)
 
+        if info.username:
+            username = staff.username
+        else:
+            username = info.username
+
         staff.password = new_password
-        staff.username = info.username
+        staff.username = username
 
         await ss.commit()
 
@@ -119,6 +127,9 @@ async def edit_employee_info(
     staff_id: str,
     ss: AsyncSession,
 ):
+    if len(emp_info.ssn) != 12:
+        raise HandledError("SSN must be 12 numbers")
+
     async with ss.begin():
         try:
             uid = UUID(staff_id.strip())

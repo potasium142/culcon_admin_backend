@@ -24,6 +24,15 @@ async def create(
     thumbnail: bytes,
     ss: AsyncSession,
 ):
+    if not blog_dto.title:
+        raise HandledError("Title cannot be empty")
+
+    if not blog_dto.description:
+        raise HandledError("Description cannot be empty")
+
+    if not blog_dto.markdown_text:
+        raise HandledError("Content of blog cannot be empty")
+
     async with ss.begin():
         id = str(uuid4())
 
@@ -67,6 +76,15 @@ async def edit(
     blog_dto: BlogCreation,
     ss: AsyncSession,
 ):
+    if not blog_dto.title:
+        raise HandledError("Title cannot be empty")
+
+    if not blog_dto.description:
+        raise HandledError("Description cannot be empty")
+
+    if not blog_dto.markdown_text:
+        raise HandledError("Content of blog cannot be empty")
+
     async with ss.begin():
         blog: Blog = await ss.get_one(Blog, id)
 
