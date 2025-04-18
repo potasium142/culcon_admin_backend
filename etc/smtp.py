@@ -23,7 +23,7 @@ def send_email(
         subject=subject,
         html=html_content,
         text=text_content or html_content.replace("<br>", "\n"),
-        mail_from=(env.SENDER_NAME, env.SENDER_EMAIL),
+        mail_from=(env.SENDER_NAME, env.SMTP_USER),
     )
 
     response = message.send(
