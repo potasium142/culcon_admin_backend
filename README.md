@@ -45,9 +45,9 @@
     | POSTGRES_USER            | postgres     |
     | POSTGRES_DB              | postgres     |
 
-    > [!IMPORTANT]
-    >
-    > \* is required parameter
+> [!IMPORTANT]
+>
+> \* is required parameter
 
 3.  Start container
 
@@ -89,12 +89,14 @@
          ```
 
 4.  Run LLM container
+
     ```bash
     docker run -d -p 11434:11434 -v <data directory>:/root/.ollama ollama
     ```
-    > [!TIP]
-    >
-    > Add `--gpus=all` for GPU acceleration
+
+> [!TIP]
+>
+> Add `--gpus=all` for GPU acceleration
 
 ### **BACKEND**
 
@@ -151,34 +153,34 @@
    bash ./weights_download.bash
    ```
 
-   > [!TIP]
-   >
-   > `-d <directory>` to set output directory
+> [!TIP]
+>
+> `-d <directory>` to set output directory
 
 5. Create container
 
-   > [!IMPORTANT]
-   >
-   > - Environment variable for python backend
-   > - \* is required
+> [!IMPORTANT]
+>
+> - Environment variable for python backend
+> - \* is required
 
-   | Name                 | Value              | Description               |
-   | -------------------- | ------------------ | ------------------------- |
-   | SECRET_KEY \*        |                    | Secret key for JWT        |
-   | LLM_ENDPOINT \*      |                    | Endpoint for LLM          |
-   | TOKEN_EXPIRE_MINUTES | 7200               | Expire time for JWT token |
-   | DB_NAME              | postgres           | Target database's name    |
-   | DB_PORT              | 5432               | Target port of database   |
-   | DB_DRIVER            | postgresql+psycopg | Database driver           |
-   | SMTP_PORT            | 587                | Port for SMTP             |
+| Name                 | Value              | Description               |
+| -------------------- | ------------------ | ------------------------- |
+| SECRET_KEY \*        |                    | Secret key for JWT        |
+| LLM_ENDPOINT \*      |                    | Endpoint for LLM          |
+| TOKEN_EXPIRE_MINUTES | 7200               | Expire time for JWT token |
+| DB_NAME              | postgres           | Target database's name    |
+| DB_PORT              | 5432               | Target port of database   |
+| DB_DRIVER            | postgresql+psycopg | Database driver           |
+| SMTP_PORT            | 587                | Port for SMTP             |
 
-   ```bash
-   docker run -p 8000:8000 -e <variable>=<value> ... -v <weights directory>:/workdir/ai/weights <image tags>
-   ```
+    ```bash
+    docker run -p 8000:8000 -e <variable>=<value> ... -v <weights directory>:/workdir/ai/weights <image tags>
+    ```
 
-   > [!TIP]
-   >
-   > Add `--gpus=all` for GPU acceleration, or system will use CPU only otherwise
+> [!TIP]
+>
+> Add `--gpus=all` for GPU acceleration, or system will use CPU only otherwise
 
 #### Java backend
 
@@ -197,24 +199,24 @@
 
 3. Create container
 
-   > [!IMPORTANT]
-   >
-   > - Environment variable for ~Spring Boot backend~
-   > - All variables in the table are required
+> [!IMPORTANT]
+>
+> - Environment variable for ~Spring Boot backend~
+> - All variables in the table are required
 
-   | Name                        | Description                     |
-   | --------------------------- | ------------------------------- |
-   | JWT_SECRET_KEY              | Secret key for JWT              |
-   | JWT_EXPIRATION              | Expire time for JWT token       |
-   | GOOGLE_OAUTH2_CLIENT_ID     | Google OAuth2 client ID         |
-   | GOOGLE_OAUTH2_CLIENT_SECRET | Google OAuth2 client secret     |
-   | GOOGLE_AUTH_REDIRECT_URI    | Redirect URI for Google OAuth2  |
-   | FRONTEND_ENDPOINT           | Endpoint for customer frontend  |
-   | DEPLOY_URL                  | Deploy endpoint of this backend |
+| Name                        | Description                     |
+| --------------------------- | ------------------------------- |
+| JWT_SECRET_KEY              | Secret key for JWT              |
+| JWT_EXPIRATION              | Expire time for JWT token       |
+| GOOGLE_OAUTH2_CLIENT_ID     | Google OAuth2 client ID         |
+| GOOGLE_OAUTH2_CLIENT_SECRET | Google OAuth2 client secret     |
+| GOOGLE_AUTH_REDIRECT_URI    | Redirect URI for Google OAuth2  |
+| FRONTEND_ENDPOINT           | Endpoint for customer frontend  |
+| DEPLOY_URL                  | Deploy endpoint of this backend |
 
-   ```bash
-   docker run -p 8080:8080 -e <variable>=<value> ... <image tags>
-   ```
+```bash
+docker run -p 8080:8080 -e <variable>=<value> ... <image tags>
+```
 
 #### Frontend
 

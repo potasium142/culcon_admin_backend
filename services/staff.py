@@ -1,7 +1,6 @@
 from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from auth import encryption
-from db.postgresql.db_session import db_session
 from db.postgresql.models.staff_account import (
     AccountStatus,
     AccountType,
@@ -27,14 +26,22 @@ async def get_all_staff(
     pg: Page,
     ss: AsyncSession,
     id: str = "",
+    type: AccountType | None = None,
 ):
     async with ss.begin():
+        if type:
+            filters = [
+                StaffAccount.username.ilike(f"%{id}%"),
+                StaffAccount.type == type,
+            ]
+        else:
+            filters = [
+                StaffAccount.username.ilike(f"%{id}%"),
+            ]
+
         data = await ss.scalars(
             paging(
-                sqla.select(StaffAccount).filter(
-                    StaffAccount.type == AccountType.STAFF,
-                    StaffAccount.username.ilike(f"%{id}%"),
-                ),
+                sqla.select(StaffAccount).filter(*filters),
                 pg,
             )
         )
@@ -48,10 +55,7 @@ async def get_all_staff(
 
         count = (
             await ss.scalar(
-                sqla.select(sqla.func.count(StaffAccount.id)).filter(
-                    StaffAccount.type == AccountType.STAFF,
-                    StaffAccount.username.ilike(f"%{id}%"),
-                )
+                sqla.select(sqla.func.count(StaffAccount.id)).filter(*filters)
             )
             or 0
         )

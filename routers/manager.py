@@ -1,4 +1,5 @@
 from datetime import date
+from enum import Enum
 from typing import Annotated
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
@@ -13,7 +14,10 @@ from services.predict import (
     predict_next_month_revenue,
 )
 from db.postgresql.db_session import get_session
-from db.postgresql.models.staff_account import AccountStatus
+from db.postgresql.models.staff_account import (
+    AccountStatus,
+    AccountType,
+)
 from dtos.request.account import AccountCreateDto
 from dtos.request.coupon import CouponCreation
 
@@ -131,6 +135,12 @@ async def disable_coupon(
     await coupon_sv.disable_coupon(coupon_id, ss)
 
 
+class AccountTypeSearch(str, Enum):
+    MANAGER = "MANAGER"
+    STAFF = "STAFF"
+    SHIPPER = "SHIPPER"
+
+
 @router.get(
     "/staff/fetch/all",
     tags=["Staff Managment"],
@@ -140,8 +150,19 @@ async def read_all_staff(
     pg: Paging,
     ss: Session,
     id: str = "",
+    type: AccountTypeSearch | None = None,
 ):
-    staff = await staff_sv.get_all_staff(pg, ss, id)
+    search_type = None
+
+    match type:
+        case AccountTypeSearch.MANAGER:
+            search_type = AccountType.MANAGER
+        case AccountTypeSearch.STAFF:
+            search_type = AccountType.STAFF
+        case AccountTypeSearch.SHIPPER:
+            search_type = AccountType.SHIPPER
+
+    staff = await staff_sv.get_all_staff(pg, ss, id, search_type)
     return staff
 
 
