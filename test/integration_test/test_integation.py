@@ -1,10 +1,14 @@
 import pytest
 import httpx
 import json
-import os
-from .data import mealkit_valid_data, main_image_path_mealkit, additional_image_path_mealkit,mealkit_no_article, main_image_path_blog
+from .data import (
+    mealkit_valid_data,
+    main_image_path_mealkit,
+    additional_image_path_mealkit,
+    mealkit_no_article,
+    main_image_path_blog,
+)
 from . import data
-
 
 BASE_URL = "https://culcon-admin-backend-813020060204.asia-northeast3.run.app/api"
 
@@ -19,16 +23,17 @@ def client():
 def auth_token(client):
     """Fixture đăng nhập và lấy token"""
     response = client.post(
-        "/auth/login", data={"username": "admin", "password": "123456"}  
+        "/auth/login", data={"username": "admin", "password": "123456"}
     )
     assert response.status_code == 200
     return response.json()["access_token"]
+
 
 @pytest.fixture
 def auth_token_shipper(client):
     """Fixture đăng nhập và lấy token"""
     response = client.post(
-        "/auth/login", data={"username": "hinessarah", "password": "123456"}  
+        "/auth/login", data={"username": "hinessarah", "password": "123456"}
     )
     assert response.status_code == 200
     return response.json()["access_token_shipper"]
@@ -37,23 +42,22 @@ def auth_token_shipper(client):
 def test_login_invalid_credentials(client):
     """Test đăng nhập với tài khoản sai"""
     response = client.post(
-        "/auth/login", data={"username": "wrong_user", "password": "wrong_pass"}  
+        "/auth/login", data={"username": "wrong_user", "password": "wrong_pass"}
     )
     assert response.status_code == 400
+
 
 def test_login_blankUsername(client):
     """Test đăng nhập với tài khoản ko có username"""
-    response = client.post(
-        "/auth/login", data={"username": "", "password": "123456"}  
-    )
+    response = client.post("/auth/login", data={"username": "", "password": "123456"})
     assert response.status_code == 400
+
 
 def test_login_blankPassword(client):
     """Test đăng nhập với tài khoản ko có pasword"""
-    response = client.post(
-        "/auth/login", data={"username": "admin", "password": ""}  
-    )
+    response = client.post("/auth/login", data={"username": "admin", "password": ""})
     assert response.status_code == 400
+
 
 def test_login_valid_credentials(client):
     """Test đăng nhập thành công (Cần user hợp lệ)"""
@@ -63,59 +67,54 @@ def test_login_valid_credentials(client):
     token = response.json().get("access_token")
     assert token is not None
 
+
 def test_profile_no_token(client):
     """Test lấy profile mà không có token"""
     response = client.get("/auth/profile")
     assert response.status_code == 401  # Unauthorized
+
 
 def test_permission_test_no_token(client):
     """Test truy cập endpoint yêu cầu quyền mà không có token"""
     response = client.get("/auth/permission_test")
     assert response.status_code == 401
 
+
 def test_coupon_fetch_all(client, auth_token):
     response = client.get(
         f"{BASE_URL}/general/coupon/fetch/all",
-        headers={
-            "Authorization": f"Bearer {auth_token}",
-            "Accept": "application/json"
-        }
+        headers={"Authorization": f"Bearer {auth_token}", "Accept": "application/json"},
     )
     assert response.status_code == 200
+
 
 def test_coupon_fetch_sucess(client, auth_token):
     response = client.get(
         f"{BASE_URL}/general/coupon/fetch",
-        headers={
-            "Authorization": f"Bearer {auth_token}",
-            "Accept": "application/json"
-        },
+        headers={"Authorization": f"Bearer {auth_token}", "Accept": "application/json"},
         params={"id": "CP01"},
     )
     assert response.status_code == 200
 
+
 def test_coupon_fetch_wrongId(client, auth_token):
     response = client.get(
         f"{BASE_URL}/general/coupon/fetch",
-        headers={
-            "Authorization": f"Bearer {auth_token}",
-            "Accept": "application/json"
-        },
+        headers={"Authorization": f"Bearer {auth_token}", "Accept": "application/json"},
         params={"id": "WrongID"},
     )
     assert response.status_code == 200
 
-def test_coupon_create_sucess(client, auth_token):
-    test_data = data.test_coupon_create_success
-    response = client.post(
-        f"{BASE_URL}/manager/coupon/create",
-        headers={
-            "Authorization": f"Bearer {auth_token}",
-            "Accept": "application/json"
-        },
-        json=test_data,
-    )
-    assert response.status_code == 200
+
+# def test_coupon_create_sucess(client, auth_token):
+#     test_data = data.test_coupon_create_success
+#     response = client.post(
+#         f"{BASE_URL}/manager/coupon/create",
+#         headers={"Authorization": f"Bearer {auth_token}", "Accept": "application/json"},
+#         json=test_data,
+#     )
+#     assert response.status_code == 200
+
 
 def test_coupon_create_missing_field(client, auth_token):
     response = client.post(
@@ -124,10 +123,10 @@ def test_coupon_create_missing_field(client, auth_token):
         json={
             "sale_percent": 10,
             "usage_amount": 5,
-            
         },
     )
-    assert response.status_code == 422  
+    assert response.status_code == 422
+
 
 def test_coupon_create_duplicate_id(client, auth_token):
     response2 = client.post(
@@ -138,10 +137,11 @@ def test_coupon_create_duplicate_id(client, auth_token):
             "sale_percent": 5,
             "usage_amount": 1,
             "minimum_price": 50,
-            "id": "CPTEST"
+            "id": "CPTEST",
         },
     )
     assert response2.status_code == 500
+
 
 def test_coupon_create_no_token(client):
     response = client.post(
@@ -151,10 +151,11 @@ def test_coupon_create_no_token(client):
             "sale_percent": 10,
             "usage_amount": 5,
             "minimum_price": 100,
-            "id": "CPNOTOKEN"
+            "id": "CPNOTOKEN",
         },
     )
     assert response.status_code == 401  # Unauthorized
+
 
 # def test_coupon_create_invalid_data(client, auth_token):
 #     response = client.post(
@@ -170,63 +171,69 @@ def test_coupon_create_no_token(client):
 #     )
 #     assert response.status_code in [400, 422]
 
+
 def test_coupon_disable_sucess(client, auth_token):
     test_data = getattr(data, "coupon_disable_sucess")
     response = client.delete(
         f"{BASE_URL}/manager/coupon/disable",
         headers={"Authorization": f"Bearer {auth_token}"},
-        params=test_data
+        params=test_data,
     )
 
     assert response.status_code == 200
 
-def test_product_create_success(client, auth_token):
-    main_image_path = "test/IntegartionTest/image_test/cabbage.jpg"
-    additional_image_path = "test/IntegartionTest/image_test/cabbage1.jpg"
-    product_detail = {
-        "product_name": "Dalat Spinach",
-        "product_type": "VEG",
-        "day_before_expiry": 5,
-        "description": "Organic clean Spinach",
-        "article_md": "Useful information about Spinach",
-        "instructions": [
-            "Wash before use",
-            "Store in refrigerator"
-        ],
-        "infos": {
-            "Weight": "500g"
-        }
-    }
 
-    with open(main_image_path, "rb") as main_img, open(additional_image_path, "rb") as extra_img:
-        response = client.post(
-            f"{BASE_URL}/staff/product/create",
-            headers={"Authorization": f"Bearer {auth_token}"},
-            files={
-                "product_detail": (None, json.dumps(product_detail), "application/json"),
-                "main_image": ("test_image_main.jpg", main_img, "image/jpeg"),
-                "additional_images": ("test_image_extra.jpg", extra_img, "image/jpeg"),
-            }
-        )
+# def test_product_create_success(client, auth_token):
+#     main_image_path = "test/IntegartionTest/image_test/cabbage.jpg"
+#     additional_image_path = "test/IntegartionTest/image_test/cabbage1.jpg"
+#     product_detail = {
+#         "product_name": "Dalat Spinach",
+#         "product_type": "VEG",
+#         "day_before_expiry": 5,
+#         "description": "Organic clean Spinach",
+#         "article_md": "Useful information about Spinach",
+#         "instructions": ["Wash before use", "Store in refrigerator"],
+#         "infos": {"Weight": "500g"},
+#     }
 
-    assert response.status_code == 200
+#     with (
+#         open(main_image_path, "rb") as main_img,
+#         open(additional_image_path, "rb") as extra_img,
+#     ):
+#         response = client.post(
+#             f"{BASE_URL}/staff/product/create",
+#             headers={"Authorization": f"Bearer {auth_token}"},
+#             files={
+#                 "product_detail": (
+#                     None,
+#                     json.dumps(product_detail),
+#                     "application/json",
+#                 ),
+#                 "main_image": ("test_image_main.jpg", main_img, "image/jpeg"),
+#                 "additional_images": ("test_image_extra.jpg", extra_img, "image/jpeg"),
+#             },
+#         )
+
+#     assert response.status_code == 200
+
 
 def test_product_fetch_TakeOneProduct(client, auth_token):
     """Test lấy danh sách sản phẩm với token hợp lệ và tham số query"""
-    params = {
-        "prod_id": "VEG_Potato"         
-    }
+    params = {"prod_id": "VEG_Potato"}
 
     response = client.get(
         "/general/product/fetch",
         headers={"Authorization": f"Bearer {auth_token}"},
-        params=params
+        params=params,
     )
 
     assert response.status_code == 200
     data = response.json()
-    assert isinstance(data, dict) or isinstance(data, list)  # Tuỳ vào API trả ra kiểu gì
+    assert isinstance(data, dict) or isinstance(
+        data, list
+    )  # Tuỳ vào API trả ra kiểu gì
     print("Response:", data)
+
 
 def test_product_fetch_all_success(client, auth_token):
     """Test lấy danh sách sản phẩm với token hợp lệ"""
@@ -236,79 +243,68 @@ def test_product_fetch_all_success(client, auth_token):
     )
     assert response.status_code == 200
 
+
 def test_product_fetch_all_successwithpagination(client, auth_token):
     """Test lấy danh sách sản phẩm với token hợp lệ và tham số query"""
-    params = {
-        "index": 1,
-        "size": 7
-    }
+    params = {"index": 1, "size": 7}
 
     response = client.get(
         "/general/product/fetch_all",
         headers={"Authorization": f"Bearer {auth_token}"},
-        params=params
+        params=params,
     )
     assert response.status_code == 200
 
+
 def test_product_fetch_all_success(client, auth_token):
     """Test lấy danh sách sản phẩm với token hợp lệ và tham số query"""
-    params = {
-        "type": "VEG",               
-        "index": 0,
-        "size": 7
-    }
+    params = {"type": "VEG", "index": 0, "size": 7}
 
     response = client.get(
         "/general/product/fetch_all",
         headers={"Authorization": f"Bearer {auth_token}"},
-        params=params
+        params=params,
     )
 
     assert response.status_code == 200
     data = response.json()
-    assert isinstance(data, dict) or isinstance(data, list)  
+    assert isinstance(data, dict) or isinstance(data, list)
     print("Response:", data)
+
 
 def test_product_fetch_ProductNotExist(client, auth_token):
     """test ingredient không tồn tại"""
     response = client.get(
         f"{BASE_URL}/general/product/fetch",
-        headers={
-            "Authorization": f"Bearer {auth_token}",
-            "Accept": "application/json"
-        },
+        headers={"Authorization": f"Bearer {auth_token}", "Accept": "application/json"},
         params={"prod_id": "VEG_NotExist"},
     )
     if response.status_code != 200:
         print(f"Error {response.status_code}: {response.text}")
     assert response.status_code == 500
 
+
 def test_product_fetch_ingredient(client, auth_token):
     response = client.get(
         f"{BASE_URL}/general/product/fetch/ingredients",
-        headers={
-            "Authorization": f"Bearer {auth_token}",
-            "Accept": "application/json"
-        },
+        headers={"Authorization": f"Bearer {auth_token}", "Accept": "application/json"},
         params={"prod_id": "MK_GarlicBeefStirFry"},
     )
     assert response.status_code == 200
 
+
 def test_product_fetch_ingredient_not_exist(client, auth_token):
     response = client.get(
         f"{BASE_URL}/general/product/fetch/ingredients",
-        headers={
-            "Authorization": f"Bearer {auth_token}",
-            "Accept": "application/json"
-        },
+        headers={"Authorization": f"Bearer {auth_token}", "Accept": "application/json"},
         params={"prod_id": "Not Exist"},
     )
     assert response.status_code == 500
 
+
 def test_product_create_has_existed(client, auth_token):
     main_image_path = "test/IntegartionTest/image_test/cachuadalat.jpg"
     additional_image_path = "test/IntegartionTest/image_test/cachuadalat1.jpg"
-
 
     product_detail = {
         "product_name": "Dalat tomatoes",
@@ -316,24 +312,26 @@ def test_product_create_has_existed(client, auth_token):
         "day_before_expiry": 5,
         "description": "Organic clean tomatoes",
         "article_md": "Useful information about tomatoes",
-        "instructions": [
-            "Wash before use",
-            "Store in refrigerator"
-        ],
-        "infos": {
-            "Weight": "500g"
-        }
+        "instructions": ["Wash before use", "Store in refrigerator"],
+        "infos": {"Weight": "500g"},
     }
 
-    with open(main_image_path, "rb") as main_img, open(additional_image_path, "rb") as extra_img:
+    with (
+        open(main_image_path, "rb") as main_img,
+        open(additional_image_path, "rb") as extra_img,
+    ):
         response = client.post(
             f"{BASE_URL}/staff/product/create",
             headers={"Authorization": f"Bearer {auth_token}"},
             files={
-                "product_detail": (None, json.dumps(product_detail), "application/json"),
+                "product_detail": (
+                    None,
+                    json.dumps(product_detail),
+                    "application/json",
+                ),
                 "main_image": ("test_image_main.jpg", main_img, "image/jpeg"),
                 "additional_images": ("test_image_extra.jpg", extra_img, "image/jpeg"),
-            }
+            },
         )
 
     assert response.status_code == 500
@@ -341,10 +339,10 @@ def test_product_create_has_existed(client, auth_token):
     assert "message" in data
     assert data["message"] == "Product is already exists"
 
+
 def test_product_create_invalid_productype(client, auth_token):
     main_image_path = "test/IntegartionTest/image_test/cachuadalat.jpg"
     additional_image_path = "test/IntegartionTest/image_test/cachuadalat1.jpg"
-
 
     product_detail = {
         "product_name": "Dalat milk",
@@ -352,32 +350,34 @@ def test_product_create_invalid_productype(client, auth_token):
         "day_before_expiry": 5,
         "description": "Organic clean milk",
         "article_md": "Useful information about milk",
-        "instructions": [
-            "drink",
-            "Store in refrigerator"
-        ],
-        "infos": {
-            "Weight": "500ml"
-        }
+        "instructions": ["drink", "Store in refrigerator"],
+        "infos": {"Weight": "500ml"},
     }
 
-    with open(main_image_path, "rb") as main_img, open(additional_image_path, "rb") as extra_img:
+    with (
+        open(main_image_path, "rb") as main_img,
+        open(additional_image_path, "rb") as extra_img,
+    ):
         response = client.post(
             f"{BASE_URL}/staff/product/create",
             headers={"Authorization": f"Bearer {auth_token}"},
             files={
-                "product_detail": (None, json.dumps(product_detail), "application/json"),
+                "product_detail": (
+                    None,
+                    json.dumps(product_detail),
+                    "application/json",
+                ),
                 "main_image": ("test_image_main.jpg", main_img, "image/jpeg"),
                 "additional_images": ("test_image_extra.jpg", extra_img, "image/jpeg"),
-            }
+            },
         )
 
     assert response.status_code == 422
 
+
 def test_product_create_blank_name(client, auth_token):
     main_image_path = "test/IntegartionTest/image_test/cachuadalat.jpg"
     additional_image_path = "test/IntegartionTest/image_test/cachuadalat1.jpg"
-
 
     product_detail = {
         "product_name": "",
@@ -385,24 +385,26 @@ def test_product_create_blank_name(client, auth_token):
         "day_before_expiry": 5,
         "description": "Organic clean milk",
         "article_md": "Useful information about milk",
-        "instructions": [
-            "drink",
-            "Store in refrigerator"
-        ],
-        "infos": {
-            "Weight": "500ml"
-        }
+        "instructions": ["drink", "Store in refrigerator"],
+        "infos": {"Weight": "500ml"},
     }
 
-    with open(main_image_path, "rb") as main_img, open(additional_image_path, "rb") as extra_img:
+    with (
+        open(main_image_path, "rb") as main_img,
+        open(additional_image_path, "rb") as extra_img,
+    ):
         response = client.post(
             f"{BASE_URL}/staff/product/create",
             headers={"Authorization": f"Bearer {auth_token}"},
             files={
-                "product_detail": (None, json.dumps(product_detail), "application/json"),
+                "product_detail": (
+                    None,
+                    json.dumps(product_detail),
+                    "application/json",
+                ),
                 "main_image": ("test_image_main.jpg", main_img, "image/jpeg"),
                 "additional_images": ("test_image_extra.jpg", extra_img, "image/jpeg"),
-            }
+            },
         )
 
     assert response.status_code == 500
@@ -410,10 +412,10 @@ def test_product_create_blank_name(client, auth_token):
     assert "message" in data
     assert data["message"] == "Product name is not valid"
 
+
 def test_product_create_dayBeaforeExpiryisNull(client, auth_token):
     main_image_path = "test/IntegartionTest/image_test/cachuadalat.jpg"
     additional_image_path = "test/IntegartionTest/image_test/cachuadalat1.jpg"
-
 
     product_detail = {
         "product_name": "Dalat cabagge",
@@ -421,27 +423,30 @@ def test_product_create_dayBeaforeExpiryisNull(client, auth_token):
         "day_before_expiry": "",
         "description": "Organic clean cabagge",
         "article_md": "Useful information about cabagge",
-        "instructions": [
-            "drink",
-            "Store in refrigerator"
-        ],
-        "infos": {
-            "Weight": "500ml"
-        }
+        "instructions": ["drink", "Store in refrigerator"],
+        "infos": {"Weight": "500ml"},
     }
 
-    with open(main_image_path, "rb") as main_img, open(additional_image_path, "rb") as extra_img:
+    with (
+        open(main_image_path, "rb") as main_img,
+        open(additional_image_path, "rb") as extra_img,
+    ):
         response = client.post(
             f"{BASE_URL}/staff/product/create",
             headers={"Authorization": f"Bearer {auth_token}"},
             files={
-                "product_detail": (None, json.dumps(product_detail), "application/json"),
+                "product_detail": (
+                    None,
+                    json.dumps(product_detail),
+                    "application/json",
+                ),
                 "main_image": ("test_image_main.jpg", main_img, "image/jpeg"),
                 "additional_images": ("test_image_extra.jpg", extra_img, "image/jpeg"),
-            }
+            },
         )
 
     assert response.status_code == 422
+
 
 # def test_product_create_descriptionIsNull(client, auth_token):
 #     main_image_path = "test/IntegartionTest/image_test/cachuadalat.jpg"
@@ -474,7 +479,7 @@ def test_product_create_dayBeaforeExpiryisNull(client, auth_token):
 #         )
 
 #     assert response.status_code == 422
-    
+
 # def test_product_create_article_mdIsNull(client, auth_token):
 #     main_image_path = "test/IntegartionTest/image_test/cachuadalat.jpg"
 #     additional_image_path = "test/IntegartionTest/image_test/cachuadalat1.jpg"
@@ -639,39 +644,39 @@ def test_product_create_dayBeaforeExpiryisNull(client, auth_token):
 
 #     assert response.status_code == 422
 
+
 def test_product_update_info(client, auth_token):
     valid_prod_id = "VEG_Potato"
     test_data = getattr(data, "product_update_info")
     response = client.post(
-            f"{BASE_URL}/staff/product/update/info/prod?prod_id={valid_prod_id}",
-            headers={"Authorization": f"Bearer {auth_token}"},
-            json=test_data
-        )
+        f"{BASE_URL}/staff/product/update/info/prod?prod_id={valid_prod_id}",
+        headers={"Authorization": f"Bearer {auth_token}"},
+        json=test_data,
+    )
     assert response.status_code == 200
+
 
 def test_product_update_info_BlankExpiredDay(client, auth_token):
     valid_prod_id = "VEG_Potato"
     test_data = getattr(data, "product_update_info_blankDayExpiry")
     response = client.post(
-            f"{BASE_URL}/staff/product/update/info/prod?prod_id={valid_prod_id}",
-            headers={"Authorization": f"Bearer {auth_token}"},
-            files={
-                "prod_id": (None, json.dumps(test_data), "application/json")
-            }
-        )
+        f"{BASE_URL}/staff/product/update/info/prod?prod_id={valid_prod_id}",
+        headers={"Authorization": f"Bearer {auth_token}"},
+        files={"prod_id": (None, json.dumps(test_data), "application/json")},
+    )
     assert response.status_code == 422
+
 
 def test_product_update_info_ExpiredDayEualZero(client, auth_token):
     valid_prod_id = "VEG_Potato"
     test_data = getattr(data, "product_update_info_ExpiredDayEualZero")
     response = client.post(
-            f"{BASE_URL}/staff/product/update/info/prod?prod_id={valid_prod_id}",
-            headers={"Authorization": f"Bearer {auth_token}"},
-            files={
-                "prod_id": (None, json.dumps(test_data), "application/json")
-            }
-        )
+        f"{BASE_URL}/staff/product/update/info/prod?prod_id={valid_prod_id}",
+        headers={"Authorization": f"Bearer {auth_token}"},
+        files={"prod_id": (None, json.dumps(test_data), "application/json")},
+    )
     assert response.status_code == 422
+
 
 # def test_product_update_info_ExpiredDayNegative(client, auth_token):
 #     valid_prod_id = "VEG_Potato"
@@ -685,17 +690,17 @@ def test_product_update_info_ExpiredDayEualZero(client, auth_token):
 #         )
 #     assert response.status_code == 422
 
+
 def test_product_update_info_BlankKeyInfo(client, auth_token):
     valid_prod_id = "VEG_Potato"
     test_data = getattr(data, "product_update_info_BlankKeyInfo")
     response = client.post(
-            f"{BASE_URL}/staff/product/update/info/prod?prod_id={valid_prod_id}",
-            headers={"Authorization": f"Bearer {auth_token}"},
-            files={
-                "prod_id": (None, json.dumps(test_data), "application/json")
-            }
-        )
+        f"{BASE_URL}/staff/product/update/info/prod?prod_id={valid_prod_id}",
+        headers={"Authorization": f"Bearer {auth_token}"},
+        files={"prod_id": (None, json.dumps(test_data), "application/json")},
+    )
     assert response.status_code == 422
+
 
 def test_product_update_status_OutOfStock(client, auth_token):
     valid_prod_id = "VEG_Potato"
@@ -703,10 +708,11 @@ def test_product_update_status_OutOfStock(client, auth_token):
 
     response = client.patch(
         f"{BASE_URL}/staff/product/update/status?prod_id={valid_prod_id}&status={new_status}",
-        headers={"Authorization": f"Bearer {auth_token}"}
+        headers={"Authorization": f"Bearer {auth_token}"},
     )
 
     assert response.status_code == 200
+
 
 def test_product_update_status_NoLongerInSale(client, auth_token):
     valid_prod_id = "VEG_Potato"
@@ -714,10 +720,11 @@ def test_product_update_status_NoLongerInSale(client, auth_token):
 
     response = client.patch(
         f"{BASE_URL}/staff/product/update/status?prod_id={valid_prod_id}&status={new_status}",
-        headers={"Authorization": f"Bearer {auth_token}"}
+        headers={"Authorization": f"Bearer {auth_token}"},
     )
 
     assert response.status_code == 200
+
 
 def test_product_update_status_Instock(client, auth_token):
     valid_prod_id = "VEG_Potato"
@@ -725,10 +732,11 @@ def test_product_update_status_Instock(client, auth_token):
 
     response = client.patch(
         f"{BASE_URL}/staff/product/update/status?prod_id={valid_prod_id}&status={new_status}",
-        headers={"Authorization": f"Bearer {auth_token}"}
+        headers={"Authorization": f"Bearer {auth_token}"},
     )
 
     assert response.status_code == 200
+
 
 def test_product_update_quantity_success(client, auth_token):
     update_data = getattr(data, "product_update_quantity_valid")
@@ -738,9 +746,10 @@ def test_product_update_quantity_success(client, auth_token):
         f"?prod_id={update_data['prod_id']}"
         f"&quantity={update_data['quantity']}"
         f"&in_price={update_data['in_price']}",
-        headers={"Authorization": f"Bearer {auth_token}"}
+        headers={"Authorization": f"Bearer {auth_token}"},
     )
     assert response.status_code == 200
+
 
 def test_product_update_quantity_missing_price(client, auth_token):
     update_data = getattr(data, "product_update_quantity_missing_price")
@@ -750,9 +759,10 @@ def test_product_update_quantity_missing_price(client, auth_token):
         f"?prod_id={update_data['prod_id']}"
         f"&quantity={update_data['quantity']}"
         f"&in_price={update_data['in_price']}",
-        headers={"Authorization": f"Bearer {auth_token}"}
+        headers={"Authorization": f"Bearer {auth_token}"},
     )
     assert response.status_code == 422
+
 
 def test_product_update_quantity_missing_prodId(client, auth_token):
     update_data = getattr(data, "product_update_quantity_missing_prodId")
@@ -762,9 +772,10 @@ def test_product_update_quantity_missing_prodId(client, auth_token):
         f"?prod_id={update_data['prod_id']}"
         f"&quantity={update_data['quantity']}"
         f"&in_price={update_data['in_price']}",
-        headers={"Authorization": f"Bearer {auth_token}"}
+        headers={"Authorization": f"Bearer {auth_token}"},
     )
     assert response.status_code == 500
+
 
 def test_product_update_quantity_missing_quantity(client, auth_token):
     update_data = getattr(data, "product_update_quantity_missing_quantity")
@@ -774,9 +785,10 @@ def test_product_update_quantity_missing_quantity(client, auth_token):
         f"?prod_id={update_data['prod_id']}"
         f"&quantity={update_data['quantity']}"
         f"&in_price={update_data['in_price']}",
-        headers={"Authorization": f"Bearer {auth_token}"}
+        headers={"Authorization": f"Bearer {auth_token}"},
     )
     assert response.status_code == 422
+
 
 # def test_product_update_quantity_inPriceNegative(client, auth_token):
 #     update_data = getattr(data, "product_update_quantity_inPriceNegative")
@@ -802,6 +814,7 @@ def test_product_update_quantity_missing_quantity(client, auth_token):
 #     )
 #     assert response.status_code == 422
 
+
 def test_product_update_price_valid(client, auth_token):
     update_data = getattr(data, "product_update_price_valid")
 
@@ -810,10 +823,11 @@ def test_product_update_price_valid(client, auth_token):
         f"?product_id={update_data['product_id']}"
         f"&price={update_data['price']}"
         f"&sale_percent={update_data['sale_percent']}",
-        headers={"Authorization": f"Bearer {auth_token}"}
+        headers={"Authorization": f"Bearer {auth_token}"},
     )
 
     assert response.status_code == 200
+
 
 # def test_product_update_price_Negative_salePercent(client, auth_token):
 #     update_data = getattr(data, "product_update__price_Negative_salePercent")
@@ -828,6 +842,7 @@ def test_product_update_price_valid(client, auth_token):
 
 #     assert response.status_code == 422
 
+
 def test_product_update_price_blank_productId(client, auth_token):
     update_data = getattr(data, "product_update_price_blank_productId")
 
@@ -836,10 +851,11 @@ def test_product_update_price_blank_productId(client, auth_token):
         f"?product_id={update_data['product_id']}"
         f"&price={update_data['price']}"
         f"&sale_percent={update_data['sale_percent']}",
-        headers={"Authorization": f"Bearer {auth_token}"}
+        headers={"Authorization": f"Bearer {auth_token}"},
     )
 
     assert response.status_code == 500
+
 
 def test_product_update_price_blank_price(client, auth_token):
     update_data = getattr(data, "product_update_price_blank_price")
@@ -849,10 +865,11 @@ def test_product_update_price_blank_price(client, auth_token):
         f"?product_id={update_data['product_id']}"
         f"&price={update_data['price']}"
         f"&sale_percent={update_data['sale_percent']}",
-        headers={"Authorization": f"Bearer {auth_token}"}
+        headers={"Authorization": f"Bearer {auth_token}"},
     )
 
     assert response.status_code == 500
+
 
 def test_product_update_price_blank_sale_percent(client, auth_token):
     update_data = getattr(data, "product_update_price_blank_sale_percent")
@@ -862,10 +879,11 @@ def test_product_update_price_blank_sale_percent(client, auth_token):
         f"?product_id={update_data['product_id']}"
         f"&price={update_data['price']}"
         f"&sale_percent={update_data['sale_percent']}",
-        headers={"Authorization": f"Bearer {auth_token}"}
+        headers={"Authorization": f"Bearer {auth_token}"},
     )
 
     assert response.status_code == 422
+
 
 def product_history_stock_valid(client, auth_token):
     update_data = getattr(data, "product_history_stock_valid")
@@ -875,10 +893,11 @@ def product_history_stock_valid(client, auth_token):
         f"?product_id={update_data['product_id']}"
         f"&index={update_data['index']}"
         f"&size={update_data['size']}",
-        headers={"Authorization": f"Bearer {auth_token}"}
+        headers={"Authorization": f"Bearer {auth_token}"},
     )
 
     assert response.status_code == 200
+
 
 def product_history_stock_prodId_notExist(client, auth_token):
     update_data = getattr(data, "product_history_stock_prodId_notExist")
@@ -888,10 +907,11 @@ def product_history_stock_prodId_notExist(client, auth_token):
         f"?product_id={update_data['product_id']}"
         f"&index={update_data['index']}"
         f"&size={update_data['size']}",
-        headers={"Authorization": f"Bearer {auth_token}"}
+        headers={"Authorization": f"Bearer {auth_token}"},
     )
 
     assert response.status_code == 200
+
 
 def product_history_stock_valid(client, auth_token):
     update_data = getattr(data, "product_history_price_valid")
@@ -901,10 +921,11 @@ def product_history_stock_valid(client, auth_token):
         f"?product_id={update_data['product_id']}"
         f"&index={update_data['index']}"
         f"&size={update_data['size']}",
-        headers={"Authorization": f"Bearer {auth_token}"}
+        headers={"Authorization": f"Bearer {auth_token}"},
     )
 
     assert response.status_code == 200
+
 
 def product_history_stock_prodId_notExist(client, auth_token):
     update_data = getattr(data, "product_history_price_prodId_notExist")
@@ -914,56 +935,76 @@ def product_history_stock_prodId_notExist(client, auth_token):
         f"?product_id={update_data['product_id']}"
         f"&index={update_data['index']}"
         f"&size={update_data['size']}",
-        headers={"Authorization": f"Bearer {auth_token}"}
+        headers={"Authorization": f"Bearer {auth_token}"},
     )
 
     assert response.status_code == 200
 
-def test_mealkit_create_success(client, auth_token):
-    test_data = json.dumps(mealkit_valid_data)  # đảm bảo chuyển đúng sang JSON string
+    # def test_mealkit_create_success(client, auth_token):
+    #     test_data = json.dumps(mealkit_valid_data)  # đảm bảo chuyển đúng sang JSON string
 
-    with open(main_image_path_mealkit, "rb") as main_img, open(additional_image_path_mealkit, "rb") as extra_img:
-        files = [
-            ("product_detail", (None, test_data, "application/json")),
-            ("main_image", ("main_image.jpg", main_img, "image/jpeg")),
-            ("additional_images", ("extra_image.jpg", extra_img, "image/jpeg")),
-        ]
+    #     with (
+    #         open(main_image_path_mealkit, "rb") as main_img,
+    #         open(additional_image_path_mealkit, "rb") as extra_img,
+    #     ):
+    #         files = [
+    #             ("product_detail", (None, test_data, "application/json")),
+    #             ("main_image", ("main_image.jpg", main_img, "image/jpeg")),
+    #             ("additional_images", ("extra_image.jpg", extra_img, "image/jpeg")),
+    #         ]
 
-        response = client.post(
-            f"{BASE_URL}/staff/mealkit/create",
-            headers={"Authorization": f"Bearer {auth_token}"},
-            files=files
-        )
+    #         response = client.post(
+    #             f"{BASE_URL}/staff/mealkit/create",
+    #             headers={"Authorization": f"Bearer {auth_token}"},
+    #             files=files,
+    #         )
 
     print("Response status:", response.status_code)
     print("Response body:", response.text)
     assert response.status_code == 200
 
+
 def test_mealkit_create_invalid_ingredient(client, auth_token):
-    with open(main_image_path_mealkit, "rb") as main_img, open(additional_image_path_mealkit, "rb") as extra_img:
+    with (
+        open(main_image_path_mealkit, "rb") as main_img,
+        open(additional_image_path_mealkit, "rb") as extra_img,
+    ):
         response = client.post(
             f"{BASE_URL}/staff/mealkit/create",
             headers={"Authorization": f"Bearer {auth_token}"},
             files={
-                "product_detail": (None, json.dumps(mealkit_valid_data), "application/json"),
+                "product_detail": (
+                    None,
+                    json.dumps(mealkit_valid_data),
+                    "application/json",
+                ),
                 "main_image": ("test_image_main.jpg", main_img, "image/jpeg"),
                 "additional_images": ("test_image_extra.jpg", extra_img, "image/jpeg"),
-            }
+            },
         )
     assert response.status_code == 500
 
+
 def test_mealkit_create_hadExist(client, auth_token):
-    with open(main_image_path_mealkit, "rb") as main_img, open(additional_image_path_mealkit, "rb") as extra_img:
+    with (
+        open(main_image_path_mealkit, "rb") as main_img,
+        open(additional_image_path_mealkit, "rb") as extra_img,
+    ):
         response = client.post(
             f"{BASE_URL}/staff/mealkit/create",
             headers={"Authorization": f"Bearer {auth_token}"},
             files={
-                "product_detail": (None, json.dumps(mealkit_valid_data), "application/json"),
+                "product_detail": (
+                    None,
+                    json.dumps(mealkit_valid_data),
+                    "application/json",
+                ),
                 "main_image": ("test_image_main.jpg", main_img, "image/jpeg"),
                 "additional_images": ("test_image_extra.jpg", extra_img, "image/jpeg"),
-            }
+            },
         )
     assert response.status_code == 500
+
 
 # def test_product_create_main_additional_imagesIsNotImgFile(client, auth_token):
 #     main_image_path = "test/IntegartionTest/image_test/cachuadalat1.jpg"
@@ -998,9 +1039,13 @@ def test_mealkit_create_hadExist(client, auth_token):
 
 #     assert response.status_code == 422
 
+
 def test_mealkit_create_blankMealkitName(client, auth_token):
     test_data = getattr(data, "mealkit_no_product_name")
-    with open(main_image_path_mealkit, "rb") as main_img, open(additional_image_path_mealkit, "rb") as extra_img:
+    with (
+        open(main_image_path_mealkit, "rb") as main_img,
+        open(additional_image_path_mealkit, "rb") as extra_img,
+    ):
         response = client.post(
             f"{BASE_URL}/staff/mealkit/create",
             headers={"Authorization": f"Bearer {auth_token}"},
@@ -1008,13 +1053,17 @@ def test_mealkit_create_blankMealkitName(client, auth_token):
                 "product_detail": (None, json.dumps(test_data), "application/json"),
                 "main_image": ("test_image_main.jpg", main_img, "image/jpeg"),
                 "additional_images": ("test_image_extra.jpg", extra_img, "image/jpeg"),
-            }
+            },
         )
     assert response.status_code == 500
+
 
 def test_mealkit_create_blankProductType(client, auth_token):
     test_data = getattr(data, "mealkit_no_product_type")
-    with open(main_image_path_mealkit, "rb") as main_img, open(additional_image_path_mealkit, "rb") as extra_img:
+    with (
+        open(main_image_path_mealkit, "rb") as main_img,
+        open(additional_image_path_mealkit, "rb") as extra_img,
+    ):
         response = client.post(
             f"{BASE_URL}/staff/mealkit/create",
             headers={"Authorization": f"Bearer {auth_token}"},
@@ -1022,13 +1071,17 @@ def test_mealkit_create_blankProductType(client, auth_token):
                 "product_detail": (None, json.dumps(test_data), "application/json"),
                 "main_image": ("test_image_main.jpg", main_img, "image/jpeg"),
                 "additional_images": ("test_image_extra.jpg", extra_img, "image/jpeg"),
-            }
+            },
         )
     assert response.status_code == 422
+
 
 def test_mealkit_create_blankDescription(client, auth_token):
     test_data = getattr(data, "mealkit_no_desc")
-    with open(main_image_path_mealkit, "rb") as main_img, open(additional_image_path_mealkit, "rb") as extra_img:
+    with (
+        open(main_image_path_mealkit, "rb") as main_img,
+        open(additional_image_path_mealkit, "rb") as extra_img,
+    ):
         response = client.post(
             f"{BASE_URL}/staff/mealkit/create",
             headers={"Authorization": f"Bearer {auth_token}"},
@@ -1036,26 +1089,38 @@ def test_mealkit_create_blankDescription(client, auth_token):
                 "product_detail": (None, json.dumps(test_data), "application/json"),
                 "main_image": ("test_image_main.jpg", main_img, "image/jpeg"),
                 "additional_images": ("test_image_extra.jpg", extra_img, "image/jpeg"),
-            }
+            },
         )
     assert response.status_code == 500
 
+
 def test_mealkit_create_blankArticle(client, auth_token):
-    with open(main_image_path_mealkit, "rb") as main_img, open(additional_image_path_mealkit, "rb") as extra_img:
+    with (
+        open(main_image_path_mealkit, "rb") as main_img,
+        open(additional_image_path_mealkit, "rb") as extra_img,
+    ):
         response = client.post(
             f"{BASE_URL}/staff/mealkit/create",
             headers={"Authorization": f"Bearer {auth_token}"},
             files={
-                "product_detail": (None, json.dumps(mealkit_no_article), "application/json"),
+                "product_detail": (
+                    None,
+                    json.dumps(mealkit_no_article),
+                    "application/json",
+                ),
                 "main_image": ("test_image_main.jpg", main_img, "image/jpeg"),
                 "additional_images": ("test_image_extra.jpg", extra_img, "image/jpeg"),
-            }
+            },
         )
     assert response.status_code == 500
+
 
 def test_mealkit_create_blankInfo(client, auth_token):
     test_data = getattr(data, "mealkit_no_infos")
-    with open(main_image_path_mealkit, "rb") as main_img, open(additional_image_path_mealkit, "rb") as extra_img:
+    with (
+        open(main_image_path_mealkit, "rb") as main_img,
+        open(additional_image_path_mealkit, "rb") as extra_img,
+    ):
         response = client.post(
             f"{BASE_URL}/staff/mealkit/create",
             headers={"Authorization": f"Bearer {auth_token}"},
@@ -1063,13 +1128,17 @@ def test_mealkit_create_blankInfo(client, auth_token):
                 "product_detail": (None, json.dumps(test_data), "application/json"),
                 "main_image": ("test_image_main.jpg", main_img, "image/jpeg"),
                 "additional_images": ("test_image_extra.jpg", extra_img, "image/jpeg"),
-            }
+            },
         )
     assert response.status_code == 500
 
+
 def test_mealkit_create_blankInfo(client, auth_token):
     test_data = getattr(data, "mealkit_no_ingredients")
-    with open(main_image_path_mealkit, "rb") as main_img, open(additional_image_path_mealkit, "rb") as extra_img:
+    with (
+        open(main_image_path_mealkit, "rb") as main_img,
+        open(additional_image_path_mealkit, "rb") as extra_img,
+    ):
         response = client.post(
             f"{BASE_URL}/staff/mealkit/create",
             headers={"Authorization": f"Bearer {auth_token}"},
@@ -1077,16 +1146,17 @@ def test_mealkit_create_blankInfo(client, auth_token):
                 "product_detail": (None, json.dumps(test_data), "application/json"),
                 "main_image": ("test_image_main.jpg", main_img, "image/jpeg"),
                 "additional_images": ("test_image_extra.jpg", extra_img, "image/jpeg"),
-            }
+            },
         )
     assert response.status_code == 422
+
 
 def test_fetch_ingredients_success(client, auth_token):
     test_data = getattr(data, "fetch_ingredients_valid_params")
     response = client.get(
         f"{BASE_URL}/staff/mealkit/create/fetch/ingredients",
         headers={"Authorization": f"Bearer {auth_token}"},
-        params=test_data
+        params=test_data,
     )
 
     assert response.status_code == 200
@@ -1094,65 +1164,71 @@ def test_fetch_ingredients_success(client, auth_token):
     assert "content" in json_data
     assert isinstance(json_data["content"], list)
 
+
+# def test_create_account_success(client, auth_token):
+#     test_data = getattr(data, "create_account_manager_success")
+#     response = client.post(
+#         f"{BASE_URL}/manager/create/account",
+#         headers={
+#             "Authorization": f"Bearer {auth_token}",
+#             "Content-Type": "application/json",
+#         },
+#         json=test_data,
+#     )
+
+#     assert response.status_code == 200
+
+
 def test_create_account_success(client, auth_token):
     test_data = getattr(data, "create_account_manager_success")
     response = client.post(
         f"{BASE_URL}/manager/create/account",
         headers={
             "Authorization": f"Bearer {auth_token}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         },
-        json=test_data
+        json=test_data,
     )
 
     assert response.status_code == 200
 
-def test_create_account_success(client, auth_token):
-    test_data = getattr(data, "create_account_manager_success")
-    response = client.post(
-        f"{BASE_URL}/manager/create/account",
-        headers={
-            "Authorization": f"Bearer {auth_token}",
-            "Content-Type": "application/json"
-        },
-        json=test_data
-    )
-
-    assert response.status_code == 200
 
 def test_create_account_missing_username(client, auth_token):
     test_data = data.create_account_missing_username
     response = client.post(
         f"{BASE_URL}/manager/create/account",
         headers={"Authorization": f"Bearer {auth_token}"},
-        json=test_data
+        json=test_data,
     )
     assert response.status_code == 422
+
 
 def test_create_account_duplicate_username(client, auth_token):
     test_data = data.create_account_manager_success  # dùng lại username đã tồn tại
     response = client.post(
         f"{BASE_URL}/manager/create/account",
         headers={"Authorization": f"Bearer {auth_token}"},
-        json=test_data
+        json=test_data,
     )
     assert response.status_code in [400, 409, 500]
+
 
 def test_create_account_invalid_email(client, auth_token):
     test_data = data.create_account_invalid_email
     response = client.post(
         f"{BASE_URL}/manager/create/account",
         headers={"Authorization": f"Bearer {auth_token}"},
-        json=test_data
+        json=test_data,
     )
     assert response.status_code == 500
+
 
 def test_create_account_no_token(client):
     test_data = data.create_account_manager_success
     response = client.post(
         f"{BASE_URL}/manager/create/account",
         headers={"Content-Type": "application/json"},
-        json=test_data
+        json=test_data,
     )
     assert response.status_code == 401
 
@@ -1170,18 +1246,20 @@ def test_create_account_no_token(client):
 
 #     assert response.status_code == 500
 
+
 def test_create_account_duplicate_ssn(client, auth_token):
     test_data = getattr(data, "test_create_account_duplicate_ssn")
     response = client.post(
         f"{BASE_URL}/manager/create/account",
         headers={
             "Authorization": f"Bearer {auth_token}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         },
-        json=test_data
+        json=test_data,
     )
 
     assert response.status_code == 500
+
 
 def test_create_account_invalid_phoneNumber(client, auth_token):
     test_data = getattr(data, "test_create_account_invalid_phoneNumber")
@@ -1189,12 +1267,13 @@ def test_create_account_invalid_phoneNumber(client, auth_token):
         f"{BASE_URL}/manager/create/account",
         headers={
             "Authorization": f"Bearer {auth_token}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         },
-        json=test_data
+        json=test_data,
     )
 
     assert response.status_code == 500
+
 
 def test_create_account_exist_phoneNumber(client, auth_token):
     test_data = getattr(data, "test_create_account_exist_phoneNumber")
@@ -1202,12 +1281,13 @@ def test_create_account_exist_phoneNumber(client, auth_token):
         f"{BASE_URL}/manager/create/account",
         headers={
             "Authorization": f"Bearer {auth_token}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         },
-        json=test_data
+        json=test_data,
     )
 
     assert response.status_code == 500
+
 
 # def test_create_accout_underage_dob(client, auth_token):
 #     test_data = data.test_create_accout_underage_dob
@@ -1223,21 +1303,23 @@ def test_create_account_exist_phoneNumber(client, auth_token):
 
 #     assert response.status_code == 500
 
+
 def test_staff_fetch_all(client, auth_token):
     test_data = getattr(data, "staff_fetch_all")
     response = client.get(
         f"{BASE_URL}/manager/staff/fetch/all",
         headers={
             "Authorization": f"Bearer {auth_token}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         },
-        params=test_data
+        params=test_data,
     )
 
     assert response.status_code == 200
     json_data = response.json()
     assert "content" in json_data
     assert isinstance(json_data["content"], list)
+
 
 def test_staff_fetch_all_oneaccount(client, auth_token):
     test_data = getattr(data, "staff_fetch_all")
@@ -1245,9 +1327,9 @@ def test_staff_fetch_all_oneaccount(client, auth_token):
         f"{BASE_URL}/manager/staff/fetch/all",
         headers={
             "Authorization": f"Bearer {auth_token}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         },
-        params=test_data
+        params=test_data,
     )
 
     assert response.status_code == 200
@@ -1255,18 +1337,20 @@ def test_staff_fetch_all_oneaccount(client, auth_token):
     assert "content" in json_data
     assert isinstance(json_data["content"], list)
 
+
 def test_staff_fetch_id_readStaffProfile_IdNotExist(client, auth_token):
     test_data = getattr(data, "staff_fetch_all")
     response = client.get(
         f"{BASE_URL}/manager/staff/fetch/{id}",
         headers={
             "Authorization": f"Bearer {auth_token}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         },
-        params=test_data
+        params=test_data,
     )
 
     assert response.status_code == 500
+
 
 # def test_edit_staff_account_valid(client, auth_token):
 #     test_data = data.edit_staff_account
@@ -1424,18 +1508,20 @@ def test_staff_fetch_id_readStaffProfile_IdNotExist(client, auth_token):
 
 #     assert response.status_code == 200
 
+
 def test_staff_fetch_id_readStaffProfile(client, auth_token):
     test_data = getattr(data, "staff_fetch_id_readStaffProfile")
     response = client.get(
         f"{BASE_URL}/manager/staff/fetch/{id}",
         headers={
             "Authorization": f"Bearer {auth_token}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         },
-        params=test_data
+        params=test_data,
     )
 
     assert response.status_code == 500
+
 
 def test_blog_create_success(client, auth_token):
     test_data = getattr(data, "test_blog_create_success")
@@ -1445,10 +1531,11 @@ def test_blog_create_success(client, auth_token):
             headers={"Authorization": f"Bearer {auth_token}"},
             files={
                 "blog_info": (None, json.dumps(test_data), "application/json"),
-                "main_image": ("test_image_main.jpg", main_img, "image/jpeg")
-            }
+                "main_image": ("test_image_main.jpg", main_img, "image/jpeg"),
+            },
         )
     assert response.status_code == 200
+
 
 # def test_blog_create_blank_title(client, auth_token):
 #     test_data = getattr(data, "test_blog_create_blank_title")
@@ -1528,17 +1615,19 @@ def test_blog_create_success(client, auth_token):
 #     )
 #     assert response.status_code == 500
 
+
 def test_comment_fetch_all(client, auth_token):
     test_data = data.test_comment_fetch_all
     response = client.get(
         f"{BASE_URL}/staff/comment/fetch/all",
         headers={
             "Authorization": f"Bearer {auth_token}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         },
-        params=test_data
+        params=test_data,
     )
     assert response.status_code == 200
+
 
 def test_comment_fetch_all_normalStatus(client, auth_token):
     test_data = data.test_comment_fetch_all_normalStatus
@@ -1546,11 +1635,12 @@ def test_comment_fetch_all_normalStatus(client, auth_token):
         f"{BASE_URL}/staff/comment/fetch/all",
         headers={
             "Authorization": f"Bearer {auth_token}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         },
-        params=test_data
+        params=test_data,
     )
     assert response.status_code == 200
+
 
 def test_comment_fetch_all_reportedStatus(client, auth_token):
     test_data = data.test_comment_fetch_all_reportedStatus
@@ -1558,11 +1648,12 @@ def test_comment_fetch_all_reportedStatus(client, auth_token):
         f"{BASE_URL}/staff/comment/fetch/all",
         headers={
             "Authorization": f"Bearer {auth_token}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         },
-        params=test_data
+        params=test_data,
     )
     assert response.status_code == 200
+
 
 def test_comment_fetch_all_deletedStatus(client, auth_token):
     test_data = data.test_comment_fetch_all_deletedStatus
@@ -1570,11 +1661,12 @@ def test_comment_fetch_all_deletedStatus(client, auth_token):
         f"{BASE_URL}/staff/comment/fetch/all",
         headers={
             "Authorization": f"Bearer {auth_token}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         },
-        params=test_data
+        params=test_data,
     )
     assert response.status_code == 200
+
 
 def test_comment_fetch_all_normalStatus_typePost(client, auth_token):
     test_data = data.test_comment_fetch_all_normalStatus_typePost
@@ -1582,11 +1674,12 @@ def test_comment_fetch_all_normalStatus_typePost(client, auth_token):
         f"{BASE_URL}/staff/comment/fetch/all",
         headers={
             "Authorization": f"Bearer {auth_token}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         },
-        params=test_data
+        params=test_data,
     )
     assert response.status_code == 200
+
 
 def test_comment_fetch_all_reportedStatus_typePost(client, auth_token):
     test_data = data.test_comment_fetch_all_reportedStatus_typePost
@@ -1594,11 +1687,12 @@ def test_comment_fetch_all_reportedStatus_typePost(client, auth_token):
         f"{BASE_URL}/staff/comment/fetch/all",
         headers={
             "Authorization": f"Bearer {auth_token}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         },
-        params=test_data
+        params=test_data,
     )
     assert response.status_code == 200
+
 
 def test_comment_fetch_all_deletedStatus_typePost(client, auth_token):
     test_data = data.test_comment_fetch_all_deletedStatus_typePost
@@ -1606,11 +1700,12 @@ def test_comment_fetch_all_deletedStatus_typePost(client, auth_token):
         f"{BASE_URL}/staff/comment/fetch/all",
         headers={
             "Authorization": f"Bearer {auth_token}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         },
-        params=test_data
+        params=test_data,
     )
     assert response.status_code == 200
+
 
 def test_comment_fetch_all_normalStatus_typePost(client, auth_token):
     test_data = data.test_comment_fetch_all_normalStatus_typePost
@@ -1618,11 +1713,12 @@ def test_comment_fetch_all_normalStatus_typePost(client, auth_token):
         f"{BASE_URL}/staff/comment/fetch/all",
         headers={
             "Authorization": f"Bearer {auth_token}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         },
-        params=test_data
+        params=test_data,
     )
     assert response.status_code == 200
+
 
 def test_comment_fetch_all_reportedStatus_typePost(client, auth_token):
     test_data = data.test_comment_fetch_all_reportedStatus_typePost
@@ -1630,11 +1726,12 @@ def test_comment_fetch_all_reportedStatus_typePost(client, auth_token):
         f"{BASE_URL}/staff/comment/fetch/all",
         headers={
             "Authorization": f"Bearer {auth_token}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         },
-        params=test_data
+        params=test_data,
     )
     assert response.status_code == 200
+
 
 def test_comment_fetch_all_deletedStatus_typePost(client, auth_token):
     test_data = data.test_comment_fetch_all_deletedStatus_typePost
@@ -1642,11 +1739,12 @@ def test_comment_fetch_all_deletedStatus_typePost(client, auth_token):
         f"{BASE_URL}/staff/comment/fetch/all",
         headers={
             "Authorization": f"Bearer {auth_token}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         },
-        params=test_data
+        params=test_data,
     )
     assert response.status_code == 200
+
 
 def test_comment_fetch_oneBlog(client, auth_token):
     test_data = data.test_comment_fetch_oneBlog
@@ -1654,11 +1752,12 @@ def test_comment_fetch_oneBlog(client, auth_token):
         f"{BASE_URL}/staff/comment/fetch/all",
         headers={
             "Authorization": f"Bearer {auth_token}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         },
-        params=test_data
+        params=test_data,
     )
     assert response.status_code == 200
+
 
 def test_customer_fetch_all(client, auth_token):
     test_data = data.test_customer_fetch_all
@@ -1666,50 +1765,53 @@ def test_customer_fetch_all(client, auth_token):
         f"{BASE_URL}/staff/customer/fetch/all",
         headers={
             "Authorization": f"Bearer {auth_token}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         },
-        params=test_data
+        params=test_data,
     )
     assert response.status_code == 200
 
+
 def test_customer_fetch_cart(client, auth_token):
     test_data = data.test_customer_fetch_cart
-    customer_id = test_data["id"]  
+    customer_id = test_data["id"]
     response = client.get(
         f"{BASE_URL}/staff/customer/fetch/cart/{customer_id}",
         headers={
             "Authorization": f"Bearer {auth_token}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         },
-        params=test_data
+        params=test_data,
     )
     assert response.status_code == 200
 
+
 def test_customer_fetch_infos(client, auth_token):
     test_data = data.test_customer_fetch_infos
-    customer_id = test_data["id"]  
+    customer_id = test_data["id"]
     response = client.get(
         f"{BASE_URL}/staff/customer/fetch/id/{customer_id}",
         headers={
             "Authorization": f"Bearer {auth_token}",
-            "Content-Type": "application/json"
-        }
+            "Content-Type": "application/json",
+        },
     )
     assert response.status_code == 200
 
 
 def test_customer_fetch_order(client, auth_token):
     test_data = data.test_customer_fetch_order
-    customer_id = test_data["id"]  
+    customer_id = test_data["id"]
     response = client.get(
         f"{BASE_URL}/staff/customer/fetch/order/{customer_id}",
         headers={
             "Authorization": f"Bearer {auth_token}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         },
-        params=test_data
+        params=test_data,
     )
     assert response.status_code == 200
+
 
 def test_customer_edit_status_banned(client, auth_token):
     test_data = data.test_customer_edit_status_banned
@@ -1717,11 +1819,12 @@ def test_customer_edit_status_banned(client, auth_token):
         f"{BASE_URL}/staff/customer/edit/status",
         headers={
             "Authorization": f"Bearer {auth_token}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         },
-        params=test_data
+        params=test_data,
     )
     assert response.status_code == 200
+
 
 def test_customer_edit_status_normal(client, auth_token):
     test_data = data.test_customer_edit_status_normal
@@ -1729,11 +1832,12 @@ def test_customer_edit_status_normal(client, auth_token):
         f"{BASE_URL}/staff/customer/edit/status",
         headers={
             "Authorization": f"Bearer {auth_token}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         },
-        params=test_data
+        params=test_data,
     )
     assert response.status_code == 200
+
 
 def test_customer_edit_account_success(client, auth_token):
     test_data = data.test_customer_edit_account_success
@@ -1741,12 +1845,13 @@ def test_customer_edit_account_success(client, auth_token):
         f"{BASE_URL}/staff/customer/edit/account",
         headers={
             "Authorization": f"Bearer {auth_token}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         },
         params=test_data["params"],
-        json=test_data["payload"]
+        json=test_data["payload"],
     )
     assert response.status_code == 200
+
 
 def test_customer_edit_account_blankUsername(client, auth_token):
     test_data = data.test_customer_edit_account_blankUsername
@@ -1754,12 +1859,13 @@ def test_customer_edit_account_blankUsername(client, auth_token):
         f"{BASE_URL}/staff/customer/edit/account",
         headers={
             "Authorization": f"Bearer {auth_token}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         },
         params=test_data["params"],
-        json=test_data["payload"]
+        json=test_data["payload"],
     )
     assert response.status_code == 422
+
 
 # def test_customer_edit_account_blankPassword(client, auth_token):
 #     test_data = data.test_customer_edit_account_blankPassword
@@ -1774,18 +1880,20 @@ def test_customer_edit_account_blankUsername(client, auth_token):
 #     )
 #     assert response.status_code == 422
 
+
 def test_customer_edit_account_infos_valid(client, auth_token):
     test_data = data.test_customer_edit_account_infos_valid
     response = client.patch(
         f"{BASE_URL}/staff/customer/edit/info",
         headers={
             "Authorization": f"Bearer {auth_token}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         },
         params=test_data["params"],
-        json=test_data["payload"]
+        json=test_data["payload"],
     )
     assert response.status_code == 200
+
 
 def test_customer_edit_account_infos_invalid_email(client, auth_token):
     test_data = data.test_customer_edit_account_infos_invalid_email
@@ -1793,12 +1901,13 @@ def test_customer_edit_account_infos_invalid_email(client, auth_token):
         f"{BASE_URL}/staff/customer/edit/info",
         headers={
             "Authorization": f"Bearer {auth_token}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         },
         params=test_data["params"],
-        json=test_data["payload"]
+        json=test_data["payload"],
     )
     assert response.status_code == 422
+
 
 def test_customer_edit_account_infos_invalid_phone(client, auth_token):
     test_data = data.test_customer_edit_account_infos_invalid_phone
@@ -1806,12 +1915,13 @@ def test_customer_edit_account_infos_invalid_phone(client, auth_token):
         f"{BASE_URL}/staff/customer/edit/info",
         headers={
             "Authorization": f"Bearer {auth_token}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         },
         params=test_data["params"],
-        json=test_data["payload"]
+        json=test_data["payload"],
     )
     assert response.status_code == 422
+
 
 def test_order_fetch_all(client, auth_token):
     test_data = data.test_order_fetch_all
@@ -1819,12 +1929,12 @@ def test_order_fetch_all(client, auth_token):
         f"{BASE_URL}/staff/order/fetch/all",
         headers={
             "Authorization": f"Bearer {auth_token}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         },
-        params=test_data
-
+        params=test_data,
     )
     assert response.status_code == 200
+
 
 def test_order_fetch_all_onConfirm(client, auth_token):
     test_data = data.test_order_fetch_all
@@ -1832,12 +1942,12 @@ def test_order_fetch_all_onConfirm(client, auth_token):
         f"{BASE_URL}/staff/order/fetch/all",
         headers={
             "Authorization": f"Bearer {auth_token}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         },
-        params=test_data
-
+        params=test_data,
     )
     assert response.status_code == 200
+
 
 def test_order_fetch_all_PROCESSING(client, auth_token):
     test_data = data.test_order_fetch_all_ON_PROCESSING
@@ -1845,12 +1955,12 @@ def test_order_fetch_all_PROCESSING(client, auth_token):
         f"{BASE_URL}/staff/order/fetch/all",
         headers={
             "Authorization": f"Bearer {auth_token}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         },
-        params=test_data
-
+        params=test_data,
     )
     assert response.status_code == 200
+
 
 def test_order_fetch_all_ON_SHIPPING(client, auth_token):
     test_data = data.test_order_fetch_all_ON_SHIPPING
@@ -1858,12 +1968,12 @@ def test_order_fetch_all_ON_SHIPPING(client, auth_token):
         f"{BASE_URL}/staff/order/fetch/all",
         headers={
             "Authorization": f"Bearer {auth_token}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         },
-        params=test_data
-
+        params=test_data,
     )
     assert response.status_code == 200
+
 
 def test_order_fetch_all_SHIPPED(client, auth_token):
     test_data = data.test_order_fetch_all_SHIPPED
@@ -1871,12 +1981,12 @@ def test_order_fetch_all_SHIPPED(client, auth_token):
         f"{BASE_URL}/staff/order/fetch/all",
         headers={
             "Authorization": f"Bearer {auth_token}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         },
-        params=test_data
-
+        params=test_data,
     )
     assert response.status_code == 200
+
 
 def test_order_fetch_all_DELIVERED(client, auth_token):
     test_data = data.test_order_fetch_all_DELIVERED
@@ -1884,12 +1994,12 @@ def test_order_fetch_all_DELIVERED(client, auth_token):
         f"{BASE_URL}/staff/order/fetch/all",
         headers={
             "Authorization": f"Bearer {auth_token}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         },
-        params=test_data
-
+        params=test_data,
     )
     assert response.status_code == 200
+
 
 def test_order_fetch_all_CANCELLED(client, auth_token):
     test_data = data.test_order_fetch_all_CANCELLED
@@ -1897,12 +2007,12 @@ def test_order_fetch_all_CANCELLED(client, auth_token):
         f"{BASE_URL}/staff/order/fetch/all",
         headers={
             "Authorization": f"Bearer {auth_token}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         },
-        params=test_data
-
+        params=test_data,
     )
     assert response.status_code == 200
+
 
 def test_order_fetch_status_onConfirm(client, auth_token):
     test_data = data.test_order_fetch_status_onConfirm
@@ -1910,12 +2020,12 @@ def test_order_fetch_status_onConfirm(client, auth_token):
         f"{BASE_URL}/staff/order/fetch/all",
         headers={
             "Authorization": f"Bearer {auth_token}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         },
-        params=test_data
-
+        params=test_data,
     )
     assert response.status_code == 200
+
 
 def test_order_fetch_status_PROCESSING(client, auth_token):
     test_data = data.test_order_fetch_status_ON_PROCESSING
@@ -1923,12 +2033,12 @@ def test_order_fetch_status_PROCESSING(client, auth_token):
         f"{BASE_URL}/staff/order/fetch/all",
         headers={
             "Authorization": f"Bearer {auth_token}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         },
-        params=test_data
-
+        params=test_data,
     )
     assert response.status_code == 200
+
 
 def test_order_fetch_status_ON_SHIPPING(client, auth_token):
     test_data = data.test_order_fetch_status_ON_SHIPPING
@@ -1936,12 +2046,12 @@ def test_order_fetch_status_ON_SHIPPING(client, auth_token):
         f"{BASE_URL}/staff/order/fetch/status",
         headers={
             "Authorization": f"Bearer {auth_token}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         },
-        params=test_data
-
+        params=test_data,
     )
     assert response.status_code == 200
+
 
 def test_order_fetch_status_SHIPPED(client, auth_token):
     test_data = data.test_order_fetch_status_SHIPPED
@@ -1949,12 +2059,12 @@ def test_order_fetch_status_SHIPPED(client, auth_token):
         f"{BASE_URL}/staff/order/fetch/status",
         headers={
             "Authorization": f"Bearer {auth_token}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         },
-        params=test_data
-
+        params=test_data,
     )
     assert response.status_code == 200
+
 
 def test_order_fetch_status_DELIVERED(client, auth_token):
     test_data = data.test_order_fetch_status_DELIVERED
@@ -1962,12 +2072,12 @@ def test_order_fetch_status_DELIVERED(client, auth_token):
         f"{BASE_URL}/staff/order/fetch/status",
         headers={
             "Authorization": f"Bearer {auth_token}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         },
-        params=test_data
-
+        params=test_data,
     )
     assert response.status_code == 200
+
 
 def test_order_fetch_status_CANCELLED(client, auth_token):
     test_data = data.test_order_fetch_status_CANCELLED
@@ -1975,44 +2085,44 @@ def test_order_fetch_status_CANCELLED(client, auth_token):
         f"{BASE_URL}/staff/order/fetch/status",
         headers={
             "Authorization": f"Bearer {auth_token}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         },
-        params=test_data
-
+        params=test_data,
     )
     assert response.status_code == 200
 
+
 def test_order_fetch_infos(client, auth_token):
     test_data = data.test_order_fetch_infos
-    customer_id = test_data["id"] 
+    customer_id = test_data["id"]
     response = client.get(
         f"{BASE_URL}/staff/order/fetch/{customer_id}",
         headers={
             "Authorization": f"Bearer {auth_token}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         },
-        params=test_data
-
+        params=test_data,
     )
     assert response.status_code == 200
 
+
 def test_order_fetch_items(client, auth_token):
     test_data = data.test_order_fetch_items
-    customer_id = test_data["id"] 
+    customer_id = test_data["id"]
     response = client.get(
         f"{BASE_URL}/staff/order/fetch/{customer_id}/items",
         headers={
             "Authorization": f"Bearer {auth_token}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         },
-        params=test_data
-
+        params=test_data,
     )
     assert response.status_code == 200
 
+
 # def test_order_accept(client, auth_token):
 #     test_data = data.test_order_accept
-#     customer_id = test_data["id"] 
+#     customer_id = test_data["id"]
 #     response = client.post(
 #         f"{BASE_URL}/staff/order/accept/{customer_id}",
 #         headers={
@@ -2026,7 +2136,7 @@ def test_order_fetch_items(client, auth_token):
 
 # def test_order_cancel(client, auth_token):
 #     test_data = data.test_order_cancel
-#     customer_id = test_data["id"] 
+#     customer_id = test_data["id"]
 #     response = client.post(
 #         f"{BASE_URL}/staff/order/cancel/{customer_id}",
 #         headers={
@@ -2066,7 +2176,7 @@ def test_order_fetch_items(client, auth_token):
 
 # def test_order_shipper_accept(client, auth_token):
 #     test_data = data.test_order_shipper_accept
-#     id = test_data["id"] 
+#     id = test_data["id"]
 #     response = client.put(
 #         f"{BASE_URL}/shipper/order/accept/{id}",
 #         headers={
@@ -2077,5 +2187,3 @@ def test_order_fetch_items(client, auth_token):
 
 #     )
 #     assert response.status_code == 200
-
-
