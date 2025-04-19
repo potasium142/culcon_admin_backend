@@ -1,4 +1,4 @@
-ai/weights
+ai/weights*
 test.ipynb
 dev.env
 
