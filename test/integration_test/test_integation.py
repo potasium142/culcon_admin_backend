@@ -184,8 +184,8 @@ def test_coupon_disable_sucess(client, auth_token):
 
 
 # def test_product_create_success(client, auth_token):
-#     main_image_path = "test/IntegartionTest/image_test/cabbage.jpg"
-#     additional_image_path = "test/IntegartionTest/image_test/cabbage1.jpg"
+#     main_image_path = "test/integration_test/image_test/cabbage.jpg"
+#     additional_image_path = "test/integration_test/image_test/cabbage1.jpg"
 #     product_detail = {
 #         "product_name": "Dalat Spinach",
 #         "product_type": "VEG",
@@ -303,8 +303,8 @@ def test_product_fetch_ingredient_not_exist(client, auth_token):
 
 
 def test_product_create_has_existed(client, auth_token):
-    main_image_path = "test/IntegartionTest/image_test/cachuadalat.jpg"
-    additional_image_path = "test/IntegartionTest/image_test/cachuadalat1.jpg"
+    main_image_path = "test/integration_test/image_test/cachuadalat.jpg"
+    additional_image_path = "test/integration_test/image_test/cachuadalat1.jpg"
 
     product_detail = {
         "product_name": "Dalat tomatoes",
@@ -341,8 +341,8 @@ def test_product_create_has_existed(client, auth_token):
 
 
 def test_product_create_invalid_productype(client, auth_token):
-    main_image_path = "test/IntegartionTest/image_test/cachuadalat.jpg"
-    additional_image_path = "test/IntegartionTest/image_test/cachuadalat1.jpg"
+    main_image_path = "test/integration_test/image_test/cachuadalat.jpg"
+    additional_image_path = "test/integration_test/image_test/cachuadalat1.jpg"
 
     product_detail = {
         "product_name": "Dalat milk",
@@ -376,8 +376,8 @@ def test_product_create_invalid_productype(client, auth_token):
 
 
 def test_product_create_blank_name(client, auth_token):
-    main_image_path = "test/IntegartionTest/image_test/cachuadalat.jpg"
-    additional_image_path = "test/IntegartionTest/image_test/cachuadalat1.jpg"
+    main_image_path = "test/integration_test/image_test/cachuadalat.jpg"
+    additional_image_path = "test/integration_test/image_test/cachuadalat1.jpg"
 
     product_detail = {
         "product_name": "",
@@ -414,8 +414,8 @@ def test_product_create_blank_name(client, auth_token):
 
 
 def test_product_create_dayBeaforeExpiryisNull(client, auth_token):
-    main_image_path = "test/IntegartionTest/image_test/cachuadalat.jpg"
-    additional_image_path = "test/IntegartionTest/image_test/cachuadalat1.jpg"
+    main_image_path = "test/integration_test/image_test/cachuadalat.jpg"
+    additional_image_path = "test/integration_test/image_test/cachuadalat1.jpg"
 
     product_detail = {
         "product_name": "Dalat cabagge",
@@ -449,8 +449,8 @@ def test_product_create_dayBeaforeExpiryisNull(client, auth_token):
 
 
 # def test_product_create_descriptionIsNull(client, auth_token):
-#     main_image_path = "test/IntegartionTest/image_test/cachuadalat.jpg"
-#     additional_image_path = "test/IntegartionTest/image_test/cachuadalat1.jpg"
+#     main_image_path = "test/integration_test/image_test/cachuadalat.jpg"
+#     additional_image_path = "test/integration_test/image_test/cachuadalat1.jpg"
 
 
 #     product_detail = {
@@ -481,8 +481,8 @@ def test_product_create_dayBeaforeExpiryisNull(client, auth_token):
 #     assert response.status_code == 422
 
 # def test_product_create_article_mdIsNull(client, auth_token):
-#     main_image_path = "test/IntegartionTest/image_test/cachuadalat.jpg"
-#     additional_image_path = "test/IntegartionTest/image_test/cachuadalat1.jpg"
+#     main_image_path = "test/integration_test/image_test/cachuadalat.jpg"
+#     additional_image_path = "test/integration_test/image_test/cachuadalat1.jpg"
 
 
 #     product_detail = {
@@ -513,8 +513,8 @@ def test_product_create_dayBeaforeExpiryisNull(client, auth_token):
 #     assert response.status_code == 422
 
 # def test_product_create_dayBeaforeExpiryisNull(client, auth_token):
-#     main_image_path = "test/IntegartionTest/image_test/cachuadalat.jpg"
-#     additional_image_path = "test/IntegartionTest/image_test/cachuadalat1.jpg"
+#     main_image_path = "test/integration_test/image_test/cachuadalat.jpg"
+#     additional_image_path = "test/integration_test/image_test/cachuadalat1.jpg"
 
 
 #     product_detail = {
@@ -546,8 +546,8 @@ def test_product_create_dayBeaforeExpiryisNull(client, auth_token):
 #     assert response.status_code == 422
 
 # def test_product_create_dayBeaforeExpiryisNegative(client, auth_token):
-#     main_image_path = "test/IntegartionTest/image_test/cachuadalat.jpg"
-#     additional_image_path = "test/IntegartionTest/image_test/cachuadalat1.jpg"
+#     main_image_path = "test/integration_test/image_test/cachuadalat.jpg"
+#     additional_image_path = "test/integration_test/image_test/cachuadalat1.jpg"
 
 
 #     product_detail = {
@@ -579,8 +579,8 @@ def test_product_create_dayBeaforeExpiryisNull(client, auth_token):
 #     assert response.status_code == 422
 
 # def test_product_create_main_imageIsNotImgFile(client, auth_token):
-#     main_image_path = "test/IntegartionTest/image_test/test img.txt"
-#     additional_image_path = "test/IntegartionTest/image_test/cachuadalat1.jpg"
+#     main_image_path = "test/integration_test/image_test/test img.txt"
+#     additional_image_path = "test/integration_test/image_test/cachuadalat1.jpg"
 
 
 #     product_detail = {
@@ -612,8 +612,8 @@ def test_product_create_dayBeaforeExpiryisNull(client, auth_token):
 #     assert response.status_code == 422
 
 # def test_product_create_main_additional_imagesIsNotImgFile(client, auth_token):
-#     main_image_path = "test/IntegartionTest/image_test/cachuadalat1.jpg"
-#     additional_image_path = "test/IntegartionTest/image_test/test img.txt"
+#     main_image_path = "test/integration_test/image_test/cachuadalat1.jpg"
+#     additional_image_path = "test/integration_test/image_test/test img.txt"
 
 
 #     product_detail = {
@@ -1007,8 +1007,8 @@ def test_mealkit_create_hadExist(client, auth_token):
 
 
 # def test_product_create_main_additional_imagesIsNotImgFile(client, auth_token):
-#     main_image_path = "test/IntegartionTest/image_test/cachuadalat1.jpg"
-#     additional_image_path = "test/IntegartionTest/image_test/test img.txt"
+#     main_image_path = "test/integration_test/image_test/cachuadalat1.jpg"
+#     additional_image_path = "test/integration_test/image_test/test img.txt"
 
 
 #     product_detail = {
