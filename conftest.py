@@ -10,11 +10,11 @@ def setup_test_container():
         password="postgres",
         dbname="postgres",
         port=5432,
-    ).with_bind_ports(5432, 5433)
+    ).with_bind_ports(5432, 5432)
 
     postgres.start()
 
-    os.environ["DB_PORT"] = "5433"
+    os.environ["DB_PORT"] = "5432"
 
 
 def pytest_sessionstart(session):
