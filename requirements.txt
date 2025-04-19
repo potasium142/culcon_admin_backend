@@ -27,5 +27,5 @@ emails==0.6
 paypal-checkout-serversdk==1.0.3
 paypal-server-sdk==1.0.0
 paypalhttp==1.0.1
-
+pytest-asyncio==0.26.0
 asyncpg==0.25.0 

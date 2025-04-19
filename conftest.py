@@ -18,5 +18,4 @@ def setup_test_container():
 
 
 def pytest_sessionstart(session):
-    pass
-    # setup_test_container()
+    setup_test_container()
