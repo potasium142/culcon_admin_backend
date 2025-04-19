@@ -2,7 +2,7 @@ name: Docker Dev Image CI
 
 on:
   push:
-    branches: ["main", "stable", "non_stable"]
+    branches: ["main", "stable", "unstable"]
 
 jobs:
   build:
