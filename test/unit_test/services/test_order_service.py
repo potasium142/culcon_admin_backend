@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import  AsyncMock, MagicMock, patch, Mock
+from unittest.mock import AsyncMock, MagicMock, patch, Mock
 from services.order import *
 from db.postgresql.models.product import (
     MealkitIngredients,
@@ -31,12 +31,16 @@ from .set_up.test_user_account_data import *
 from .set_up.test_account_data import *
 from .set_up.test_transaction_data import *
 from uuid import UUID
-from sqlalchemy.exc import NoResultFound 
+from sqlalchemy.exc import NoResultFound
+
 # Test database URL
 DATABASE_URL = "postgresql+asyncpg://postgres:postgres@localhost:5432/postgres"
 
 engine = create_async_engine(DATABASE_URL, echo=False)
-TestingSessionLocal = sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
+TestingSessionLocal = sessionmaker(
+    bind=engine, class_=AsyncSession, expire_on_commit=False
+)
+
 
 @pytest_asyncio.fixture(scope="function", autouse=True)
 async def create_test_db():
@@ -45,7 +49,8 @@ async def create_test_db():
         await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
 
         # Drop all public tables
-        await conn.execute(text("""
+        await conn.execute(
+            text("""
             DO $$ 
             DECLARE
                 r RECORD;
@@ -55,7 +60,8 @@ async def create_test_db():
                 END LOOP;
             END 
             $$;
-        """))
+        """)
+        )
 
         # Create tables
         await conn.run_sync(Base.metadata.create_all)
@@ -68,6 +74,7 @@ async def create_test_db():
 
     await engine.dispose()
 
+
 # Provide DB session for tests
 @pytest_asyncio.fixture()
 async def db_session():
@@ -76,7 +83,7 @@ async def db_session():
         await session.rollback()
 
 
-#-----------------------------------------------------------
+# -----------------------------------------------------------
 @pytest.mark.asyncio
 async def test_change_order_status_success(db_session):
     # Arrange
@@ -84,22 +91,17 @@ async def test_change_order_status_success(db_session):
     initial_status = OrderStatus.ON_CONFIRM
     new_status = OrderStatus.ON_PROCESSING
 
-
-    user_account = preb_user_account_1()  
+    user_account = preb_user_account_1()
     db_session.add(user_account)
     await db_session.commit()
 
-
-    order = preb_order_history_1() 
+    order = preb_order_history_1()
     db_session.add(order)
     await db_session.commit()
 
     # Act
     result = await change_order_status(
-        id=order_id,
-        ss=db_session,
-        prev_status=initial_status,
-        status=new_status
+        id=order_id, ss=db_session, prev_status=initial_status, status=new_status
     )
 
     # Assert: result is True (status was changed)
@@ -109,12 +111,12 @@ async def test_change_order_status_success(db_session):
     updated_order = await db_session.get(OrderHistory, order_id)
     assert updated_order.order_status == new_status
 
+
 @pytest.mark.asyncio
 async def test_change_order_status_fail_previous_status(db_session):
     order_id = "Order_001"
-  
 
-    user_account = preb_user_account_1()  
+    user_account = preb_user_account_1()
     db_session.add(user_account)
     await db_session.commit()
 
@@ -129,21 +131,22 @@ async def test_change_order_status_fail_previous_status(db_session):
             id=order_id,
             ss=db_session,
             prev_status=OrderStatus.ON_CONFIRM,  # Expecting PLACED, but it's SHIPPED
-            status=OrderStatus.DELIVERED
+            status=OrderStatus.DELIVERED,
         )
 
-#-----------------------------------------------------------
+
+# -----------------------------------------------------------
 @pytest.mark.asyncio
 async def test_accept_order_success(db_session):
     # Arrange
     order_id = "Order_001"
     staff_id = "12345678-9012-3456-7890-123456789012"
 
-    staff_account = preb_staff_account_1()  
+    staff_account = preb_staff_account_1()
     db_session.add(staff_account)
     await db_session.commit()
 
-    user_account = preb_user_account_1()  
+    user_account = preb_user_account_1()
     db_session.add(user_account)
     await db_session.commit()
 
@@ -178,7 +181,9 @@ async def test_accept_order_success(db_session):
     order_process_get = await db_session.execute(
         select(OrderProcess).filter(OrderProcess.order_id == order_id)
     )
-    order_process = order_process_get.scalars().first()  # Get the first OrderProcess row
+    order_process = (
+        order_process_get.scalars().first()
+    )  # Get the first OrderProcess row
 
     assert order_process is not None
     assert order_process.delivery_status == DeliveryStatus.AWAIT
@@ -193,7 +198,7 @@ async def test_accept_order_fail_insufficient_stock(db_session):
     db_session.add(preb_staff_account_1())
     db_session.add(preb_user_account_1())
     db_session.add(preb_order_history_1())
-    
+
     mock_product = preb_product_table_1()
     db_session.add(mock_product)
 
@@ -220,7 +225,7 @@ async def test_accept_order_invalid_status(db_session):
     order = preb_order_history_1()
     order.order_status = OrderStatus.CANCELLED
     db_session.add(order)
-    
+
     mock_product = preb_product_table_1()
     db_session.add(mock_product)
 
@@ -245,9 +250,9 @@ async def test_accept_order_invalid_cod_payment_status(db_session):
     db_session.add(preb_user_account_1())
 
     order = preb_order_history_1()
-    order.payment_method=PaymentMethod.COD
-    order.payment_status=PaymentStatus.RECEIVED
-    
+    order.payment_method = PaymentMethod.COD
+    order.payment_status = PaymentStatus.RECEIVED
+
     db_session.add(order)
 
     mock_product = preb_product_table_1()
@@ -272,9 +277,9 @@ async def test_accept_order_not_paid_non_cod(db_session):
     db_session.add(preb_user_account_1())
 
     order = preb_order_history_1()
-    order.payment_method=PaymentMethod.PAYPAL
-    order.payment_status=PaymentStatus.PENDING
-    
+    order.payment_method = PaymentMethod.PAYPAL
+    order.payment_status = PaymentStatus.PENDING
+
     db_session.add(order)
 
     mock_product = preb_product_table_1()
@@ -298,7 +303,7 @@ async def test_accept_order_sets_out_of_stock(db_session):
     db_session.add(preb_staff_account_1())
     db_session.add(preb_user_account_1())
     db_session.add(preb_order_history_1())
-    
+
     mock_product = preb_product_table_1()
     mock_product.available_quantity = 0
     db_session.add(mock_product)
@@ -329,12 +334,13 @@ async def test_accept_order_invalid_order_id(db_session):
 
     with pytest.raises(NoResultFound):  # Replace with NoResultFound if not caught
         await accept_order(order_id, db_session, staff_id)
-#-----------------------------------------------------------
 
+
+# -----------------------------------------------------------
 
 
 @pytest.mark.asyncio
-@patch("culcon_admin_backend.services.order.payment_controller.refund_captured_payment")
+@patch("services.order.payment_controller.refund_captured_payment")
 async def test_cancel_order_success(mock_refund, db_session):
     # Setup fake refund response
     mock_refund.return_value = MagicMock(body=MagicMock(id="REFUND_123"))
@@ -347,17 +353,14 @@ async def test_cancel_order_success(mock_refund, db_session):
 
     # Add product
     product = preb_product_table_1()
-    original_quantity = product.available_quantity 
+    original_quantity = product.available_quantity
     db_session.add(product)
     await db_session.commit()
-
 
     # Add product price history
     price_history = preb_product_price_history_table_1()
     db_session.add(price_history)
     await db_session.commit()
-
-
 
     # Create order
     order = preb_order_history_1()
@@ -393,10 +396,11 @@ async def test_cancel_order_success(mock_refund, db_session):
 
     # Check if inventory was restocked
     updated_product = await db_session.get(Product, product.id)
-    assert updated_product.available_quantity == original_quantity + 2  
+    assert updated_product.available_quantity == original_quantity + 2
+
 
 @pytest.mark.asyncio
-@patch("culcon_admin_backend.services.order.payment_controller.refund_captured_payment")
+@patch("services.order.payment_controller.refund_captured_payment")
 async def test_cancel_order_fail_on_shipping(mock_refund, db_session):
     # Setup fake refund response
     mock_refund.return_value = MagicMock(body=MagicMock(id="REFUND_123"))
@@ -409,10 +413,9 @@ async def test_cancel_order_fail_on_shipping(mock_refund, db_session):
 
     # Add product
     product = preb_product_table_1()
-    original_quantity = product.available_quantity 
+    original_quantity = product.available_quantity
     db_session.add(product)
     await db_session.commit()
-
 
     # Add product price history
     price_history = preb_product_price_history_table_1()
@@ -421,7 +424,7 @@ async def test_cancel_order_fail_on_shipping(mock_refund, db_session):
 
     # Create order
     order = preb_order_history_1()
-    order.order_status = OrderStatus.ON_SHIPPING 
+    order.order_status = OrderStatus.ON_SHIPPING
     order.payment_method = PaymentMethod.PAYPAL
     db_session.add(order)
     await db_session.commit()
@@ -442,8 +445,9 @@ async def test_cancel_order_fail_on_shipping(mock_refund, db_session):
     with pytest.raises(HandledError, match="Order already in delivering"):
         await cancel_order(order_id, db_session)
 
+
 @pytest.mark.asyncio
-@patch("culcon_admin_backend.services.order.payment_controller.refund_captured_payment")
+@patch("services.order.payment_controller.refund_captured_payment")
 async def test_cancel_order_fail_delivered(mock_refund, db_session):
     # Setup fake refund response
     mock_refund.return_value = MagicMock(body=MagicMock(id="REFUND_123"))
@@ -456,10 +460,9 @@ async def test_cancel_order_fail_delivered(mock_refund, db_session):
 
     # Add product
     product = preb_product_table_1()
-    original_quantity = product.available_quantity 
+    original_quantity = product.available_quantity
     db_session.add(product)
     await db_session.commit()
-
 
     # Add product price history
     price_history = preb_product_price_history_table_1()
@@ -468,7 +471,7 @@ async def test_cancel_order_fail_delivered(mock_refund, db_session):
 
     # Create order
     order = preb_order_history_1()
-    order.order_status = OrderStatus.SHIPPED 
+    order.order_status = OrderStatus.SHIPPED
     order.payment_method = PaymentMethod.PAYPAL
     db_session.add(order)
     await db_session.commit()
@@ -489,8 +492,9 @@ async def test_cancel_order_fail_delivered(mock_refund, db_session):
     with pytest.raises(HandledError, match="Order already  delivered"):
         await cancel_order(order_id, db_session)
 
+
 @pytest.mark.asyncio
-@patch("culcon_admin_backend.services.order.payment_controller.refund_captured_payment")
+@patch("services.order.payment_controller.refund_captured_payment")
 async def test_cancel_order_fail_cancel(mock_refund, db_session):
     # Setup fake refund response
     mock_refund.return_value = MagicMock(body=MagicMock(id="REFUND_123"))
@@ -503,10 +507,9 @@ async def test_cancel_order_fail_cancel(mock_refund, db_session):
 
     # Add product
     product = preb_product_table_1()
-    original_quantity = product.available_quantity 
+    original_quantity = product.available_quantity
     db_session.add(product)
     await db_session.commit()
-
 
     # Add product price history
     price_history = preb_product_price_history_table_1()
@@ -515,7 +518,7 @@ async def test_cancel_order_fail_cancel(mock_refund, db_session):
 
     # Create order
     order = preb_order_history_1()
-    order.order_status = OrderStatus.CANCELLED 
+    order.order_status = OrderStatus.CANCELLED
     order.payment_method = PaymentMethod.PAYPAL
     db_session.add(order)
     await db_session.commit()

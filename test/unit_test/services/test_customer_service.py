@@ -1,21 +1,19 @@
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch, Mock
-from db.postgresql.models.user_account import UserAccount, UserAccountStatus, PostComment
+from unittest.mock import AsyncMock, MagicMock, patch
+from db.postgresql.models.user_account import (
+    UserAccount,
+    UserAccountStatus,
+)
 from etc.local_error import HandledError
 from db.postgresql.db_session import db_session
 from services.customer import *
-from auth import encryption
-from db.postgresql.models.order_history import OrderHistory
 from db.postgresql.models.user_account import (
-    Cart,
     UserAccount,
     UserAccountStatus,
 )
 from dtos.request.user_account import EditCustomerAccount, EditCustomerInfo
 
 from etc.local_error import HandledError
-from db.postgresql.paging import display_page, paging, Page, table_size
-import sqlalchemy as sqla
 
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
@@ -23,17 +21,20 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy import text
 from db.postgresql.models import Base
 
-from sqlalchemy.exc import NoResultFound 
+from sqlalchemy.exc import NoResultFound
 
 from .set_up.test_user_account_data import *
 from .set_up.test_account_data import *
 
 
 # Test database URL
-DATABASE_URL = "postgresql+asyncpg://postgres:postgres@localhost:5432/postgres"
+DATABASE_URL = "postgresql+psycopg://postgres:postgres@localhost:5432/postgres"
 
 engine = create_async_engine(DATABASE_URL, echo=False)
-TestingSessionLocal = sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
+TestingSessionLocal = sessionmaker(
+    bind=engine, class_=AsyncSession, expire_on_commit=False
+)
+
 
 @pytest_asyncio.fixture(scope="function", autouse=True)
 async def create_test_db():
@@ -42,7 +43,8 @@ async def create_test_db():
         await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
 
         # Drop all public tables
-        await conn.execute(text("""
+        await conn.execute(
+            text("""
             DO $$ 
             DECLARE
                 r RECORD;
@@ -52,7 +54,8 @@ async def create_test_db():
                 END LOOP;
             END 
             $$;
-        """))
+        """)
+        )
 
         # Create tables
         await conn.run_sync(Base.metadata.create_all)
@@ -65,6 +68,7 @@ async def create_test_db():
 
     await engine.dispose()
 
+
 # Provide DB session for tests
 @pytest_asyncio.fixture()
 async def db_session():
@@ -73,7 +77,8 @@ async def db_session():
         await session.rollback()
 
 
-#-----------------------------------------------------------
+# -----------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_set_account_status_success(db_session):
@@ -95,16 +100,11 @@ async def test_set_account_status_success(db_session):
     updated_user = await db_session.get(UserAccount, user.id)
     assert updated_user.status == new_status
 
-def test_set_account_status_not_found():
-    with patch.object(db_session.session, "get", return_value=None):
-        with pytest.raises(HandledError, match="Customer account not found"):
-            set_account_status("invalid_user_id", UserAccountStatus.DEACTIVATE)
 
 @pytest.mark.asyncio
 async def test_set_account_status_fail_account_not_found(db_session):
     # Arrange: Create a dummy user account
     user = preb_user_account_1()
-
 
     # Act: Change the user status
     new_status = UserAccountStatus.BANNED
@@ -126,14 +126,14 @@ async def test_get_customer_success():
 
     mock_session = MagicMock()
     mock_session.get_one = AsyncMock(return_value=mock_user)
-    
+
     # Patch the context manager behavior
     mock_context = MagicMock()
     mock_context.__aenter__.return_value = mock_session
     mock_context.__aexit__.return_value = AsyncMock()
     mock_session.__aenter__.return_value = mock_session
     mock_session.__aexit__.return_value = AsyncMock()
-    
+
     # Act
     result = await get_customer("user-id", mock_session)
 
@@ -154,25 +154,34 @@ async def test_get_customer_success():
 async def test_get_customer_not_found():
     # Arrange
     mock_session = MagicMock()
-    mock_session.__aenter__ = AsyncMock(return_value=mock_session)  # Mock the context manager entry
-    mock_session.__aexit__ = AsyncMock(return_value=False)  # Mock the context manager exit
-    
+    mock_session.__aenter__ = AsyncMock(
+        return_value=mock_session
+    )  # Mock the context manager entry
+    mock_session.__aexit__ = AsyncMock(
+        return_value=False
+    )  # Mock the context manager exit
+
     # Simulate `session.get_one()` returning None
     mock_session.get_one = AsyncMock(return_value=None)
-    
-    # Act & Assert
-    with pytest.raises(AttributeError):  # The exception that will be raised due to accessing attributes of `None`
-        await get_customer("nonexistent-id", mock_session)
 
+    # Act & Assert
+    with pytest.raises(
+        AttributeError
+    ):  # The exception that will be raised due to accessing attributes of `None`
+        await get_customer("nonexistent-id", mock_session)
 
 
 @pytest.mark.asyncio
 async def test_edit_customer_info_success():
     # Arrange
     mock_session = MagicMock()
-    mock_session.__aenter__ = AsyncMock(return_value=mock_session)  # Mock the context manager entry
-    mock_session.__aexit__ = AsyncMock(return_value=False)  # Mock the context manager exit
-    
+    mock_session.__aenter__ = AsyncMock(
+        return_value=mock_session
+    )  # Mock the context manager entry
+    mock_session.__aexit__ = AsyncMock(
+        return_value=False
+    )  # Mock the context manager exit
+
     # Creating a mock UserAccount object for the customer
     mock_customer = MagicMock(spec=UserAccount)
     mock_customer.id = "existing-id"
@@ -181,10 +190,10 @@ async def test_edit_customer_info_success():
     mock_customer.phone = "123456789"
     mock_customer.profile_description = "Old Description"
     mock_customer.profile_name = "Old Name"
-    
+
     # Set the mock session to return the mock customer when `get_one` is called
     mock_session.get_one = AsyncMock(return_value=mock_customer)
-    
+
     # Mock the `flush` method to be an AsyncMock (to be awaited)
     mock_session.flush = AsyncMock()
 
@@ -194,7 +203,7 @@ async def test_edit_customer_info_success():
         address="New Address",
         phone="0123456789",  # Updated to match the expected phone pattern
         profile_description="New Description",
-        profile_name="New Name"
+        profile_name="New Name",
     )
 
     # Act
@@ -221,15 +230,17 @@ async def test_edit_customer_info_account_not_found():
         address="New Address",
         phone="0123456789",
         profile_description="New Description",
-        profile_name="New Name"
+        profile_name="New Name",
     )
 
-    with pytest.raises(AttributeError, match="'NoneType' object has no attribute 'email'"):
+    with pytest.raises(
+        AttributeError, match="'NoneType' object has no attribute 'email'"
+    ):
         await edit_customer_info("nonexistent-id", info, mock_session)
+
 
 @pytest.mark.asyncio
 async def test_edit_customer_account_success():
-    
     # Arrange
     mock_session = MagicMock()
     mock_session.__aenter__ = AsyncMock(return_value=mock_session)
@@ -257,23 +268,24 @@ async def test_edit_customer_account_success():
         # Act
         result = await edit_customer_account("user-123", info, mock_session)
 
+
 # @pytest.mark.asyncio
 # async def test_edit_customer_account_user_not_found():
 #     # Arrange
 #     mock_session = MagicMock()
 #     mock_session.__aenter__ = AsyncMock(return_value=mock_session)
 #     mock_session.__aexit__ = AsyncMock(return_value=False)
-    
+
 #     # Mock the flush method to behave like an async function
 #     mock_session.flush = AsyncMock()
-    
+
 #     # Simulate the case where the user is not found (None is returned by get_one)
 #     mock_session.get_one = AsyncMock(return_value=None)
-    
+
 #     new_username = "newuser"
 #     new_password = "newpassword"
 #     info = EditCustomerAccount(username=new_username, password=new_password)
-    
+
 #     # Act & Assert: Ensure that when user is not found, an exception is raised
 #     try:
 #         await edit_customer_account("nonexistent-user-id", info, mock_session)

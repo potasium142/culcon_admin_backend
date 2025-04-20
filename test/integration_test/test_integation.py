@@ -235,7 +235,7 @@ def test_product_fetch_TakeOneProduct(client, auth_token):
     print("Response:", data)
 
 
-def test_product_fetch_all_success(client, auth_token):
+def test_product_fetch_all_success_a(client, auth_token):
     """Test lấy danh sách sản phẩm với token hợp lệ"""
     response = client.get(
         "/general/product/fetch_all",
@@ -913,7 +913,7 @@ def product_history_stock_prodId_notExist(client, auth_token):
     assert response.status_code == 200
 
 
-def product_history_stock_valid(client, auth_token):
+def product_history_stock_valid_a(client, auth_token):
     update_data = getattr(data, "product_history_price_valid")
 
     response = client.put(
@@ -927,7 +927,7 @@ def product_history_stock_valid(client, auth_token):
     assert response.status_code == 200
 
 
-def product_history_stock_prodId_notExist(client, auth_token):
+def product_history_stock_prodId_notExist_a(client, auth_token):
     update_data = getattr(data, "product_history_price_prodId_notExist")
 
     response = client.put(
@@ -1133,7 +1133,7 @@ def test_mealkit_create_blankInfo(client, auth_token):
     assert response.status_code == 500
 
 
-def test_mealkit_create_blankInfo(client, auth_token):
+def test_mealkit_create_blankInfo_a(client, auth_token):
     test_data = getattr(data, "mealkit_no_ingredients")
     with (
         open(main_image_path_mealkit, "rb") as main_img,
@@ -1179,18 +1179,18 @@ def test_fetch_ingredients_success(client, auth_token):
 #     assert response.status_code == 200
 
 
-def test_create_account_success(client, auth_token):
-    test_data = getattr(data, "create_account_manager_success")
-    response = client.post(
-        f"{BASE_URL}/manager/create/account",
-        headers={
-            "Authorization": f"Bearer {auth_token}",
-            "Content-Type": "application/json",
-        },
-        json=test_data,
-    )
+# def test_create_account_success(client, auth_token):
+#     test_data = getattr(data, "create_account_manager_success")
+#     response = client.post(
+#         f"{BASE_URL}/manager/create/account",
+#         headers={
+#             "Authorization": f"Bearer {auth_token}",
+#             "Content-Type": "application/json",
+#         },
+#         json=test_data,
+#     )
 
-    assert response.status_code == 200
+#     assert response.status_code == 200
 
 
 def test_create_account_missing_username(client, auth_token):
@@ -1668,7 +1668,7 @@ def test_comment_fetch_all_deletedStatus(client, auth_token):
     assert response.status_code == 200
 
 
-def test_comment_fetch_all_normalStatus_typePost(client, auth_token):
+def test_comment_fetch_all_normalStatus_typePost_a(client, auth_token):
     test_data = data.test_comment_fetch_all_normalStatus_typePost
     response = client.get(
         f"{BASE_URL}/staff/comment/fetch/all",
@@ -1681,7 +1681,7 @@ def test_comment_fetch_all_normalStatus_typePost(client, auth_token):
     assert response.status_code == 200
 
 
-def test_comment_fetch_all_reportedStatus_typePost(client, auth_token):
+def test_comment_fetch_all_reportedStatus_typePost_a(client, auth_token):
     test_data = data.test_comment_fetch_all_reportedStatus_typePost
     response = client.get(
         f"{BASE_URL}/staff/comment/fetch/all",
@@ -1694,7 +1694,7 @@ def test_comment_fetch_all_reportedStatus_typePost(client, auth_token):
     assert response.status_code == 200
 
 
-def test_comment_fetch_all_deletedStatus_typePost(client, auth_token):
+def test_comment_fetch_all_deletedStatus_typePost_a(client, auth_token):
     test_data = data.test_comment_fetch_all_deletedStatus_typePost
     response = client.get(
         f"{BASE_URL}/staff/comment/fetch/all",

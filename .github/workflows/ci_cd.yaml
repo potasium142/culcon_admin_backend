@@ -28,7 +28,7 @@ jobs:
 
   deploy-branch:
     name: Push to Deploy Branch
-    needs: test
+    needs: Test
     runs-on: ubuntu-latest
     # Only run on push to main/stable/non_stable branches, not on PRs
     if: github.event_name == 'push'
