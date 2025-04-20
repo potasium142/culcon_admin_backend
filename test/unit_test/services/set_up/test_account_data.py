@@ -96,7 +96,59 @@ def preb_staff_account_1() -> StaffAccount:
         ssn="123-45-6789",  # Replace with a valid SSN
         phonenumber="1234567890",  # Replace with valid phone number
         realname="John Doe",
-        email="john.doe@example.com",  # Replace with valid email
+        email="johndoe@example.com",  # Replace with valid email
+        dob=date(1990, 1, 1)  # Replace with a valid date of birth
+    )
+
+    # Attach employee info to staff account
+    staff_account.employee_info = employee_info
+
+    return staff_account
+
+def preb_staff_account_2() -> StaffAccount:
+    # Create a staff account
+    staff_account = StaffAccount(
+        id="87654321-4321-6789-4321-987654321098",
+        username="staff_user_002",
+        password="secure_password",  # You should hash the password before storing it
+        type=AccountType.STAFF,
+        status=AccountStatus.ACTIVE,
+        token=str(uuid4())  # Example token, replace with a valid token generation method
+    )
+
+    # Create associated employee info
+    employee_info = EmployeeInfo(
+        account_id=staff_account.id,
+        ssn="123-45-6999",  # Replace with a valid SSN
+        phonenumber="1234567899",  # Replace with valid phone number
+        realname="John Two",
+        email="johntwo@example.com",  # Replace with valid email
+        dob=date(1990, 1, 1)  # Replace with a valid date of birth
+    )
+
+    # Attach employee info to staff account
+    staff_account.employee_info = employee_info
+
+    return staff_account
+
+def preb_manager_account_1() -> StaffAccount:
+    # Create a staff account
+    staff_account = StaffAccount(
+        id="f48cce55-8a67-4e02-87e7-298efb0d93c1",
+        username="manager_user_001",
+        password="secure_password",  # You should hash the password before storing it
+        type=AccountType.MANAGER,
+        status=AccountStatus.ACTIVE,
+        token=str(uuid4())  # Example token, replace with a valid token generation method
+    )
+
+    # Create associated employee info
+    employee_info = EmployeeInfo(
+        account_id=staff_account.id,
+        ssn="999-45-6999",  # Replace with a valid SSN
+        phonenumber="1234569999",  # Replace with valid phone number
+        realname="John Manager",
+        email="johnmanager@example.com",  # Replace with valid email
         dob=date(1990, 1, 1)  # Replace with a valid date of birth
     )
 
