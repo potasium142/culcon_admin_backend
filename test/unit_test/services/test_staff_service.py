@@ -1,10 +1,10 @@
 import pytest
-from unittest.mock import  MagicMock, AsyncMock, patch, Mock
+from unittest.mock import MagicMock, AsyncMock, patch, Mock
 from db.postgresql.db_session import db_session
 from db.postgresql.models.staff_account import *
 from etc.local_error import HandledError
 from db.postgresql.paging import Page
-from services.staff import * 
+from services.staff import *
 
 from auth import encryption
 from datetime import datetime
@@ -23,10 +23,13 @@ from .set_up.test_user_account_data import *
 from .set_up.test_account_data import *
 
 # Test database URL
-DATABASE_URL = "postgresql+asyncpg://postgres:postgres@localhost:5432/postgres"
+DATABASE_URL = "postgresql+psycopg://postgres:postgres@localhost:5432/postgres"
 
 engine = create_async_engine(DATABASE_URL, echo=False)
-TestingSessionLocal = sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
+TestingSessionLocal = sessionmaker(
+    bind=engine, class_=AsyncSession, expire_on_commit=False
+)
+
 
 @pytest_asyncio.fixture(scope="function", autouse=True)
 async def create_test_db():
@@ -35,7 +38,8 @@ async def create_test_db():
         await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
 
         # Drop all public tables
-        await conn.execute(text("""
+        await conn.execute(
+            text("""
             DO $$ 
             DECLARE
                 r RECORD;
@@ -45,7 +49,8 @@ async def create_test_db():
                 END LOOP;
             END 
             $$;
-        """))
+        """)
+        )
 
         # Create tables
         await conn.run_sync(Base.metadata.create_all)
@@ -58,6 +63,7 @@ async def create_test_db():
 
     await engine.dispose()
 
+
 # Provide DB session for tests
 @pytest_asyncio.fixture()
 async def db_session():
@@ -66,7 +72,7 @@ async def db_session():
         await session.rollback()
 
 
-#-----------------------------------------------------------
+# -----------------------------------------------------------
 
 
 @pytest.mark.asyncio
@@ -107,7 +113,6 @@ async def test_get_all_staff_success_filter_by_username(db_session):
     assert "staff_user_001" in usernames
 
 
-
 @pytest.mark.asyncio
 async def test_get_all_staff_success_filter_by_type(db_session):
     # Arrange
@@ -126,9 +131,9 @@ async def test_get_all_staff_success_filter_by_type(db_session):
     usernames = [s["username"] for s in result["content"]]
     assert "manager_user_001" in usernames
 
+
 @pytest.mark.asyncio
 async def test_get_all_staff_empty(db_session):
-
     # Act: call the function to retrieve all staff (no filter)
     page = Page(number=1, size=10)
     result = await get_all_staff(page, db_session)
@@ -138,7 +143,7 @@ async def test_get_all_staff_empty(db_session):
     assert len(result["content"]) == 0
 
 
-#-----------------------------------------------------------
+# -----------------------------------------------------------
 
 
 @pytest.mark.asyncio
@@ -190,7 +195,8 @@ async def test_get_staff_profile_fail_employee_info_missing(db_session):
     with pytest.raises(HandledError, match="Employee info not found"):
         await get_staff_profile(staff.id, db_session)
 
-#-----------------------------------------------------------
+
+# -----------------------------------------------------------
 
 
 @pytest.mark.asyncio
@@ -199,7 +205,7 @@ async def test_edit_staff_account_success(db_session):
     staff = preb_staff_account_1()
     db_session.add(staff)
     await db_session.commit()
-    
+
     new_password = "new_secure_password"
     payload = EditStaffAccount(
         username=staff.username,
@@ -222,6 +228,7 @@ async def test_edit_staff_account_success(db_session):
     updated = await db_session.get(type(staff), staff_id)
     assert updated is not None
     assert updated.password != staff_oldpass  # assuming you hash it
+
 
 @pytest.mark.asyncio
 async def test_edit_staff_account_fail_empty_password_raises(db_session):
@@ -246,14 +253,12 @@ async def test_edit_staff_account_fail_invalid_uuid_raises(db_session):
     db_session.add(staff)
     await db_session.commit()
 
-   
     payload = EditStaffAccount(
         username="new_name",
         password="abc123",
     )
 
     invalid_id = "123214324234235345345345345345123"
-
 
     # Act & Assert
     with pytest.raises(HandledError, match="UUID invalid"):
@@ -266,7 +271,6 @@ async def test_edit_staff_account_fail_not_found_raises(db_session):
     db_session.add(staff)
     await db_session.commit()
 
-    
     payload = EditStaffAccount(
         username="new_name",
         password="abc123",
@@ -275,18 +279,20 @@ async def test_edit_staff_account_fail_not_found_raises(db_session):
     # random UUID
     missing_id = str(uuid.uuid4())
 
-
     # Act & Assert
     with pytest.raises(HandledError, match="Staff account not found"):
         await edit_staff_account(missing_id, payload, db_session)
 
 
-#-----------------------------------------------------------
+# -----------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_edit_employee_info_success(db_session):
     # Arrange
-    staff = preb_staff_account_1()  # Assuming a function to pre-build staff with necessary info
+    staff = (
+        preb_staff_account_1()
+    )  # Assuming a function to pre-build staff with necessary info
     db_session.add(staff)
     await db_session.commit()
 
@@ -296,7 +302,7 @@ async def test_edit_employee_info_success(db_session):
         email="newemail@example.com",
         phonenumber="0234967890",
         dob="1990-01-01",
-        realname="New Realname"
+        realname="New Realname",
     )
 
     # Act
@@ -311,6 +317,7 @@ async def test_edit_employee_info_success(db_session):
     assert result["dob"] == expected_dob
     assert result["realname"] == "New Realname"
 
+
 @pytest.mark.asyncio
 async def test_edit_employee_info_fail_invalid_ssn(db_session):
     # Arrange
@@ -324,12 +331,13 @@ async def test_edit_employee_info_fail_invalid_ssn(db_session):
         email="new_email@example.com",
         phonenumber="0234567890",
         dob="1990-01-01",
-        realname="New Realname"
+        realname="New Realname",
     )
 
     # Act & Assert
     with pytest.raises(HandledError, match="SSN must be 12 numbers"):
         await edit_employee_info(payload, str(staff.id), db_session)
+
 
 @pytest.mark.asyncio
 async def test_edit_employee_info_fail_invalid_uuid(db_session):
@@ -344,12 +352,13 @@ async def test_edit_employee_info_fail_invalid_uuid(db_session):
         email="newemail@example.com",
         phonenumber="0234567890",
         dob="1990-01-01",
-        realname="New Realname"
+        realname="New Realname",
     )
 
     # Act & Assert
     with pytest.raises(HandledError, match="UUID invalid"):
         await edit_employee_info(payload, invalid_uuid, db_session)
+
 
 @pytest.mark.asyncio
 async def test_edit_employee_info_fail_not_found(db_session):
@@ -364,7 +373,7 @@ async def test_edit_employee_info_fail_not_found(db_session):
         email="newemail@example.com",
         phonenumber="0234567890",
         dob="1990-01-01",
-        realname="New Realname"
+        realname="New Realname",
     )
 
     # Act & Assert
@@ -372,7 +381,7 @@ async def test_edit_employee_info_fail_not_found(db_session):
         await edit_employee_info(payload, missing_uuid, db_session)
 
 
-#-----------------------------------------------------------
+# -----------------------------------------------------------
 
 
 @pytest.fixture
@@ -398,6 +407,7 @@ def mock_staff():
 
     return mock_staff
 
+
 @pytest.mark.asyncio
 async def test_set_staff_status_success():
     staff_id = str(uuid4())
@@ -414,7 +424,9 @@ async def test_set_staff_status_success():
 
     mock_ss.commit = AsyncMock()
 
-    with patch("services.staff.get_staff_profile", new_callable=AsyncMock) as mock_get_profile:
+    with patch(
+        "services.staff.get_staff_profile", new_callable=AsyncMock
+    ) as mock_get_profile:
         mock_get_profile.return_value = {"id": staff_id, "status": mock_status}
 
         result = await set_staff_status(staff_id, mock_status, mock_ss)
@@ -423,6 +435,7 @@ async def test_set_staff_status_success():
         mock_ss.commit.assert_awaited_once()
         mock_get_profile.assert_awaited_once_with(staff_id, mock_ss)
         assert result == {"id": staff_id, "status": mock_status}
+
 
 @pytest.mark.asyncio
 async def test_set_staff_status_staff_not_found():

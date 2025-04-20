@@ -3,10 +3,11 @@ import asyncio
 from sqlalchemy.future import select
 
 # Database URL
-DATABASE_URL = "postgresql+asyncpg://postgres:postgres@localhost:5432/postgres"
+DATABASE_URL = "postgresql+psycopg://postgres:postgres@localhost:5432/postgres"
 
 # Create an async engine for PostgreSQL
 engine = create_async_engine(DATABASE_URL, echo=True)
+
 
 # Test connection
 async def test_connection():
@@ -19,6 +20,7 @@ async def test_connection():
             print(f"Connection successful: {scalar_result}")
     except Exception as e:
         print(f"Error connecting to the database: {e}")
+
 
 # Run the test function
 asyncio.run(test_connection())

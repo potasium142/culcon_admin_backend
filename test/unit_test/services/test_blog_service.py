@@ -25,7 +25,7 @@ from datetime import date
 
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy import text, select  
+from sqlalchemy import text, select
 
 from services.account import create_account
 from dtos.request.account import AccountCreateDto, AccountInfoForm
@@ -40,10 +40,13 @@ from unittest.mock import AsyncMock, patch
 from pydantic import ValidationError
 
 # Test database URL
-DATABASE_URL = "postgresql+asyncpg://postgres:postgres@localhost:5432/postgres"
+DATABASE_URL = "postgresql+psycopg://postgres:postgres@localhost:5432/postgres"
 
 engine = create_async_engine(DATABASE_URL, echo=False)
-TestingSessionLocal = sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
+TestingSessionLocal = sessionmaker(
+    bind=engine, class_=AsyncSession, expire_on_commit=False
+)
+
 
 @pytest_asyncio.fixture(scope="function", autouse=True)
 async def create_test_db():
@@ -52,7 +55,8 @@ async def create_test_db():
         await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
 
         # Drop all public tables
-        await conn.execute(text("""
+        await conn.execute(
+            text("""
             DO $$ 
             DECLARE
                 r RECORD;
@@ -62,7 +66,8 @@ async def create_test_db():
                 END LOOP;
             END 
             $$;
-        """))
+        """)
+        )
 
         # Create tables
         await conn.run_sync(Base.metadata.create_all)
@@ -75,6 +80,7 @@ async def create_test_db():
 
     await engine.dispose()
 
+
 # Provide DB session for tests
 @pytest_asyncio.fixture()
 async def db_session():
@@ -83,7 +89,7 @@ async def db_session():
         await session.rollback()
 
 
-#-----------------------------------------------------------
+# -----------------------------------------------------------
 @pytest.mark.asyncio
 async def test_create_blog_success(db_session):
     # 🎯 Arrange test input
@@ -92,10 +98,13 @@ async def test_create_blog_success(db_session):
 
     # 🤖 Mock clip_model
     mock_clip_model = MagicMock()
-    mock_clip_model.encode_text.return_value =[[0.1] * 768]  # Example embedding
+    mock_clip_model.encode_text.return_value = [[0.1] * 768]  # Example embedding
 
     # 🧪 Patch cloudinary.upload to return a mock URL
-    with patch("services.blog.cloudinary.upload", return_value="http://cloudinary.com/fake_thumb.jpg"):
+    with patch(
+        "services.blog.cloudinary.upload",
+        return_value="http://cloudinary.com/fake_thumb.jpg",
+    ):
         # 🛠 Act
         result = await create(blog_dto, mock_clip_model, dummy_thumbnail, db_session)
 
@@ -116,58 +125,48 @@ async def test_create_blog_success(db_session):
         assert blog is not None
         assert blog_embed is not None
 
+
 @pytest.mark.asyncio
 async def test_create_fail_title_empty(db_session):
     blog_dto = BlogCreation(
-        title="",
-        description="Description",
-        markdown_text="Some text",
-        infos={}
+        title="", description="Description", markdown_text="Some text", infos={}
     )
 
     with pytest.raises(HandledError, match="Title cannot be empty"):
         await create(blog_dto, clip_model=MagicMock(), thumbnail=b"img", ss=db_session)
+
+
 @pytest.mark.asyncio
 async def test_create_fail_description_empty(db_session):
     blog_dto = BlogCreation(
-        title="Title",
-        description="",
-        markdown_text="Some text",
-        infos={}
+        title="Title", description="", markdown_text="Some text", infos={}
     )
 
     with pytest.raises(HandledError, match="Description cannot be empty"):
         await create(blog_dto, clip_model=MagicMock(), thumbnail=b"img", ss=db_session)
+
+
 @pytest.mark.asyncio
 async def test_create_fail_markdown_text_empty(db_session):
     blog_dto = BlogCreation(
-        title="Title",
-        description="Description",
-        markdown_text="",
-        infos={}
+        title="Title", description="Description", markdown_text="", infos={}
     )
 
     with pytest.raises(HandledError, match="Content of blog cannot be empty"):
         await create(blog_dto, clip_model=MagicMock(), thumbnail=b"img", ss=db_session)
 
+
 @pytest.mark.asyncio
 async def test_create_fail_title_none_validation():
     with pytest.raises(ValidationError) as exc_info:
-        BlogCreation(
-            title=None,
-            description=None,
-            markdown_text=None,
-            infos=None
-        )
+        BlogCreation(title=None, description=None, markdown_text=None, infos=None)
     assert "title" in str(exc_info.value)
+
 
 @pytest.mark.asyncio
 async def test_create_blog_cloudinary_upload_failure():
     blog_dto = BlogCreation(
-        title="Title",
-        description="Desc",
-        markdown_text="Text",
-        infos={"views": "1"}
+        title="Title", description="Desc", markdown_text="Text", infos={"views": "1"}
     )
     thumbnail_bytes = b"img"
 
@@ -189,14 +188,14 @@ async def test_create_blog_cloudinary_upload_failure():
             await create(blog_dto, mock_clip_model, thumbnail_bytes, mock_session)
 
 
-#-----------------------------------------------------------
+# -----------------------------------------------------------
 @pytest.mark.asyncio
 async def test_edit_fail_blog_not_found():
     blog_dto = BlogCreation(
         title="Updated Title",
         description="Updated Description",
         markdown_text="Updated Article",
-        infos={"tags": "tech"}
+        infos={"tags": "tech"},
     )
 
     mock_clip_model = MagicMock()
@@ -205,6 +204,7 @@ async def test_edit_fail_blog_not_found():
     class FakeAsyncBegin:
         async def __aenter__(self):
             return None
+
         async def __aexit__(self, exc_type, exc_val, exc_tb):
             return None
 
@@ -216,8 +216,9 @@ async def test_edit_fail_blog_not_found():
 
     with pytest.raises(NoResultFound):
         await edit("nonexistent-id", mock_clip_model, blog_dto, mock_ss)
-        
-#-----------------------------------------------------------
+
+
+# -----------------------------------------------------------
 @pytest.mark.asyncio
 async def test_get_blog_success():
     # Mock Blog object
@@ -227,16 +228,19 @@ async def test_get_blog_success():
         description="Test Desc",
         article="Test Content",
         infos={"tags": "python"},
-        thumbnail="test_thumb.jpg"
+        thumbnail="test_thumb.jpg",
     )
 
     # Mock session
     mock_ss = AsyncMock()
-    
+
     class FakeAsyncBegin:
-        async def __aenter__(self): return None
-        async def __aexit__(self, exc_type, exc_val, exc_tb): return None
-    
+        async def __aenter__(self):
+            return None
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            return None
+
     mock_ss.begin = MagicMock(return_value=FakeAsyncBegin())
     mock_ss.get_one = AsyncMock(return_value=blog)
 
@@ -245,13 +249,17 @@ async def test_get_blog_success():
     assert result.id == "123"
     assert result.title == "Test Title"
 
+
 @pytest.mark.asyncio
 async def test_get_blog_not_found():
     mock_ss = AsyncMock()
-    
+
     class FakeAsyncBegin:
-        async def __aenter__(self): return None
-        async def __aexit__(self, exc_type, exc_val, exc_tb): return None
+        async def __aenter__(self):
+            return None
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            return None
 
     mock_ss.begin = MagicMock(return_value=FakeAsyncBegin())
     mock_ss.get_one = AsyncMock(side_effect=NoResultFound("Blog not found"))
@@ -259,7 +267,8 @@ async def test_get_blog_not_found():
     with pytest.raises(NoResultFound):
         await get("nonexistent-id", mock_ss)
 
-#-----------------------------------------------------------
+
+# -----------------------------------------------------------
 @pytest.mark.asyncio
 async def test_change_comment_status_success():
     # Create a mock PostComment object
@@ -271,7 +280,7 @@ async def test_change_comment_status_success():
         parent_comment=None,
         comment="Some comment",
         status=CommentStatus.NORMAL,
-        comment_type=None 
+        comment_type=None,
     )
 
     # Mock session
@@ -279,8 +288,11 @@ async def test_change_comment_status_success():
 
     # Mock context manager for session.begin
     class FakeAsyncBegin:
-        async def __aenter__(self): return None
-        async def __aexit__(self, exc_type, exc_val, exc_tb): return None
+        async def __aenter__(self):
+            return None
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            return None
 
     mock_ss.begin = MagicMock(return_value=FakeAsyncBegin())
 
@@ -295,13 +307,17 @@ async def test_change_comment_status_success():
     assert result.status == CommentStatus.REPORTED
     mock_ss.flush.assert_awaited_once()
 
+
 @pytest.mark.asyncio
 async def test_change_comment_status_not_found():
     mock_ss = AsyncMock()
 
     class FakeAsyncBegin:
-        async def __aenter__(self): return None
-        async def __aexit__(self, exc_type, exc_val, exc_tb): return None
+        async def __aenter__(self):
+            return None
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            return None
 
     mock_ss.begin = MagicMock(return_value=FakeAsyncBegin())
     mock_ss.get_one = AsyncMock(side_effect=NoResultFound)

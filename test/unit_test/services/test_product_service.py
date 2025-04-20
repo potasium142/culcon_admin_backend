@@ -27,11 +27,15 @@ from db.postgresql.models import Base
 from .set_up.test_product_data import *
 from sqlalchemy.exc import NoResultFound
 from pydantic import ValidationError
+
 # Test database URL
-DATABASE_URL = "postgresql+asyncpg://postgres:postgres@localhost:5432/postgres"
+DATABASE_URL = "postgresql+psycopg://postgres:postgres@localhost:5432/postgres"
 
 engine = create_async_engine(DATABASE_URL, echo=False)
-TestingSessionLocal = sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
+TestingSessionLocal = sessionmaker(
+    bind=engine, class_=AsyncSession, expire_on_commit=False
+)
+
 
 @pytest_asyncio.fixture(scope="function", autouse=True)
 async def create_test_db():
@@ -40,7 +44,8 @@ async def create_test_db():
         await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
 
         # Drop all public tables
-        await conn.execute(text("""
+        await conn.execute(
+            text("""
             DO $$ 
             DECLARE
                 r RECORD;
@@ -50,7 +55,8 @@ async def create_test_db():
                 END LOOP;
             END 
             $$;
-        """))
+        """)
+        )
 
         # Create tables
         await conn.run_sync(Base.metadata.create_all)
@@ -63,6 +69,7 @@ async def create_test_db():
 
     await engine.dispose()
 
+
 # Provide DB session for tests
 @pytest_asyncio.fixture()
 async def db_session():
@@ -71,7 +78,8 @@ async def db_session():
         await session.rollback()
 
 
-#-----------------------------------------------------------
+# -----------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_update_info_success(db_session):
@@ -82,7 +90,7 @@ async def test_update_info_success(db_session):
     product = preb_product_table_1()
     db_session.add(product)
     await db_session.commit()
-    
+
     product_doc = preb_product_doc_table_1()
     db_session.add(product_doc)
 
@@ -91,7 +99,6 @@ async def test_update_info_success(db_session):
 
     await db_session.commit()
 
-
     # Create mock clip model
     mock_clip = MagicMock()
     mock_clip.encode_text = MagicMock(return_value=[[0.2] * 768])
@@ -99,13 +106,9 @@ async def test_update_info_success(db_session):
     # New product update data
     update_data = ex_product_update_dto_1()
 
-
     # Act
     result = await update_info(
-        prod_id=prod_id,
-        prod_info=update_data,
-        clip_model=mock_clip,
-        ss=db_session
+        prod_id=prod_id, prod_info=update_data, clip_model=mock_clip, ss=db_session
     )
 
     # Assert
@@ -114,6 +117,7 @@ async def test_update_info_success(db_session):
     assert result["infos"] == update_data.infos
     assert result["article_md"] == update_data.article_md
     assert "instructions" not in result  # only included for MealKitUpdate
+
 
 @pytest.mark.asyncio
 async def test_update_info_mealkit_success(db_session):
@@ -124,7 +128,7 @@ async def test_update_info_mealkit_success(db_session):
     product = preb_product_table_1()
     db_session.add(product)
     await db_session.commit()
-    
+
     product_doc = preb_product_doc_table_1()
     db_session.add(product_doc)
 
@@ -133,7 +137,6 @@ async def test_update_info_mealkit_success(db_session):
 
     await db_session.commit()
 
-
     # Create mock clip model
     mock_clip = MagicMock()
     mock_clip.encode_text = MagicMock(return_value=[[0.2] * 768])
@@ -141,13 +144,9 @@ async def test_update_info_mealkit_success(db_session):
     # New product update data
     update_data = ex_mealkit_update_dto_1()
 
-
     # Act
     result = await update_info(
-        prod_id=prod_id,
-        prod_info=update_data,
-        clip_model=mock_clip,
-        ss=db_session
+        prod_id=prod_id, prod_info=update_data, clip_model=mock_clip, ss=db_session
     )
 
     # Assert
@@ -155,7 +154,8 @@ async def test_update_info_mealkit_success(db_session):
     assert result["description"] == update_data.description
     assert result["infos"] == update_data.infos
     assert result["article_md"] == update_data.article_md
-    assert "instructions" in result 
+    assert "instructions" in result
+
 
 @pytest.mark.asyncio
 async def test_update_info_mealkit_fail_no_ingredient(db_session):
@@ -166,7 +166,7 @@ async def test_update_info_mealkit_fail_no_ingredient(db_session):
     product = preb_product_table_1()
     db_session.add(product)
     await db_session.commit()
-    
+
     product_doc = preb_product_doc_table_1()
     db_session.add(product_doc)
 
@@ -174,7 +174,6 @@ async def test_update_info_mealkit_fail_no_ingredient(db_session):
     db_session.add(product_embed)
 
     await db_session.commit()
-
 
     # Create mock clip model
     mock_clip = MagicMock()
@@ -185,10 +184,7 @@ async def test_update_info_mealkit_fail_no_ingredient(db_session):
     # Act & Assert
     with pytest.raises(HandledError, match="Product id none is not exist"):
         await update_info(
-            prod_id=prod_id,
-            prod_info=update_data,
-            clip_model=mock_clip,
-            ss=db_session
+            prod_id=prod_id, prod_info=update_data, clip_model=mock_clip, ss=db_session
         )
 
 
@@ -207,11 +203,9 @@ async def test_update_info_fail_no_product_with_id(db_session):
     # Act & Assert
     with pytest.raises(NoResultFound):
         await update_info(
-            prod_id=prod_id,
-            prod_info=update_data,
-            clip_model=mock_clip,
-            ss=db_session
+            prod_id=prod_id, prod_info=update_data, clip_model=mock_clip, ss=db_session
         )
+
 
 @pytest.mark.asyncio
 async def test_update_info_fail_invalid_expiry(db_session):
@@ -221,7 +215,7 @@ async def test_update_info_fail_invalid_expiry(db_session):
     product = preb_product_table_1()
     db_session.add(product)
     await db_session.commit()
-    
+
     product_doc = preb_product_doc_table_1()
     db_session.add(product_doc)
 
@@ -239,11 +233,9 @@ async def test_update_info_fail_invalid_expiry(db_session):
     # Act & Assert
     with pytest.raises(HandledError, match="Product description cannot be empty"):
         await update_info(
-            prod_id=prod_id,
-            prod_info=update_data,
-            clip_model=mock_clip,
-            ss=db_session
+            prod_id=prod_id, prod_info=update_data, clip_model=mock_clip, ss=db_session
         )
+
 
 @pytest.mark.asyncio
 async def test_update_info_fail_invalid_description(db_session):
@@ -253,7 +245,7 @@ async def test_update_info_fail_invalid_description(db_session):
     product = preb_product_table_1()
     db_session.add(product)
     await db_session.commit()
-    
+
     product_doc = preb_product_doc_table_1()
     db_session.add(product_doc)
 
@@ -271,20 +263,19 @@ async def test_update_info_fail_invalid_description(db_session):
     # Act & Assert
     with pytest.raises(HandledError, match="Expired day must be bigger than 0"):
         await update_info(
-            prod_id=prod_id,
-            prod_info=update_data,
-            clip_model=mock_clip,
-            ss=db_session
+            prod_id=prod_id, prod_info=update_data, clip_model=mock_clip, ss=db_session
         )
+
 
 @pytest.mark.asyncio
 async def test_product_creation_fail_null():
     with pytest.raises(ValidationError) as exc_info:
         ex_product_update_dto_1_null()
-        
+
     assert "description" in str(exc_info.value)
 
-#-----------------------------------------------------------
+
+# -----------------------------------------------------------
 
 
 @pytest.mark.asyncio
@@ -295,17 +286,13 @@ async def test_update_price_success(db_session):
     product = preb_product_table_1()
     db_session.add(product)
     await db_session.commit()
-    
 
     new_price = 79.99
     new_sale = 20.0
 
     # Act
     result = await update_price(
-        prod_id=prod_id,
-        price=new_price,
-        sale_percent=new_sale,
-        ss=db_session
+        prod_id=prod_id, price=new_price, sale_percent=new_sale, ss=db_session
     )
 
     # Assert: return value
@@ -321,10 +308,16 @@ async def test_update_price_success(db_session):
 
     # Assert: price history created
     history = (
-        await db_session.execute(
-            sqla.select(ProductPriceHistory).where(ProductPriceHistory.product_id == prod_id)
+        (
+            await db_session.execute(
+                sqla.select(ProductPriceHistory).where(
+                    ProductPriceHistory.product_id == prod_id
+                )
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert len(history) == 1
     assert history[0].price == pytest.approx(new_price, rel=1e-6)
     assert history[0].sale_percent == pytest.approx(new_sale, rel=1e-6)
@@ -338,18 +331,16 @@ async def test_update_price_fail_invalid_price(db_session):
     product = preb_product_table_1()
     db_session.add(product)
     await db_session.commit()
-    
 
     new_price = 0
     new_sale = 20.0
 
     with pytest.raises(HandledError, match="Price is not valid"):
         await update_price(
-                    prod_id=prod_id,
-                    price=new_price,
-                    sale_percent=new_sale,
-                    ss=db_session
-                )
+            prod_id=prod_id, price=new_price, sale_percent=new_sale, ss=db_session
+        )
+
+
 @pytest.mark.asyncio
 async def test_update_price_fail_invalid_sale(db_session):
     # Arrange
@@ -358,20 +349,18 @@ async def test_update_price_fail_invalid_sale(db_session):
     product = preb_product_table_1()
     db_session.add(product)
     await db_session.commit()
-    
 
     new_price = 10.0
     new_sale = -10.0
 
     with pytest.raises(HandledError, match="Sale percent is not valid"):
         await update_price(
-                    prod_id=prod_id,
-                    price=new_price,
-                    sale_percent=new_sale,
-                    ss=db_session
-                )
+            prod_id=prod_id, price=new_price, sale_percent=new_sale, ss=db_session
+        )
 
-#-----------------------------------------------------------
+
+# -----------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_restock_product_success(db_session):
@@ -379,7 +368,9 @@ async def test_restock_product_success(db_session):
     prod_id = "Rice_ID"
     product = preb_product_table_1()
     product.available_quantity = 10
-    product.product_status = ProductStatus.OUT_OF_STOCK  # Assume this status before restocking
+    product.product_status = (
+        ProductStatus.OUT_OF_STOCK
+    )  # Assume this status before restocking
 
     db_session.add(product)
     await db_session.commit()
@@ -407,13 +398,20 @@ async def test_restock_product_success(db_session):
 
     # Assert: stock history created
     history = (
-        await db_session.execute(
-            sqla.select(ProductStockHistory).where(ProductStockHistory.product_id == prod_id)
+        (
+            await db_session.execute(
+                sqla.select(ProductStockHistory).where(
+                    ProductStockHistory.product_id == prod_id
+                )
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert len(history) == 1
     assert history[0].in_stock == restock_amount
     assert history[0].in_price == pytest.approx(import_price, rel=1e-6)
+
 
 @pytest.mark.asyncio
 async def test_restock_product_fail_invalid_ammount(db_session):
@@ -421,21 +419,22 @@ async def test_restock_product_fail_invalid_ammount(db_session):
     prod_id = "Rice_ID"
     product = preb_product_table_1()
     product.available_quantity = 10
-    product.product_status = ProductStatus.OUT_OF_STOCK  
+    product.product_status = ProductStatus.OUT_OF_STOCK
 
     db_session.add(product)
     await db_session.commit()
 
     restock_amount = 0
-    import_price =0
+    import_price = 0
 
     with pytest.raises(HandledError, match="Amount is not valid"):
         await restock_product(
-        prod_id=prod_id,
-        amount=restock_amount,
-        import_price=import_price,
-        ss=db_session,
-    )
+            prod_id=prod_id,
+            amount=restock_amount,
+            import_price=import_price,
+            ss=db_session,
+        )
+
 
 @pytest.mark.asyncio
 async def test_restock_product_fail_invalid_price(db_session):
@@ -443,23 +442,24 @@ async def test_restock_product_fail_invalid_price(db_session):
     prod_id = "Rice_ID"
     product = preb_product_table_1()
     product.available_quantity = 10
-    product.product_status = ProductStatus.OUT_OF_STOCK  
+    product.product_status = ProductStatus.OUT_OF_STOCK
 
     db_session.add(product)
     await db_session.commit()
 
     restock_amount = 10
-    import_price =0
+    import_price = 0
 
     with pytest.raises(HandledError, match="Price is not valid"):
         await restock_product(
-        prod_id=prod_id,
-        amount=restock_amount,
-        import_price=import_price,
-        ss=db_session,
-    )
+            prod_id=prod_id,
+            amount=restock_amount,
+            import_price=import_price,
+            ss=db_session,
+        )
 
-#-----------------------------------------------------------
+
+# -----------------------------------------------------------
 
 
 @pytest.mark.asyncio
@@ -476,11 +476,7 @@ async def test_update_status_success(db_session):
     new_status = ProductStatus.IN_STOCK
 
     # Act
-    result = await update_status(
-        prod_id=prod_id,
-        status=new_status,
-        ss=db_session
-    )
+    result = await update_status(prod_id=prod_id, status=new_status, ss=db_session)
 
     # Assert: return value
     assert result["id"] == prod_id
@@ -504,12 +500,8 @@ async def test_update_status_fail_invalid_quantity_for_status(db_session):
 
     new_status = ProductStatus.IN_STOCK
 
-
     with pytest.raises(HandledError, match="Quantity is empty"):
-        await update_status(
-            prod_id=prod_id,
-            status=new_status,
-            ss=db_session
-        )
+        await update_status(prod_id=prod_id, status=new_status, ss=db_session)
 
-#-----------------------------------------------------------
+
+# -----------------------------------------------------------

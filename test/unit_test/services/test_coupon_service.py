@@ -20,10 +20,13 @@ from sqlalchemy import text
 from db.postgresql.models import Base
 
 # Test database URL
-DATABASE_URL = "postgresql+asyncpg://postgres:postgres@localhost:5432/postgres"
+DATABASE_URL = "postgresql+psycopg://postgres:postgres@localhost:5432/postgres"
 
 engine = create_async_engine(DATABASE_URL, echo=False)
-TestingSessionLocal = sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
+TestingSessionLocal = sessionmaker(
+    bind=engine, class_=AsyncSession, expire_on_commit=False
+)
+
 
 @pytest_asyncio.fixture(scope="function", autouse=True)
 async def create_test_db():
@@ -32,7 +35,8 @@ async def create_test_db():
         await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
 
         # Drop all public tables
-        await conn.execute(text("""
+        await conn.execute(
+            text("""
             DO $$ 
             DECLARE
                 r RECORD;
@@ -42,7 +46,8 @@ async def create_test_db():
                 END LOOP;
             END 
             $$;
-        """))
+        """)
+        )
 
         # Create tables
         await conn.run_sync(Base.metadata.create_all)
@@ -55,6 +60,7 @@ async def create_test_db():
 
     await engine.dispose()
 
+
 # Provide DB session for tests
 @pytest_asyncio.fixture()
 async def db_session():
@@ -63,7 +69,7 @@ async def db_session():
         await session.rollback()
 
 
-#-----------------------------------------------------------
+# -----------------------------------------------------------
 @pytest.mark.asyncio
 async def test_create_coupon_success():
     # Arrange
@@ -72,8 +78,11 @@ async def test_create_coupon_success():
     mock_ss.commit = AsyncMock()
 
     class FakeAsyncBegin:
-        async def __aenter__(self): return None
-        async def __aexit__(self, exc_type, exc_val, exc_tb): return None
+        async def __aenter__(self):
+            return None
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            return None
 
     mock_ss.begin.return_value = FakeAsyncBegin()
 
@@ -101,6 +110,7 @@ async def test_create_coupon_success():
     assert isinstance(added_coupon, Coupon)
     assert added_coupon.usage_left == 5
 
+
 @pytest.mark.asyncio
 async def test_create_coupon_fail_on_add():
     # Arrange
@@ -108,8 +118,11 @@ async def test_create_coupon_fail_on_add():
     mock_ss.begin = MagicMock()
 
     class FakeAsyncBegin:
-        async def __aenter__(self): return None
-        async def __aexit__(self, exc_type, exc_val, exc_tb): return None
+        async def __aenter__(self):
+            return None
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            return None
 
     mock_ss.begin.return_value = FakeAsyncBegin()
 
@@ -128,6 +141,7 @@ async def test_create_coupon_fail_on_add():
     with pytest.raises(SQLAlchemyError, match="Failed to add coupon"):
         await create_coupon(request_data, mock_ss)
 
+
 @pytest.mark.asyncio
 async def test_get_coupon_success():
     # Arrange
@@ -144,8 +158,11 @@ async def test_get_coupon_success():
     mock_ss.begin = MagicMock()
 
     class FakeAsyncBegin:
-        async def __aenter__(self): return None
-        async def __aexit__(self, exc_type, exc_val, exc_tb): return None
+        async def __aenter__(self):
+            return None
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            return None
 
     mock_ss.begin.return_value = FakeAsyncBegin()
     mock_ss.get.return_value = fake_coupon
@@ -162,6 +179,7 @@ async def test_get_coupon_success():
         "minimum_price": 50000,
     }
 
+
 @pytest.mark.asyncio
 async def test_get_coupon_not_found():
     # Arrange
@@ -169,8 +187,11 @@ async def test_get_coupon_not_found():
     mock_ss.begin = MagicMock()
 
     class FakeAsyncBegin:
-        async def __aenter__(self): return None
-        async def __aexit__(self, exc_type, exc_val, exc_tb): return None
+        async def __aenter__(self):
+            return None
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            return None
 
     mock_ss.begin.return_value = FakeAsyncBegin()
     mock_ss.get.return_value = None
@@ -180,7 +201,6 @@ async def test_get_coupon_not_found():
 
     # Assert
     assert result == {"error": "Coupon not found"}
-
 
 
 @pytest.mark.asyncio
@@ -206,7 +226,7 @@ async def test_disable_coupon_success():
 async def test_disable_coupon_not_found():
     # Arrange
     fake_coupon_id = "nonexistent-id"
-    
+
     mock_session = MagicMock()
     mock_session.get = AsyncMock(return_value=None)
 

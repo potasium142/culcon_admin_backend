@@ -4,7 +4,7 @@ from datetime import date
 
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy import text, select  
+from sqlalchemy import text, select
 
 from services.account import create_account
 from dtos.request.account import AccountCreateDto, AccountInfoForm
@@ -16,11 +16,15 @@ from etc.local_error import HandledError
 
 from .set_up.test_account_data import *
 from unittest.mock import AsyncMock, patch
+
 # Test database URL
-DATABASE_URL = "postgresql+asyncpg://postgres:postgres@localhost:5432/postgres"
+DATABASE_URL = "postgresql+psycopg://postgres:postgres@localhost:5432/postgres"
 
 engine = create_async_engine(DATABASE_URL, echo=False)
-TestingSessionLocal = sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
+TestingSessionLocal = sessionmaker(
+    bind=engine, class_=AsyncSession, expire_on_commit=False
+)
+
 
 @pytest_asyncio.fixture(scope="function", autouse=True)
 async def create_test_db():
@@ -29,7 +33,8 @@ async def create_test_db():
         await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
 
         # Drop all public tables
-        await conn.execute(text("""
+        await conn.execute(
+            text("""
             DO $$ 
             DECLARE
                 r RECORD;
@@ -39,7 +44,8 @@ async def create_test_db():
                 END LOOP;
             END 
             $$;
-        """))
+        """)
+        )
 
         # Create tables
         await conn.run_sync(Base.metadata.create_all)
@@ -52,6 +58,7 @@ async def create_test_db():
 
     await engine.dispose()
 
+
 # Provide DB session for tests
 @pytest_asyncio.fixture()
 async def db_session():
@@ -60,7 +67,8 @@ async def db_session():
         await session.rollback()
 
 
-#-----------------------------------------------------------
+# -----------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_create_account_success_with_db(db_session):
@@ -71,14 +79,19 @@ async def test_create_account_success_with_db(db_session):
 
     # Query the database to retrieve the account by token
     account = await db_session.execute(
-        select(StaffAccount).filter(StaffAccount.token == token)  # Use 'select' from sqlalchemy
+        select(StaffAccount).filter(
+            StaffAccount.token == token
+        )  # Use 'select' from sqlalchemy
     )
     account = account.scalar_one_or_none()  # Fetch the first result or None if no match
 
     # Assert the account details
     assert account is not None  # Ensure the account exists in the database
     assert account.username == "testuser1"
-    assert account.type == AccountType.STAFF  # 🧐 double-check if you meant STAFF or ADMIN
+    assert (
+        account.type == AccountType.STAFF
+    )  # 🧐 double-check if you meant STAFF or ADMIN
+
 
 @pytest.mark.asyncio
 async def test_create_account_success_shipper(db_session):
@@ -89,15 +102,19 @@ async def test_create_account_success_shipper(db_session):
 
     # Query the database to retrieve the account by token
     account = await db_session.execute(
-        select(StaffAccount).filter(StaffAccount.token == token)  # Use 'select' from sqlalchemy
+        select(StaffAccount).filter(
+            StaffAccount.token == token
+        )  # Use 'select' from sqlalchemy
     )
     account = account.scalar_one_or_none()  # Fetch the first result or None if no match
 
     # Assert the account details
     assert account is not None  # Ensure the account exists in the database
     assert account.username == "testuser1"
-    assert account.type == AccountType.SHIPPER  # 🧐 double-check if you meant STAFF or ADMIN
-    
+    assert (
+        account.type == AccountType.SHIPPER
+    )  # 🧐 double-check if you meant STAFF or ADMIN
+
     shipper_result = await db_session.execute(
         select(ShipperAvailbility).filter(ShipperAvailbility.id == account.id)
     )
@@ -105,6 +122,7 @@ async def test_create_account_success_shipper(db_session):
 
     # ✅ Assert that the ShipperAvailbility entry exists
     assert shipper_availability is not None
+
 
 @pytest.mark.asyncio
 async def test_create_account_shipper_missing_acc_id(db_session):
@@ -116,16 +134,19 @@ async def test_create_account_shipper_missing_acc_id(db_session):
 
         assert "Cannot find account after created" in str(exc_info.value)
 
+
 @pytest.mark.asyncio
 async def test_create_account_already_exists(db_session):
     # First, create the account
     account_dto = ex_account_dto_1()
-    
+
     # Create the account the first time, it should succeed
     await create_account(account_dto, db_session)
-    
+
     # Try to create the same account again, should raise HandledError
-    with pytest.raises(HandledError, match="duplicate key value violates unique constraint"):
+    with pytest.raises(
+        HandledError, match="duplicate key value violates unique constraint"
+    ):
         await create_account(account_dto, db_session)
 
 
@@ -140,7 +161,8 @@ async def test_create_account_null_input(db_session):
     except HandledError as e:
         print(f"Error raised: {str(e)}")  # Log the error message to help debugging
         # Adjust the regex to match the relevant part of the error message
-        assert 'null value in column' in str(e)
+        assert "null value in column" in str(e)
+
 
 @pytest.mark.asyncio
 async def test_create_account_null_input_password(db_session):
@@ -153,7 +175,4 @@ async def test_create_account_null_input_password(db_session):
     except TypeError as e:
         print(f"Error raised: {str(e)}")  # Log the error message to help debugging
         # Adjust the regex to match the relevant part of the error message
-        assert 'secret must be unicode or bytes, not None' in str(e)
-
-
-
+        assert "secret must be unicode or bytes, not None" in str(e)

@@ -7,9 +7,12 @@ from sqlalchemy import text
 from db.postgresql.models.staff_account import StaffAccount  # Import the model directly
 from db.postgresql.models import Base
 
-DATABASE_URL = "postgresql+asyncpg://postgres:postgres@localhost:5432/postgres"
+DATABASE_URL = "postgresql+psycopg://postgres:postgres@localhost:5432/postgres"
 engine = create_async_engine(DATABASE_URL, echo=False)
-TestingSessionLocal = sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
+TestingSessionLocal = sessionmaker(
+    bind=engine, class_=AsyncSession, expire_on_commit=False
+)
+
 
 @pytest_asyncio.fixture(scope="function", autouse=True)
 async def create_test_db():
@@ -18,11 +21,11 @@ async def create_test_db():
     # Import other models as needed
 
     async with engine.begin() as conn:
-
         await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
 
         # Drop all public tables
-        await conn.execute(text("""
+        await conn.execute(
+            text("""
             DO $$ 
             DECLARE
                 r RECORD;
@@ -32,7 +35,8 @@ async def create_test_db():
                 END LOOP;
             END 
             $$;
-        """))
+        """)
+        )
 
         # Log the models that are being registered
         print("Registered models:", Base.metadata.tables.keys())
@@ -47,6 +51,7 @@ async def create_test_db():
         await conn.run_sync(Base.metadata.drop_all)
 
     await engine.dispose()
+
 
 @pytest_asyncio.fixture()
 async def db_session():

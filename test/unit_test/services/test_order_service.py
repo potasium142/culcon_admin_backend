@@ -34,7 +34,7 @@ from uuid import UUID
 from sqlalchemy.exc import NoResultFound
 
 # Test database URL
-DATABASE_URL = "postgresql+asyncpg://postgres:postgres@localhost:5432/postgres"
+DATABASE_URL = "postgresql+psycopg://postgres:postgres@localhost:5432/postgres"
 
 engine = create_async_engine(DATABASE_URL, echo=False)
 TestingSessionLocal = sessionmaker(
