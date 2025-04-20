@@ -23,6 +23,12 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy import text
 from db.postgresql.models import Base
 
+from sqlalchemy.exc import NoResultFound 
+
+from .set_up.test_user_account_data import *
+from .set_up.test_account_data import *
+
+
 # Test database URL
 DATABASE_URL = "postgresql+asyncpg://postgres:postgres@localhost:5432/postgres"
 
@@ -69,23 +75,41 @@ async def db_session():
 
 #-----------------------------------------------------------
 
-def test_set_account_status_success():
-    mock_account = MagicMock(spec=UserAccount)
-    mock_account.status = UserAccountStatus.NORMAL
-    
-    with patch.object(db_session.session, "get", return_value=mock_account) as mock_get, \
-         patch.object(db_session, "commit") as mock_commit:
+@pytest.mark.asyncio
+async def test_set_account_status_success(db_session):
+    # Arrange: Create a dummy user account
+    user = preb_user_account_1()
 
-        set_account_status("some_user_id", UserAccountStatus.DEACTIVATE)
-        
-        mock_get.assert_called_once_with(UserAccount, "some_user_id")
-        assert mock_account.status == UserAccountStatus.DEACTIVATE
-        mock_commit.assert_called_once()
+    db_session.add(user)
+    await db_session.commit()
+
+    # Act: Change the user status
+    new_status = UserAccountStatus.BANNED
+    result = await set_account_status(user.id, new_status, db_session)
+
+    # Assert
+    assert result["id"] == user.id
+    assert result["status"] == new_status
+
+    # Fetch again from DB to be sure
+    updated_user = await db_session.get(UserAccount, user.id)
+    assert updated_user.status == new_status
 
 def test_set_account_status_not_found():
     with patch.object(db_session.session, "get", return_value=None):
         with pytest.raises(HandledError, match="Customer account not found"):
             set_account_status("invalid_user_id", UserAccountStatus.DEACTIVATE)
+
+@pytest.mark.asyncio
+async def test_set_account_status_fail_account_not_found(db_session):
+    # Arrange: Create a dummy user account
+    user = preb_user_account_1()
+
+
+    # Act: Change the user status
+    new_status = UserAccountStatus.BANNED
+    with pytest.raises(NoResultFound):
+        await set_account_status(user.id, new_status, db_session)
 
 
 @pytest.mark.asyncio
